@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cbe00a4963fdb8f4aa44bbeb9f6967ec, type: 3}
+  m_Name: BossLoot
+  m_EditorClassIdentifier: 
+  entries:
+  - item: {fileID: 11400000, guid: 45dec779dbd3ac545a7c9738e0a1a5ce, type: 2}
+    dropChance: 0.3
+    minQuantity: 1
+    maxQuantity: 1
+  - item: {fileID: 11400000, guid: 217aed2d2dd7aa64cb265f64214584fc, type: 2}
+    dropChance: 0.25
+    minQuantity: 1
+    maxQuantity: 1
+  - item: {fileID: 11400000, guid: 2dab60565db45e848b1072ce4a9a2408, type: 2}
+    dropChance: 0.2
+    minQuantity: 1
+    maxQuantity: 1
+  - item: {fileID: 11400000, guid: 06c94b144ad7b7242b215bcecca25a38, type: 2}
+    dropChance: 0.15
+    minQuantity: 1
+    maxQuantity: 1
+  - item: {fileID: 11400000, guid: 028afba344ae95d4dac3cb9917f86e75, type: 2}
+    dropChance: 0.1
+    minQuantity: 1
+    maxQuantity: 1
+  - item: {fileID: 11400000, guid: 2321f773dc51c704ba64739687fd2c6b, type: 2}
+    dropChance: 0.02
+    minQuantity: 1
+    maxQuantity: 1
+  minGuaranteedGold: 100
+  maxGuaranteedGold: 300
+  minGuaranteedEXP: 200
+  maxGuaranteedEXP: 500

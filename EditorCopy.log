@@ -1,0 +1,328 @@
+[LicensingClient] Error: Code 10 while verifying Licensing Client signature (process Id: 19652, path: "C:/Program Files/Unity Hub/UnityLicensingClient_V1/Unity.Licensing.Client.exe")
+[Licensing::Module] Warning: LicensingClient has failed validation; ignoring
+[LicensingClient] Handshaking with LicensingClient (version: 1.17.4+4293ba1)
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-ADMIN" (connect: 0.00s, validation: 0.01s, handshake: 0.03s)
+Entitlement-based licensing initiated
+[Licensing::Module] Successfully updated the access token 5AHTplqTAw-Dkqp6CVGS1zVpbgSkE88Qa8vBPKljGbk011f
+[LicensingClient] Licenses updated successfully
+Built from '2021.3/staging' branch; Version is '2021.3.11f1 (0a5ca18544bf) revision 679073'; Using compiler version '192829333'; Build Type 'Release'
+OS: 'Windows 11  (10.0.22631) 64bit Core' Language: 'en' Physical Memory: 16126 MB
+[Licensing::Module] Serial number assigned to: "18968485345985-UnityPersXXXX"
+BatchMode: 0, IsHumanControllingUs: 1, StartBugReporterOnCrash: 1, Is64bit: 1, IsPro: 0
+[Package Manager] Server::Start -- Port 61041 was selected
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\2021.3.11f1\Editor\Unity.exe
+-projectpath
+E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D
+-acceptSoftwareTermsForThisRunOnly
+-useHub
+-hubIPC
+-cloudEnvironment
+production
+-licensingIpc
+LicenseClient-ADMIN
+-hubSessionId
+7e81e3f1-848e-47bb-8dff-f913e3c89b2d
+-accessToken
+5AHTplqTAw-Dkqp6CVGS1zVpbgSkE88Qa8vBPKljGbk011f
+Successfully changed project path to: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D
+E:/N4_1/LAP_TRINH_GAME_2/GIUA_KY/Abyssal_Dungeon_3D
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gfx=262144"
+[Package Manager] Restoring resolved packages state from cache
+[Package Manager] 
+Registered 58 packages:
+  Packages from [https://packages.unity.com]:
+    com.unity.ads@3.7.5 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.ads@3.7.5)
+    com.unity.analytics@3.6.12 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.analytics@3.6.12)
+    com.unity.collab-proxy@1.17.2 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.collab-proxy@1.17.2)
+    com.unity.ide.rider@3.0.15 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.ide.rider@3.0.15)
+    com.unity.ide.visualstudio@2.0.16 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.ide.visualstudio@2.0.16)
+    com.unity.ide.vscode@1.2.5 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.ide.vscode@1.2.5)
+    com.unity.purchasing@4.4.1 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.purchasing@4.4.1)
+    com.unity.test-framework@1.1.31 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.test-framework@1.1.31)
+    com.unity.textmeshpro@3.0.6 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.textmeshpro@3.0.6)
+    com.unity.timeline@1.6.4 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.timeline@1.6.4)
+    com.unity.visualscripting@1.7.8 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.visualscripting@1.7.8)
+    com.unity.xr.legacyinputhelpers@2.1.10 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.xr.legacyinputhelpers@2.1.10)
+    com.unity.ext.nunit@1.0.6 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.ext.nunit@1.0.6)
+    com.unity.mathematics@1.2.6 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.mathematics@1.2.6)
+    com.unity.burst@1.7.3 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.burst@1.7.3)
+    com.unity.services.core@1.4.2 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.services.core@1.4.2)
+    com.unity.services.analytics@4.2.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.services.analytics@4.2.0)
+    com.unity.searcher@4.9.1 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.searcher@4.9.1)
+    com.unity.nuget.newtonsoft-json@3.0.2 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.nuget.newtonsoft-json@3.0.2)
+  Built-in packages:
+    com.unity.2d.sprite@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.2d.sprite@1.0.0)
+    com.unity.2d.tilemap@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.2d.tilemap@1.0.0)
+    com.unity.render-pipelines.universal@12.1.7 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.render-pipelines.universal@12.1.7)
+    com.unity.ugui@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.ugui@1.0.0)
+    com.unity.modules.ai@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.ai@1.0.0)
+    com.unity.modules.androidjni@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.androidjni@1.0.0)
+    com.unity.modules.animation@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.animation@1.0.0)
+    com.unity.modules.assetbundle@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.assetbundle@1.0.0)
+    com.unity.modules.audio@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.audio@1.0.0)
+    com.unity.modules.cloth@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.cloth@1.0.0)
+    com.unity.modules.director@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.director@1.0.0)
+    com.unity.modules.imageconversion@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.imageconversion@1.0.0)
+    com.unity.modules.imgui@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.imgui@1.0.0)
+    com.unity.modules.jsonserialize@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.jsonserialize@1.0.0)
+    com.unity.modules.particlesystem@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.particlesystem@1.0.0)
+    com.unity.modules.physics@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.physics@1.0.0)
+    com.unity.modules.physics2d@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.physics2d@1.0.0)
+    com.unity.modules.screencapture@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.screencapture@1.0.0)
+    com.unity.modules.terrain@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.terrain@1.0.0)
+    com.unity.modules.terrainphysics@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.terrainphysics@1.0.0)
+    com.unity.modules.tilemap@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.tilemap@1.0.0)
+    com.unity.modules.ui@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.ui@1.0.0)
+    com.unity.modules.uielements@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.uielements@1.0.0)
+    com.unity.modules.umbra@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.umbra@1.0.0)
+    com.unity.modules.unityanalytics@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.unityanalytics@1.0.0)
+    com.unity.modules.unitywebrequest@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.unitywebrequest@1.0.0)
+    com.unity.modules.unitywebrequestassetbundle@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.unitywebrequestassetbundle@1.0.0)
+    com.unity.modules.unitywebrequestaudio@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.unitywebrequestaudio@1.0.0)
+    com.unity.modules.unitywebrequesttexture@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.unitywebrequesttexture@1.0.0)
+    com.unity.modules.unitywebrequestwww@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.unitywebrequestwww@1.0.0)
+    com.unity.modules.vehicles@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.vehicles@1.0.0)
+    com.unity.modules.video@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.video@1.0.0)
+    com.unity.modules.vr@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.vr@1.0.0)
+    com.unity.modules.wind@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.wind@1.0.0)
+    com.unity.modules.xr@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.xr@1.0.0)
+    com.unity.modules.subsystems@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.subsystems@1.0.0)
+    com.unity.modules.uielementsnative@1.0.0 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.modules.uielementsnative@1.0.0)
+    com.unity.render-pipelines.core@12.1.7 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.render-pipelines.core@12.1.7)
+    com.unity.shadergraph@12.1.7 (location: E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.shadergraph@12.1.7)
+
+[Subsystems] No new subsystems found in resolved package list.
+Package Manager log level set to [2]
+[Package Manager] Done registering packages in 0.68s seconds
+Refreshing native plugins compatible for Editor in 15.75 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 2021.3.11f1 (0a5ca18544bf)
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/2021.3.11f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path E:/N4_1/LAP_TRINH_GAME_2/GIUA_KY/Abyssal_Dungeon_3D/Assets
+GfxDevice: creating device client; threaded=1; jobified=0
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: Intel(R) Iris(R) Xe Graphics (ID=0x9a49)
+    Vendor:   Intel
+    VRAM:     8063 MB
+    Driver:   31.0.101.5333
+Initialize mono
+Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/2021.3.11f1/Editor/Data/Managed'
+Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/2021.3.11f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'C:/Program Files/Unity/Hub/Editor/2021.3.11f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56336
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: C:/Program Files/Unity/Hub/Editor/2021.3.11f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.003384 seconds.
+Native extension for WindowsStandalone target not found
+Refreshing native plugins compatible for Editor in 3.98 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Mono: successfully reloaded assembly
+- Completed reload, in  0.418 seconds
+Domain Reload Profiling:
+	ReloadAssembly (418ms)
+		BeginReloadAssembly (55ms)
+			ExecutionOrderSort (0ms)
+			DisableScriptedObjects (0ms)
+			BackupInstance (0ms)
+			ReleaseScriptingObjects (0ms)
+			CreateAndSetChildDomain (1ms)
+		EndReloadAssembly (279ms)
+			LoadAssemblies (53ms)
+			RebuildTransferFunctionScriptingTraits (0ms)
+			SetupTypeCache (79ms)
+			ReleaseScriptCaches (0ms)
+			RebuildScriptCaches (19ms)
+			SetupLoadedEditorAssemblies (140ms)
+				LogAssemblyErrors (0ms)
+				InitializePlatformSupportModulesInManaged (6ms)
+				SetLoadedEditorAssemblies (0ms)
+				RefreshPlugins (4ms)
+				BeforeProcessingInitializeOnLoad (1ms)
+				ProcessInitializeOnLoadAttributes (87ms)
+				ProcessInitializeOnLoadMethodAttributes (43ms)
+				AfterProcessingInitializeOnLoad (0ms)
+				EditorAssembliesLoaded (0ms)
+			ExecutionOrderSort2 (0ms)
+			AwakeInstancesAfterBackupRestoration (0ms)
+Platform modules already initialized, skipping
+Application.AssetDatabase Initial Refresh Start
+Registering precompiled user dll's ...
+Registered in 0.005425 seconds.
+Starting: C:\Program Files\Unity\Hub\Editor\2021.3.11f1\Editor\Data\bee_backend.exe --profile="Library/Bee/backend_profiler0.traceevents" --stdin-canary --dagfile="Library/Bee/1900b0aE.dag" --continue-on-failure ScriptAssemblies
+WorkingDir: E:/N4_1/LAP_TRINH_GAME_2/GIUA_KY/Abyssal_Dungeon_3D
+ExitCode: 0 Duration: 0s92ms
+*** Tundra build success (0.05 seconds), 0 items updated, 879 evaluated
+AssetDatabase: script compilation time: 0.419041s
+Begin MonoManager ReloadAssembly
+Symbol file LoadedFromMemory doesn't match image E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.visualscripting@1.7.8\Editor\VisualScripting.Core\Dependencies\DotNetZip\Unity.VisualScripting.IonicZip.dll
+Symbol file LoadedFromMemory doesn't match image E:\N4_1\LAP_TRINH_GAME_2\GIUA_KY\Abyssal_Dungeon_3D\Library\PackageCache\com.unity.visualscripting@1.7.8\Editor\VisualScripting.Core\Dependencies\YamlDotNet\Unity.VisualScripting.YamlDotNet.dll
+Native extension for WindowsStandalone target not found
+Refreshing native plugins compatible for Editor in 99.14 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Mono: successfully reloaded assembly
+- Completed reload, in  2.109 seconds
+Domain Reload Profiling:
+	ReloadAssembly (2110ms)
+		BeginReloadAssembly (97ms)
+			ExecutionOrderSort (0ms)
+			DisableScriptedObjects (4ms)
+			BackupInstance (0ms)
+			ReleaseScriptingObjects (0ms)
+			CreateAndSetChildDomain (22ms)
+		EndReloadAssembly (1929ms)
+			LoadAssemblies (79ms)
+			RebuildTransferFunctionScriptingTraits (0ms)
+			SetupTypeCache (217ms)
+			ReleaseScriptCaches (1ms)
+			RebuildScriptCaches (50ms)
+			SetupLoadedEditorAssemblies (1520ms)
+				LogAssemblyErrors (0ms)
+				InitializePlatformSupportModulesInManaged (8ms)
+				SetLoadedEditorAssemblies (0ms)
+				RefreshPlugins (99ms)
+				BeforeProcessingInitializeOnLoad (97ms)
+				ProcessInitializeOnLoadAttributes (859ms)
+				ProcessInitializeOnLoadMethodAttributes (447ms)
+				AfterProcessingInitializeOnLoad (9ms)
+				EditorAssembliesLoaded (0ms)
+			ExecutionOrderSort2 (0ms)
+			AwakeInstancesAfterBackupRestoration (7ms)
+Platform modules already initialized, skipping
+Registering precompiled user dll's ...
+Registered in 0.007038 seconds.
+Asset Pipeline Refresh: Total: 4.499 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=656 ms
+		Asset DB Callback time: managed=31 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=2230 ms, compile time=421 ms, other=1159 ms
+		Project Asset Count: scripts=7028, non-scripts=1851
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 1
+	InvokeBeforeRefreshCallbacks: 0.442ms
+	ApplyChangesToAssetFolders: 0.079ms
+	Scan: 233.477ms
+	OnSourceAssetsModified: 0.000ms
+	InitializeImportedAssetsSnapshot: 11.015ms
+	GetAllGuidsForCategorization: 1.218ms
+	CategorizeAssets: 263.932ms
+	ImportOutOfDateAssets: 3876.624ms (3452.371ms without children)
+		CompileScripts: 420.968ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 1.761ms
+		InitializingProgressBar: 0.024ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 1.067ms
+		OnDemandSchedulerStart: 0.433ms
+	ReloadSourceAssets: 1.091ms
+	UnloadImportedAssets: 33.494ms
+	PostProcessAllAssets: 31.673ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.000ms
+	UnloadStreamsBegin: 1.411ms
+	LoadedImportedAssetsSnapshotReleaseGCHandles: 2.845ms
+	GetLoadedSourceAssetsSnapshot: 1.076ms
+	PersistCurrentRevisions: 0.376ms
+	UnloadStreamsEnd: 0.040ms
+	GenerateScriptTypeHashes: 2.486ms
+	Untracked: 72.282ms
+Application.AssetDatabase Initial Refresh End
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.03 seconds
+Scanning for USB devices : 1.813ms
+Initializing Unity extensions:
+Registering precompiled user dll's ...
+Registered in 0.004876 seconds.
+Asset Pipeline Refresh: Total: 0.081 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-Abyssal_Dungeon_3D
+Unloading 215 Unused Serialized files (Serialized files now loaded: 0)
+ProgressiveSceneManager::Cancel()
+Loaded scene 'Assets/Scenes/SampleScene.unity'
+	Deserialize:            3.836 ms
+	Integration:            63.877 ms
+	Integration of assets:  2.171 ms
+	Thread Wait Time:       0.093 ms
+	Total Operation Time:   69.978 ms
+Unloading 300 unused Assets / (1.1 MB). Loaded Objects now: 6347.
+Memory consumption went from 146.5 MB to 145.4 MB.
+Total: 8.608900 ms (FindLiveObjects: 0.441900 ms CreateObjectMapping: 0.280800 ms MarkObjects: 7.325000 ms  DeleteObjects: 0.560000 ms)
+
+[LAYOUT] About to load UserSettings\Layouts\default-2021.dwlt, keepMainWindow=False
+<RI> Initialized touch support.
+<RI> Initialized touch support.
+<RI> Initialized touch support.
+<RI> Initialized touch support.
+<RI> Initialized touch support.
+<RI> Initialized touch support.
+[MODES] ModeService[default].InitializeCurrentMode
+[MODES] ModeService[default].RaiseModeChanged(default, default)
+IsTimeToCheckForNewEditor: Update time 1791292532 current 1791292567
+<RI> Initializing input.
+XInput1_3.dll not found. Trying XInput9_1_0.dll instead...
+<RI> Input initialized.
+[Project] Loading completed in 9.378 seconds
+	Project init time: 				0.000 seconds
+		Template init time: 		0.000 seconds
+		Package Manager init time: 		0.000 seconds
+		Asset Database init time: 		0.000 seconds
+		Global illumination init time: 	0.000 seconds
+		Assemblies load time: 			0.000 seconds
+		Unity extensions init time: 	0.000 seconds
+		Asset Database refresh time: 	0.000 seconds
+	Scene opening time: 			0.000 seconds
+Created GICache directory at C:/Users/ADMIN/AppData/LocalLow/Unity/Caches/GiCache. Took: 0.016s, timestamps: [10.069 - 10.085]
+gi::BakeBackendSwitch: switching bake backend from 3 to 1.
+[00:00:01] Builtin Sky manager started.
+Setting up 4 worker threads for Enlighten.
+[00:00:01] Finished 1 Bake Ambient Probe job (0.00s execute, 0.00s integrate, 0.07s wallclock)
+[Licensing::Module] Successfully updated access token: "5AHTplqT"... (expires: 2027-10-06 13:16:09 GMT)
+EditorUpdateCheck: Failed The requested URL returned error: 404
+Asset Pipeline Refresh: Total: 0.023 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+TrimDiskCacheJob: Current cache size 0mb
+Asset Pipeline Refresh: Total: 0.020 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh: Total: 0.024 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh: Total: 0.021 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Starting new worker id: 0 with log in E:/N4_1/LAP_TRINH_GAME_2/GIUA_KY/Abyssal_Dungeon_3D/Logs/AssetImportWorker0.log
+Starting new worker id: 1 with log in E:/N4_1/LAP_TRINH_GAME_2/GIUA_KY/Abyssal_Dungeon_3D/Logs/AssetImportWorker1.log
+Worker ready: AssetImportWorker1 1
+Worker ready: AssetImportWorker0 0
+[Worker1] Start importing Assets/Art/UI using Guid(a373cee3b3d227a449cef0c7a2834f31) Importer(815301076,1909f56bfc062723c751e8b465ee728b) 
+[Worker1]  -> (artifact id: '59ace9beed3d78033a772d6c45d5a4d2') in 0.023048 seconds 
+[Worker0] Start importing Assets/Audio/Music using Guid(8df8904f6ece91843a514c7ae32d9dd9) Importer(815301076,1909f56bfc062723c751e8b465ee728b) 
+[Worker0]  -> (artifact id: '7c329bf04c25531774f9963288410006') in 0.032777 seconds 
+Asset Pipeline Refresh: Total: 0.023 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)
+Asset Pipeline Refresh: Total: 0.026 seconds - Initiated by RefreshV2(AllowForceSynchronousImport)

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8223f21ffa57dae48a67486a53677a62, type: 3}
+  m_Name: ForestMonster
+  m_EditorClassIdentifier: 
+  enemyName: ForestMonster
+  description: A twisted creature of the dark forest.
+  enemyType: 0
+  enemyColor: {r: 0.2, g: 0.4, b: 0.1, a: 1}
+  maxHP: 180
+  attack: 22
+  defense: 12
+  movementSpeed: 3.5
+  detectionRange: 10
+  attackRange: 2
+  attackCooldown: 1.5
+  expReward: 30
+  goldReward: 18
+  lootTable: {fileID: 0}
+  prefab: {fileID: 0}
+  skills: []
