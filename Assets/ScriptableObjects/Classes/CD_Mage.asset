@@ -1,0 +1,94 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 483716439ff876847a50cf520f4b7c43, type: 3}
+  m_Name: CD_Mage
+  m_EditorClassIdentifier: 
+  classId: 5
+  className: Mage
+  combatRole: 2
+  roleTitle: "DPS di\u1EC7n r\u1ED9ng / Kh\u1ED1ng ch\u1EBF"
+  loreAndIdentity: "S\u1EED d\u1EE5ng ph\xE9p thu\u1EADt m\u1EA1nh \u0111\u1EC3 g\xE2y
+    s\xE1t th\u01B0\u01A1ng di\u1EC7n r\u1ED9ng."
+  baseHp: 650
+  baseMana: 500
+  baseAtk: 110
+  baseDef: 15
+  baseAtkSpeed: 1
+  baseCritChance: 0.15
+  baseMoveSpeed: 5.2
+  isRanged: 1
+  attackRange: 16
+  baseRigModel: 0
+  signatureWeapon: 5
+  compatibleArmorArchetype: 3
+  primaryClassColor: {r: 0.2, g: 0.8, b: 1, a: 1}
+  headgearMeshId: ClassHelm_Mage
+  backRegaliaMeshId: ClassBack_MageAstrolabe
+  mainWeaponMeshId: ClassWeapon_MageStaff
+  offhandMeshId: 
+  passiveAbilityDescription: "Tinh th\xF4ng nguy\xEAn t\u1ED1: k\u1EF9 n\u0103ng
+    t\u1ED1n \xEDt mana h\u01A1n 10%."
+  builds:
+  - buildName: Pyromancer
+    description: "Burn m\u1EA1nh h\u01A1n 50%, +30% S\xE1t th\u01B0\u01A1ng ch\xED
+      m\u1EA1ng, +10% Crit, +12% ATK."
+    accentColor: {r: 1, g: 0.44, b: 0.12, a: 1}
+  - buildName: Cryomancer
+    description: "\u0110\xF3ng b\u0103ng/l\xE0m ch\u1EADm l\xE2u h\u01A1n 50%, +15%
+      HP; Frost Nova t\u1EA1o Khi\xEAn B\u0103ng 22% HP."
+    accentColor: {r: 0.36, g: 0.86, b: 1, a: 1}
+  - buildName: Arcanist
+    description: "+32% Mana, +22% Gi\u1EA3m h\u1ED3i chi\xEAu; Arcane Pulse ph\xF3ng
+      th\xEAm 2 tia b\xED thu\u1EADt h\u1ED9i t\u1EE5."
+    accentColor: {r: 0.78, g: 0.36, b: 1, a: 1}
+  skills:
+  - skillName: Fireball
+    description: "C\u1EA7u l\u1EEDa n\u1ED5 g\xE2y b\u1ECFng."
+    kind: 1
+    baseCooldown: 3.5
+    manaCost: 20
+    powerMultiplier: 2
+    radius: 2.8
+    range: 20
+    isUltimate: 0
+    vfxColor: {r: 1, g: 0.45, b: 0.1, a: 1}
+  - skillName: Frost Nova
+    description: "\u0110\xF3ng b\u0103ng k\u1EBB \u0111\u1ECBch xung quanh."
+    kind: 3
+    baseCooldown: 10
+    manaCost: 30
+    powerMultiplier: 1.1
+    radius: 5.5
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 0.45, g: 0.85, b: 1, a: 1}
+  - skillName: Arcane Pulse
+    description: "Xung n\u0103ng l\u01B0\u1EE3ng b\xED thu\u1EADt t\u1ED1c \u0111\u1ED9
+      cao."
+    kind: 1
+    baseCooldown: 2.5
+    manaCost: 15
+    powerMultiplier: 1.6
+    radius: 3
+    range: 22
+    isUltimate: 0
+    vfxColor: {r: 0.75, g: 0.45, b: 1, a: 1}
+  - skillName: Meteor
+    description: "Tri\u1EC7u h\u1ED3i thi\xEAn th\u1EA1ch h\u1EE7y di\u1EC7t."
+    kind: 2
+    baseCooldown: 24
+    manaCost: 60
+    powerMultiplier: 4.5
+    radius: 5.5
+    range: 18
+    isUltimate: 1
+    vfxColor: {r: 1, g: 0.45, b: 0.1, a: 1}

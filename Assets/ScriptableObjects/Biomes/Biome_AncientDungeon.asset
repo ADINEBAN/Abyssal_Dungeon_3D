@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2814dcb653c42dc49a11177840d0a83a, type: 3}
+  m_Name: Biome_AncientDungeon
+  m_EditorClassIdentifier: 
+  Data:
+    biome: 1
+    vietnameseTitle: "Ng\u1EE5c C\u1ED5 \u0110\xE1 \u0110en (Ancient Dungeon)"
+    ambienceClipName: amb_ancient_dungeon
+    skyAmbient: {r: 0.2, g: 0.22, b: 0.3, a: 1}
+    equatorAmbient: {r: 0.16, g: 0.16, b: 0.21, a: 1}
+    groundAmbient: {r: 0.08, g: 0.08, b: 0.1, a: 1}
+    fogColor: {r: 0.08, g: 0.09, b: 0.14, a: 1}
+    fogStart: 16
+    fogEnd: 60
+    cameraBgColor: {r: 0.05, g: 0.06, b: 0.1, a: 1}
+    sunColor: {r: 0.72, g: 0.78, b: 0.95, a: 1}
+    sunIntensity: 0.95
+    sunEuler: {x: 50, y: -32, z: 0}
+    torchLightColor: {r: 1, g: 0.56, b: 0.18, a: 1}
+    torchCoreColor: {r: 1, g: 0.85, b: 0.45, a: 1}
+    mistColor: {r: 0.32, g: 0.36, b: 0.48, a: 0.25}
+    particleColor: {r: 0.82, g: 0.78, b: 0.72, a: 0.4}
+    particleRiseSpeed: 0.14
+    particleSize: 0.08
+    wallStoneTint: {r: 0.74, g: 0.73, b: 0.78, a: 1}
+    floorStoneTint: {r: 0.68, g: 0.68, b: 0.74, a: 1}
+    preferMossyStone: 0

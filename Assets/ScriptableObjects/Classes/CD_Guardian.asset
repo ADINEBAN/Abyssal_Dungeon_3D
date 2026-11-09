@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 483716439ff876847a50cf520f4b7c43, type: 3}
+  m_Name: CD_Guardian
+  m_EditorClassIdentifier: 
+  classId: 1
+  className: Guardian
+  combatRole: 0
+  roleTitle: "\u0110\u1EE1 \u0111\xF2n / H\u1ED7 tr\u1EE3"
+  loreAndIdentity: "T\u1EA1o khi\xEAn, gi\u1EA3m s\xE1t th\u01B0\u01A1ng v\xE0 b\u1EA3o
+    v\u1EC7 \u0111\u1ED3ng \u0111\u1ED9i."
+  baseHp: 1250
+  baseMana: 220
+  baseAtk: 60
+  baseDef: 75
+  baseAtkSpeed: 0.9
+  baseCritChance: 0.05
+  baseMoveSpeed: 5
+  isRanged: 0
+  attackRange: 2.6
+  baseRigModel: 1
+  signatureWeapon: 9
+  compatibleArmorArchetype: 1
+  primaryClassColor: {r: 0.9, g: 0.73, b: 0.32, a: 1}
+  headgearMeshId: ClassHelm_Guardian
+  backRegaliaMeshId: 
+  mainWeaponMeshId: ClassWeapon_GuardianHammer
+  offhandMeshId: ClassShield_GuardianBulwark
+  passiveAbilityDescription: "H\u1ED9 v\u1EC7: \u0111\u1ED3ng minh g\u1EA7n b\u1EA1n
+    nh\u1EADn \xEDt h\u01A1n 8% s\xE1t th\u01B0\u01A1ng."
+  builds:
+  - buildName: Immortal Bastion
+    description: "+35% HP, +25% DEF, +15% Khi\xEAn; Sanctuary t\u1EF1 c\u1ED9ng th\xEAm
+      khi\xEAn c\xE1 nh\xE2n 14% HP."
+    accentColor: {r: 0.95, g: 0.76, b: 0.3, a: 1}
+  - buildName: Thorns Templar
+    description: "+18% DEF & ATK, +15% HP; ph\u1EA3n \u0111\xF2n 35% s\xE1t th\u01B0\u01A1ng
+      c\u1EADn chi\u1EBFn k\u1EBB \u0111\u1ECBch g\xE2y ra."
+    accentColor: {r: 1, g: 0.52, b: 0.18, a: 1}
+  - buildName: Valkyrie Aegis
+    description: "+16% T\u1ED1c ch\u1EA1y, +18% Gi\u1EA3m h\u1ED3i chi\xEAu, +15%
+      ATK; Shield Wave ph\xF3ng th\xEAm gi\xE1o \xE1nh s\xE1ng xuy\xEAn th\u1EA5u."
+    accentColor: {r: 0.45, g: 0.9, b: 1, a: 1}
+  skills:
+  - skillName: Shield Wave
+    description: "S\xF3ng khi\xEAn l\xE0m ch\u1EADm k\u1EBB \u0111\u1ECBch."
+    kind: 0
+    baseCooldown: 5
+    manaCost: 12
+    powerMultiplier: 1.3
+    radius: 4.5
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 1, g: 0.8, b: 0.25, a: 1}
+  - skillName: Sanctuary
+    description: "T\u1EA1o khi\xEAn 18% HP cho c\u1EA3 \u0111\u1ED9i."
+    kind: 7
+    baseCooldown: 14
+    manaCost: 30
+    powerMultiplier: 0.18
+    radius: 14
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 1, g: 0.8, b: 0.25, a: 1}
+  - skillName: Aegis
+    description: "T\u0103ng m\u1EA1nh ph\xF2ng th\u1EE7 cho c\u1EA3 \u0111\u1ED9i."
+    kind: 10
+    baseCooldown: 16
+    manaCost: 25
+    powerMultiplier: 1.5
+    radius: 14
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 0.75, g: 0.85, b: 1, a: 1}
+  - skillName: Citadel
+    description: "Khi\xEAu kh\xEDch + khi\xEAn 50% HP."
+    kind: 11
+    baseCooldown: 26
+    manaCost: 40
+    powerMultiplier: 0.5
+    radius: 12
+    range: 10
+    isUltimate: 1
+    vfxColor: {r: 1, g: 0.92, b: 0.55, a: 1}

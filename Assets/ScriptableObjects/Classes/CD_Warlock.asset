@@ -1,0 +1,95 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 483716439ff876847a50cf520f4b7c43, type: 3}
+  m_Name: CD_Warlock
+  m_EditorClassIdentifier: 
+  classId: 6
+  className: Warlock
+  combatRole: 2
+  roleTitle: "DOT / Debuff / Tri\u1EC7u h\u1ED3i"
+  loreAndIdentity: "G\xE2y s\xE1t th\u01B0\u01A1ng theo th\u1EDDi gian, nguy\u1EC1n
+    r\u1EE7a v\xE0 tri\u1EC7u h\u1ED3i."
+  baseHp: 700
+  baseMana: 450
+  baseAtk: 95
+  baseDef: 20
+  baseAtkSpeed: 1
+  baseCritChance: 0.1
+  baseMoveSpeed: 5.2
+  isRanged: 1
+  attackRange: 15
+  baseRigModel: 2
+  signatureWeapon: 6
+  compatibleArmorArchetype: 3
+  primaryClassColor: {r: 0.6, g: 0.18, b: 0.95, a: 1}
+  headgearMeshId: ClassHelm_Warlock
+  backRegaliaMeshId: ClassBack_WarlockGrimoire
+  mainWeaponMeshId: ClassWeapon_WarlockScepter
+  offhandMeshId: 
+  passiveAbilityDescription: "H\xFAt h\u1ED3n: \u0111\xF2n \u0111\xE1nh th\u01B0\u1EDDng
+    h\u1ED3i 4% s\xE1t th\u01B0\u01A1ng th\xE0nh m\xE1u."
+  builds:
+  - buildName: Affliction Reaper
+    description: "+18% ATK, +12% Gi\u1EA3m h\u1ED3i chi\xEAu, +6% H\xFAt m\xE1u \u2014
+      T\u1ED1i \u01B0u s\xE1t th\u01B0\u01A1ng Nguy\u1EC1n R\u1EE7a & Thi\xEAu \u0110\u1ED1t."
+    accentColor: {r: 0.52, g: 0.92, b: 0.42, a: 1}
+  - buildName: Demonologist
+    description: "+25% Mana, +16% HP, +15% CDR; Soul Minion tri\u1EC7u h\u1ED3i C\xD9NG
+      L\xDAC 2 Ti\u1EC3u Qu\u1EF7 H\u1EF1c H\u1ED3n!"
+    accentColor: {r: 0.92, g: 0.28, b: 0.48, a: 1}
+  - buildName: Soul Harvester
+    description: "+22% ATK, +10% H\xFAt m\xE1u, +8% Crit; Soul Bolt h\u1ED3i l\u1EA1i
+      12 Mana m\u1ED7i l\u1EA7n tung chi\xEAu."
+    accentColor: {r: 0.68, g: 0.22, b: 1, a: 1}
+  skills:
+  - skillName: Soul Bolt
+    description: "Tia linh h\u1ED3n h\xFAt m\xE1u."
+    kind: 1
+    baseCooldown: 3
+    manaCost: 15
+    powerMultiplier: 1.6
+    radius: 3
+    range: 20
+    isUltimate: 0
+    vfxColor: {r: 0.6, g: 0.2, b: 0.95, a: 1}
+  - skillName: Curse
+    description: "Nguy\u1EC1n r\u1EE7a: t\u0103ng 25% s\xE1t th\u01B0\u01A1ng nh\u1EADn
+      v\xE0o + \u0111\u1ED9c."
+    kind: 2
+    baseCooldown: 9
+    manaCost: 25
+    powerMultiplier: 0.6
+    radius: 4.5
+    range: 15
+    isUltimate: 0
+    vfxColor: {r: 0.6, g: 0.2, b: 0.95, a: 1}
+  - skillName: Soul Minion
+    description: "Tri\u1EC7u h\u1ED3i ti\u1EC3u qu\u1EF7 chi\u1EBFn \u0111\u1EA5u
+      20 gi\xE2y."
+    kind: 12
+    baseCooldown: 18
+    manaCost: 35
+    powerMultiplier: 0.5
+    radius: 3
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 0.6, g: 0.2, b: 0.95, a: 1}
+  - skillName: Cataclysm
+    description: "\u0110\u1EA1i h\u1ED3ng th\u1EE7y h\u1EAFc \xE1m thi\xEAu \u0111\u1ED1t."
+    kind: 2
+    baseCooldown: 26
+    manaCost: 60
+    powerMultiplier: 3.8
+    radius: 6.5
+    range: 16
+    isUltimate: 1
+    vfxColor: {r: 0.6, g: 0.2, b: 0.95, a: 1}

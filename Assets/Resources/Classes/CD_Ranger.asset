@@ -1,0 +1,94 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 483716439ff876847a50cf520f4b7c43, type: 3}
+  m_Name: CD_Ranger
+  m_EditorClassIdentifier: 
+  classId: 4
+  className: Ranger
+  combatRole: 2
+  roleTitle: "DPS t\u1EA7m xa / Ti\u1EC7n \xEDch"
+  loreAndIdentity: "T\u1EA5n c\xF4ng t\u1EEB xa, \u0111\u1EB7t b\u1EABy v\xE0 g\xE2y
+    hi\u1EC7u \u1EE9ng b\u1EA5t l\u1EE3i."
+  baseHp: 760
+  baseMana: 200
+  baseAtk: 95
+  baseDef: 25
+  baseAtkSpeed: 1.4
+  baseCritChance: 0.25
+  baseMoveSpeed: 5.8
+  isRanged: 1
+  attackRange: 16
+  baseRigModel: 0
+  signatureWeapon: 4
+  compatibleArmorArchetype: 2
+  primaryClassColor: {r: 0.27, g: 0.7, b: 0.36, a: 1}
+  headgearMeshId: ClassHelm_Ranger
+  backRegaliaMeshId: ClassBack_RangerQuiver
+  mainWeaponMeshId: 
+  offhandMeshId: ClassWeapon_RangerBow
+  passiveAbilityDescription: "M\u1EAFt \u01B0ng: +10% ch\xED m\u1EA1ng v\u1EDBi m\u1EE5c
+    ti\xEAu \u1EDF xa (>= 8m)."
+  builds:
+  - buildName: Deadeye Sniper
+    description: "+15% Crit, +28% Crit DMG; M\u1EAFt \u01AFng x2 (+20% Crit xa) &
+      Piercing Shot b\u1EAFn k\xE8m t\xEAn xung k\xEDch."
+    accentColor: {r: 0.3, g: 0.85, b: 0.42, a: 1}
+  - buildName: Frost Warden
+    description: "+16% Gi\u1EA3m h\u1ED3i chi\xEAu, +20% Mana, +12% HP \u2014 Ki\u1EC3m
+      so\xE1t chi\u1EBFn tr\u01B0\u1EDDng b\u1EB1ng B\u1EABy B\u0103ng & l\xE0m ch\u1EADm."
+    accentColor: {r: 0.42, g: 0.86, b: 1, a: 1}
+  - buildName: Tempest Volley
+    description: "+25% T\u1ED1c \u0111\xE1nh, +12% T\u1ED1c ch\u1EA1y; Volley b\u1EAFn
+      th\xEAm 2 m\u0169i t\xEAn gi\xF3 xuy\xEAn th\u1EA5u & t\u0103ng t\u1ED1c."
+    accentColor: {r: 0.65, g: 0.96, b: 0.35, a: 1}
+  skills:
+  - skillName: Piercing Shot
+    description: "M\u0169i t\xEAn xuy\xEAn th\u1EA5u."
+    kind: 1
+    baseCooldown: 4
+    manaCost: 12
+    powerMultiplier: 2
+    radius: 3
+    range: 22
+    isUltimate: 0
+    vfxColor: {r: 0.35, g: 0.95, b: 0.4, a: 1}
+  - skillName: Frost Trap
+    description: "\u0110\u1EB7t b\u1EABy b\u0103ng \u0111\xF3ng b\u0103ng k\u1EBB
+      \u0111\u1ECBch."
+    kind: 14
+    baseCooldown: 10
+    manaCost: 20
+    powerMultiplier: 1
+    radius: 3.2
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 0.45, g: 0.85, b: 1, a: 1}
+  - skillName: Volley
+    description: "B\u1EAFn 5 m\u0169i t\xEAn h\xECnh qu\u1EA1t."
+    kind: 1
+    baseCooldown: 8
+    manaCost: 20
+    powerMultiplier: 0.95
+    radius: 3
+    range: 18
+    isUltimate: 0
+    vfxColor: {r: 0.35, g: 0.95, b: 0.4, a: 1}
+  - skillName: Arrow Storm
+    description: "M\u01B0a t\xEAn l\xE0m ch\u1EADm c\u1EA3 khu v\u1EF1c."
+    kind: 2
+    baseCooldown: 24
+    manaCost: 40
+    powerMultiplier: 3.2
+    radius: 5.5
+    range: 16
+    isUltimate: 1
+    vfxColor: {r: 0.35, g: 0.95, b: 0.4, a: 1}

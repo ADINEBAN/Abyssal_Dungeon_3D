@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5fed441308ec904ba781808e61b3d69, type: 3}
+  m_Name: Enemy_DarkKnight
+  m_EditorClassIdentifier: 
+  enemyId: DarkKnight
+  displayName: Dark Knight
+  tacticalRole: 5
+  baseModelKind: 1
+  weaponKind: 0
+  custom3DMeshPiece: Enemy_DarkKnight_DreadArmor
+  tintColor: {r: 0.35, g: 0.2, b: 0.45, a: 1}
+  modelScale: 1.18
+  baseHp: 1500
+  baseAtk: 52
+  baseDef: 35
+  moveSpeed: 3.8
+  attackRange: 2.8
+  detectRange: 18
+  expReward: 90
+  goldReward: 50
+  retreatHpThreshold: 0.25
+  preferredMinRange: 0
+  preferredMaxRange: 2.2
+  specialSkillCooldown: 5.5

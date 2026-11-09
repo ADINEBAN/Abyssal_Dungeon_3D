@@ -1,0 +1,95 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 483716439ff876847a50cf520f4b7c43, type: 3}
+  m_Name: CD_Knight
+  m_EditorClassIdentifier: 
+  classId: 0
+  className: Knight
+  combatRole: 0
+  roleTitle: "\u0110\u1EE1 \u0111\xF2n / \u0110\u1EA5u s\u0129"
+  loreAndIdentity: "T\u1EADp trung v\xE0o ph\xF2ng th\u1EE7, ch\u1ED1ng ch\u1ECBu
+    v\xE0 b\u1EA3o v\u1EC7 \u0111\u1ED3ng \u0111\u1ED9i."
+  baseHp: 1100
+  baseMana: 200
+  baseAtk: 80
+  baseDef: 60
+  baseAtkSpeed: 1
+  baseCritChance: 0.1
+  baseMoveSpeed: 5.2
+  isRanged: 0
+  attackRange: 2.6
+  baseRigModel: 1
+  signatureWeapon: 1
+  compatibleArmorArchetype: 1
+  primaryClassColor: {r: 0.3, g: 0.65, b: 1, a: 1}
+  headgearMeshId: ClassHelm_Knight
+  backRegaliaMeshId: 
+  mainWeaponMeshId: ClassWeapon_KnightSword
+  offhandMeshId: ClassShield_KnightCrest
+  passiveAbilityDescription: "Ki\xEAn c\u01B0\u1EDDng: gi\u1EA3m 10% s\xE1t th\u01B0\u01A1ng
+    nh\u1EADn v\xE0o."
+  builds:
+  - buildName: Iron Vanguard
+    description: "+30% HP, +22% Ph\xF2ng th\u1EE7 \u2014 Ph\xE1o \u0111\xE0i th\xE9p
+      tuy\u1EBFn \u0111\u1EA7u."
+    accentColor: {r: 0.32, g: 0.68, b: 1, a: 1}
+  - buildName: Radiant Paladin
+    description: "+30% Mana, +28% Hi\u1EC7u qu\u1EA3 h\u1ED3i/khi\xEAn; Judgement
+      h\u1ED3i m\xE1u & ban khi\xEAn cho c\u1EA3 \u0111\u1ED9i."
+    accentColor: {r: 1, g: 0.88, b: 0.36, a: 1}
+  - buildName: Dark Knight
+    description: "+28% T\u1EA5n c\xF4ng, +10% H\xFAt m\xE1u, +6% Crit; hi\u1EBFn
+      4% HP khi tung Q/R g\xE2y n\u1ED5 Huy\u1EBFt \xC1m + Nguy\u1EC1n."
+    accentColor: {r: 0.82, g: 0.18, b: 0.52, a: 1}
+  skills:
+  - skillName: Shield Bash
+    description: "\u0110\u1EADp khi\xEAn l\xE0m cho\xE1ng k\u1EBB \u0111\u1ECBch
+      ph\xEDa tr\u01B0\u1EDBc."
+    kind: 0
+    baseCooldown: 5
+    manaCost: 15
+    powerMultiplier: 1.6
+    radius: 3.2
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 0.75, g: 0.85, b: 1, a: 1}
+  - skillName: Iron Guard
+    description: "T\u1EA1o khi\xEAn b\u1EB1ng 30% HP v\xE0 t\u0103ng ph\xF2ng th\u1EE7."
+    kind: 8
+    baseCooldown: 12
+    manaCost: 20
+    powerMultiplier: 0.3
+    radius: 3
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 0.75, g: 0.85, b: 1, a: 1}
+  - skillName: Taunt
+    description: "Khi\xEAu kh\xEDch qu\xE1i xung quanh t\u1EA5n c\xF4ng m\xECnh."
+    kind: 11
+    baseCooldown: 10
+    manaCost: 15
+    powerMultiplier: 1.5
+    radius: 10
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 1, g: 0.8, b: 0.25, a: 1}
+  - skillName: Judgement
+    description: "B\u1ED5 xu\u1ED1ng m\u1EB7t \u0111\u1EA5t g\xE2y s\xE1t th\u01B0\u01A1ng
+      l\u1EDBn v\xE0 cho\xE1ng."
+    kind: 3
+    baseCooldown: 24
+    manaCost: 40
+    powerMultiplier: 3.2
+    radius: 5.5
+    range: 10
+    isUltimate: 1
+    vfxColor: {r: 1, g: 0.92, b: 0.55, a: 1}

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2814dcb653c42dc49a11177840d0a83a, type: 3}
+  m_Name: Biome_CrystalChamber
+  m_EditorClassIdentifier: 
+  Data:
+    biome: 4
+    vietnameseTitle: "\u0110i\u1EC7n Tinh Th\u1EC3 Aether (Crystal Chamber)"
+    ambienceClipName: amb_crystal_chamber
+    skyAmbient: {r: 0.18, g: 0.28, b: 0.38, a: 1}
+    equatorAmbient: {r: 0.14, g: 0.22, b: 0.3, a: 1}
+    groundAmbient: {r: 0.06, g: 0.1, b: 0.15, a: 1}
+    fogColor: {r: 0.07, g: 0.14, b: 0.22, a: 1}
+    fogStart: 18
+    fogEnd: 64
+    cameraBgColor: {r: 0.04, g: 0.09, b: 0.15, a: 1}
+    sunColor: {r: 0.66, g: 0.9, b: 1, a: 1}
+    sunIntensity: 1.08
+    sunEuler: {x: 52, y: -35, z: 0}
+    torchLightColor: {r: 0.24, g: 0.82, b: 1, a: 1}
+    torchCoreColor: {r: 0.75, g: 0.98, b: 1, a: 1}
+    mistColor: {r: 0.24, g: 0.58, b: 0.78, a: 0.26}
+    particleColor: {r: 0.38, g: 0.92, b: 1, a: 0.65}
+    particleRiseSpeed: 0.34
+    particleSize: 0.085
+    wallStoneTint: {r: 0.68, g: 0.78, b: 0.86, a: 1}
+    floorStoneTint: {r: 0.62, g: 0.72, b: 0.82, a: 1}
+    preferMossyStone: 0

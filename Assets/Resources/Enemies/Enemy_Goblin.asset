@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5fed441308ec904ba781808e61b3d69, type: 3}
+  m_Name: Enemy_Goblin
+  m_EditorClassIdentifier: 
+  enemyId: Goblin
+  displayName: Goblin
+  tacticalRole: 0
+  baseModelKind: 0
+  weaponKind: 3
+  custom3DMeshPiece: Enemy_Goblin_HoodDagger
+  tintColor: {r: 0.45, g: 0.85, b: 0.35, a: 1}
+  modelScale: 0.72
+  baseHp: 300
+  baseAtk: 26
+  baseDef: 10
+  moveSpeed: 4.4
+  attackRange: 2
+  detectRange: 14
+  expReward: 20
+  goldReward: 8
+  retreatHpThreshold: 0.25
+  preferredMinRange: 0
+  preferredMaxRange: 2.2
+  specialSkillCooldown: 5.5

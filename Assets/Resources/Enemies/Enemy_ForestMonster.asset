@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5fed441308ec904ba781808e61b3d69, type: 3}
+  m_Name: Enemy_ForestMonster
+  m_EditorClassIdentifier: 
+  enemyId: ForestMonster
+  displayName: Forest Monster
+  tacticalRole: 0
+  baseModelKind: 4
+  weaponKind: 0
+  custom3DMeshPiece: Enemy_ForestMonster_BlightTreant
+  tintColor: {r: 0.35, g: 0.6, b: 0.25, a: 1}
+  modelScale: 1
+  baseHp: 600
+  baseAtk: 36
+  baseDef: 18
+  moveSpeed: 3.4
+  attackRange: 2.8
+  detectRange: 14
+  expReward: 35
+  goldReward: 16
+  retreatHpThreshold: 0.25
+  preferredMinRange: 0
+  preferredMaxRange: 2.2
+  specialSkillCooldown: 5.5

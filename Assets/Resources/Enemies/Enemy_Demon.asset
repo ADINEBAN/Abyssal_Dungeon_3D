@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5fed441308ec904ba781808e61b3d69, type: 3}
+  m_Name: Enemy_Demon
+  m_EditorClassIdentifier: 
+  enemyId: Demon
+  displayName: Demon
+  tacticalRole: 4
+  baseModelKind: 2
+  weaponKind: 10
+  custom3DMeshPiece: Enemy_Demon_AbyssWingsHorns
+  tintColor: {r: 0.95, g: 0.35, b: 0.3, a: 1}
+  modelScale: 1.05
+  baseHp: 700
+  baseAtk: 46
+  baseDef: 15
+  moveSpeed: 5.2
+  attackRange: 2.3
+  detectRange: 20
+  expReward: 60
+  goldReward: 35
+  retreatHpThreshold: 0.3
+  preferredMinRange: 0
+  preferredMaxRange: 2.3
+  specialSkillCooldown: 5.5

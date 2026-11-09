@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5fed441308ec904ba781808e61b3d69, type: 3}
+  m_Name: Enemy_CrystalGolem
+  m_EditorClassIdentifier: 
+  enemyId: CrystalGolem
+  displayName: Crystal Golem
+  tacticalRole: 3
+  baseModelKind: 3
+  weaponKind: 0
+  custom3DMeshPiece: Enemy_CrystalGolem_Monolith
+  tintColor: {r: 0.55, g: 0.75, b: 1, a: 1}
+  modelScale: 1
+  baseHp: 1000
+  baseAtk: 44
+  baseDef: 40
+  moveSpeed: 2.6
+  attackRange: 3.2
+  detectRange: 14
+  expReward: 80
+  goldReward: 45
+  retreatHpThreshold: 0
+  preferredMinRange: 0
+  preferredMaxRange: 3.2
+  specialSkillCooldown: 5.5

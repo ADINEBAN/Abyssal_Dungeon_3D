@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2814dcb653c42dc49a11177840d0a83a, type: 3}
+  m_Name: Biome_CursedForest
+  m_EditorClassIdentifier: 
+  Data:
+    biome: 5
+    vietnameseTitle: "Th\xE1nh \u0110i\u1EC7n R\u1EEBng Nguy\u1EC1n R\u1EE7a (Cursed
+      Forest)"
+    ambienceClipName: amb_cursed_forest
+    skyAmbient: {r: 0.16, g: 0.26, b: 0.2, a: 1}
+    equatorAmbient: {r: 0.12, g: 0.2, b: 0.16, a: 1}
+    groundAmbient: {r: 0.06, g: 0.09, b: 0.06, a: 1}
+    fogColor: {r: 0.07, g: 0.13, b: 0.1, a: 1}
+    fogStart: 15
+    fogEnd: 56
+    cameraBgColor: {r: 0.04, g: 0.08, b: 0.06, a: 1}
+    sunColor: {r: 0.7, g: 0.92, b: 0.78, a: 1}
+    sunIntensity: 0.96
+    sunEuler: {x: 46, y: -30, z: 0}
+    torchLightColor: {r: 0.38, g: 0.95, b: 0.52, a: 1}
+    torchCoreColor: {r: 0.82, g: 1, b: 0.8, a: 1}
+    mistColor: {r: 0.24, g: 0.48, b: 0.34, a: 0.28}
+    particleColor: {r: 0.48, g: 0.98, b: 0.55, a: 0.58}
+    particleRiseSpeed: 0.22
+    particleSize: 0.095
+    wallStoneTint: {r: 0.74, g: 0.82, b: 0.72, a: 1}
+    floorStoneTint: {r: 0.68, g: 0.76, b: 0.66, a: 1}
+    preferMossyStone: 1

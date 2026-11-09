@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 483716439ff876847a50cf520f4b7c43, type: 3}
+  m_Name: CD_Monk
+  m_EditorClassIdentifier: 
+  classId: 7
+  className: Monk
+  combatRole: 5
+  roleTitle: "DPS c\u1EADn chi\u1EBFn / H\u1ED7 tr\u1EE3"
+  loreAndIdentity: "\u0110\xE1nh nhanh, c\u01A1 \u0111\u1ED9ng v\xE0 c\xF3 kh\u1EA3
+    n\u0103ng h\u1ED7 tr\u1EE3 \u0111\u1ED3ng \u0111\u1ED9i."
+  baseHp: 850
+  baseMana: 250
+  baseAtk: 90
+  baseDef: 35
+  baseAtkSpeed: 1.8
+  baseCritChance: 0.2
+  baseMoveSpeed: 6.4
+  isRanged: 0
+  attackRange: 2.4
+  baseRigModel: 0
+  signatureWeapon: 7
+  compatibleArmorArchetype: 2
+  primaryClassColor: {r: 1, g: 0.65, b: 0.2, a: 1}
+  headgearMeshId: ClassHelm_Monk
+  backRegaliaMeshId: ClassBack_MonkBeads
+  mainWeaponMeshId: ClassWeapon_MonkGauntlet
+  offhandMeshId: ClassWeapon_MonkGauntlet
+  passiveAbilityDescription: "N\u1ED9i c\xF4ng: m\u1ED7i \u0111\xF2n \u0111\xE1nh
+    h\u1ED3i 4 mana."
+  builds:
+  - buildName: Windwalker
+    description: "+24% T\u1ED1c \u0111\xE1nh, +14% T\u1ED1c ch\u1EA1y, +8% Crit;
+      Flurry tung li\xEAn ho\xE0n 5 \u0111\xF2n ch\u1EDBp nho\xE1ng."
+    accentColor: {r: 0.35, g: 0.95, b: 0.72, a: 1}
+  - buildName: Mistweaver
+    description: "+35% Hi\u1EC7u qu\u1EA3 h\u1ED3i m\xE1u, +25% Mana, +14% CDR; Zen
+      Mend ban th\xEAm khi\xEAn kh\xED c\xF4ng cho c\u1EA3 \u0111\u1ED9i."
+    accentColor: {r: 0.48, g: 0.98, b: 0.62, a: 1}
+  - buildName: Dragon Fist
+    description: "+25% ATK, +25% Crit DMG; Palm Strike ph\xF3ng th\xEAm k\xECnh l\u1EF1c
+      H\u1ECFa Long t\u1EA7m xa g\xE2y B\u1ECFng."
+    accentColor: {r: 1, g: 0.56, b: 0.15, a: 1}
+  skills:
+  - skillName: Flurry
+    description: "Li\xEAn ho\xE0n quy\u1EC1n 3 \u0111\xF2n."
+    kind: 0
+    baseCooldown: 4
+    manaCost: 10
+    powerMultiplier: 0.75
+    radius: 3
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 1, g: 0.65, b: 0.2, a: 1}
+  - skillName: Zen Mend
+    description: "H\u1ED3i m\xE1u v\xE0 h\u1ED3i ph\u1EE5c cho c\u1EA3 \u0111\u1ED9i."
+    kind: 5
+    baseCooldown: 12
+    manaCost: 30
+    powerMultiplier: 1.4
+    radius: 14
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 0.35, g: 0.95, b: 0.4, a: 1}
+  - skillName: Palm Strike
+    description: "Ch\u01B0\u1EDFng l\xE0m cho\xE1ng v\xE0 \u0111\u1EA9y l\xF9i."
+    kind: 0
+    baseCooldown: 8
+    manaCost: 15
+    powerMultiplier: 2.1
+    radius: 3.2
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 1, g: 0.65, b: 0.2, a: 1}
+  - skillName: Dragon Fist
+    description: "Lao t\u1EDBi v\xE0 tung quy\u1EC1n r\u1ED3ng."
+    kind: 4
+    baseCooldown: 22
+    manaCost: 35
+    powerMultiplier: 3.6
+    radius: 4.5
+    range: 8
+    isUltimate: 1
+    vfxColor: {r: 1, g: 0.45, b: 0.1, a: 1}

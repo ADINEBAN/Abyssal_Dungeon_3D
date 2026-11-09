@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5fed441308ec904ba781808e61b3d69, type: 3}
+  m_Name: Enemy_SkeletonMage
+  m_EditorClassIdentifier: 
+  enemyId: SkeletonMage
+  displayName: Skeleton Mage
+  tacticalRole: 2
+  baseModelKind: 0
+  weaponKind: 5
+  custom3DMeshPiece: Enemy_SkeletonMage_NecroCrown
+  tintColor: {r: 0.75, g: 0.7, b: 0.95, a: 1}
+  modelScale: 0.95
+  baseHp: 290
+  baseAtk: 36
+  baseDef: 6
+  moveSpeed: 3.4
+  attackRange: 12
+  detectRange: 18
+  expReward: 35
+  goldReward: 18
+  retreatHpThreshold: 0.35
+  preferredMinRange: 5.4
+  preferredMaxRange: 12
+  specialSkillCooldown: 5.5

@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 483716439ff876847a50cf520f4b7c43, type: 3}
+  m_Name: CD_Assassin
+  m_EditorClassIdentifier: 
+  classId: 3
+  className: Assassin
+  combatRole: 1
+  roleTitle: "DPS b\xF9ng n\u1ED5 / C\u01A1 \u0111\u1ED9ng"
+  loreAndIdentity: "\xC1p s\xE1t, g\xE2y s\xE1t th\u01B0\u01A1ng ch\xED m\u1EA1ng
+    v\xE0 k\u1EBFt li\u1EC5u m\u1EE5c ti\xEAu."
+  baseHp: 720
+  baseMana: 160
+  baseAtk: 105
+  baseDef: 22
+  baseAtkSpeed: 1.6
+  baseCritChance: 0.35
+  baseMoveSpeed: 6.6
+  isRanged: 0
+  attackRange: 2.4
+  baseRigModel: 0
+  signatureWeapon: 3
+  compatibleArmorArchetype: 2
+  primaryClassColor: {r: 0.7, g: 0.3, b: 0.85, a: 1}
+  headgearMeshId: ClassHelm_Assassin
+  backRegaliaMeshId: ClassBack_AssassinCloak
+  mainWeaponMeshId: ClassWeapon_AssassinDagger
+  offhandMeshId: ClassWeapon_AssassinDagger
+  passiveAbilityDescription: "K\u1EBFt li\u1EC5u: +50% s\xE1t th\u01B0\u01A1ng l\xEAn
+    m\u1EE5c ti\xEAu d\u01B0\u1EDBi 30% HP."
+  builds:
+  - buildName: Nightblade
+    description: "+38% S\xE1t th\u01B0\u01A1ng ch\xED m\u1EA1ng, +10% Crit, +12%
+      ATK \u2014 Nh\u1EA5t k\xEDch t\u1EA5t s\xE1t t\u1EEB sau l\u01B0ng."
+    accentColor: {r: 0.72, g: 0.28, b: 0.95, a: 1}
+  - buildName: Phantom Dancer
+    description: "+20% Gi\u1EA3m h\u1ED3i chi\xEAu, +14% T\u1ED1c ch\u1EA1y; Shadow
+      Step ho\xE0n 35% h\u1ED3i chi\xEAu & t\u1EA1o khi\xEAn \u1EA3o \u1EA3nh."
+    accentColor: {r: 0.35, g: 0.88, b: 0.95, a: 1}
+  - buildName: Venom Alchemist
+    description: "+18% ATK, +6% H\xFAt m\xE1u; Venom ph\xF3ng 3 phi ti\xEAu \u0111\u1ED9c
+      v\xE0 k\u1EBB \u0111\u1ECBch tr\xFAng \u0111\u1ED9c ch\u1EBFt s\u1EBD ph\xE1t
+      n\u1ED5 m\xE2y \u0111\u1ED9c."
+    accentColor: {r: 0.28, g: 0.96, b: 0.38, a: 1}
+  skills:
+  - skillName: Backstab
+    description: "\u0110\xE2m hi\u1EC3m h\xF3c, s\xE1t th\u01B0\u01A1ng r\u1EA5t
+      cao."
+    kind: 0
+    baseCooldown: 5
+    manaCost: 15
+    powerMultiplier: 2.6
+    radius: 2.8
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 0.6, g: 0.2, b: 0.95, a: 1}
+  - skillName: Shadow Step
+    description: "L\u01B0\u1EDBt xuy\xEAn k\u1EBB \u0111\u1ECBch, b\u1EA5t t\u1EED
+      ng\u1EAFn."
+    kind: 4
+    baseCooldown: 7
+    manaCost: 15
+    powerMultiplier: 1.3
+    radius: 2
+    range: 9
+    isUltimate: 0
+    vfxColor: {r: 0.6, g: 0.2, b: 0.95, a: 1}
+  - skillName: Venom
+    description: "T\u1EA9m \u0111\u1ED9c g\xE2y s\xE1t th\u01B0\u01A1ng theo th\u1EDDi
+      gian."
+    kind: 0
+    baseCooldown: 8
+    manaCost: 15
+    powerMultiplier: 0.9
+    radius: 3
+    range: 10
+    isUltimate: 0
+    vfxColor: {r: 0.35, g: 0.95, b: 0.4, a: 1}
+  - skillName: Death Blossom
+    description: "V\u0169 \u0111i\u1EC7u t\u1EED th\u1EA7n quanh b\u1EA3n th\xE2n."
+    kind: 3
+    baseCooldown: 22
+    manaCost: 35
+    powerMultiplier: 3.8
+    radius: 4.5
+    range: 10
+    isUltimate: 1
+    vfxColor: {r: 0.6, g: 0.2, b: 0.95, a: 1}
