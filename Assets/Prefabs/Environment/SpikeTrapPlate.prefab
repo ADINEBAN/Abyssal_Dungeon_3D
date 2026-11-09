@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 1965364974541065449}
   - component: {fileID: 3380583688435530287}
   - component: {fileID: 3624155611156504695}
-  - component: {fileID: 6510647784139620940}
   m_Layer: 0
   m_Name: Model
   m_TagString: Untagged
@@ -84,25 +83,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!205 &6510647784139620940
-LODGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1307940620981109284}
-  serializedVersion: 2
-  m_LocalReferencePoint: {x: 0, y: 0.33273503, z: 0.008693814}
-  m_Size: 1.058927
-  m_FadeMode: 0
-  m_AnimateCrossFading: 0
-  m_LastLODIsBillboard: 0
-  m_LODs:
-  - screenRelativeHeight: 0.028385954
-    fadeTransitionWidth: 0
-    renderers:
-    - renderer: {fileID: 3624155611156504695}
-  m_Enabled: 1
 --- !u!1 &6838477802791708463
 GameObject:
   m_ObjectHideFlags: 0
@@ -112,6 +92,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8644954550955731296}
+  - component: {fileID: 2816044055514829853}
   m_Layer: 0
   m_Name: SpikeTrapPlate
   m_TagString: Untagged
@@ -135,3 +116,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!205 &2816044055514829853
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6838477802791708463}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0.08, z: -0.000000059604645}
+  m_Size: 1.9999999
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.025
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 3624155611156504695}
+  m_Enabled: 1

@@ -35,7 +35,11 @@ namespace AbyssGame
 
             var existing = Object.FindObjectOfType<Volume>();
             if (existing != null && existing.isGlobal && existing.sharedProfile != null)
+            {
+                if (GraphicsManager.Instance != null)
+                    GraphicsManager.Instance.ApplyActivePresetToCurrentScene();
                 return existing;
+            }
 
             var volGo = existing != null ? existing.gameObject : new GameObject("AbyssalGlobalVolume");
             if (sceneRoot != null && existing == null)
@@ -79,6 +83,8 @@ namespace AbyssGame
             smh.highlights.Override(new Vector4(1.04f, 1.01f, 0.96f, 0f));
 
             volume.sharedProfile = profile;
+            if (GraphicsManager.Instance != null)
+                GraphicsManager.Instance.ApplyActivePresetToCurrentScene();
             return volume;
         }
     }

@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7840a7139b533a428a2586a9e0e2674, type: 3}
+  m_Name: GraphicsPreset_Ultra
+  m_EditorClassIdentifier: 
+  tier: 3
+  presetName: Ultra
+  vietnameseName: "R\u1EA5t Cao (Ultra)"
+  description: "D\xE0nh cho RTX 2060 / RTX 3060 / RX 6600 tr\u1EDF l\xEAn. 4x MSAA
+    + SMAA High, b\xF3ng 4096px 4-cascade (80m), b\xF3ng \u0111\xE8n ph\u1EE5, SSAO
+    Full-Res."
+  qualitySettingsIndex: 3
+  urpPipelineAsset: {fileID: 11400000, guid: dc170a7ffe17d524192760adf17a0d45, type: 2}
+  renderScale: 1
+  minAdaptiveRenderScale: 0.85
+  maxAdaptiveRenderScale: 1
+  msaaSampleCount: 4
+  cameraAntialiasing: 2
+  smaaQuality: 2
+  antiAliasingOption: 4
+  supportsHDR: 1
+  shadowQualityOption: 4
+  enableMainLightShadows: 1
+  softShadows: 1
+  mainLightShadowResolution: 4096
+  shadowCascadeCount: 4
+  shadowDistance: 80
+  enableAdditionalLightShadows: 1
+  additionalLightsShadowResolution: 2048
+  maxAdditionalLightsPerObject: 8
+  maxActiveScenePointLights: 16
+  enableRealtimeReflectionProbes: 1
+  viewDistanceOption: 3
+  viewDistanceCullMeters: 100
+  distantAnimatorThrottleMeters: 55
+  lodBias: 1.5
+  maximumLODLevel: 0
+  textureQualityOption: 2
+  masterTextureLimit: 0
+  anisotropicFiltering: 2
+  skinWeights: 255
+  vfxQualityOption: 3
+  particleDensityMultiplier: 1.25
+  particleRaycastBudget: 1024
+  enableVfxPointLights: 1
+  enableVfxShockwaveRings: 1
+  enableVfxSecondarySparks: 1
+  enableGroundMist: 1
+  enableAmbientDustParticles: 1
+  enableTorchFlickerMotion: 1
+  enablePostProcessing: 1
+  enableTonemapping: 1
+  bloomQualityOption: 3
+  enableBloom: 1
+  bloomHighQualityFiltering: 1
+  bloomIntensity: 0.58
+  enableVignette: 1
+  enableSplitToning: 1
+  ambientOcclusionOption: 2
+  enableSSAO: 1
+  ssaoDownsample: 0
+  ssaoIntensity: 0.5
+  ssaoSampleCount: 8
+  defaultVSyncCount: 1
+  targetFrameRate: 120

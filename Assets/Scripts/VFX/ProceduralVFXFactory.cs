@@ -53,7 +53,13 @@ namespace AbyssalDungeon.VFX
             }
             
             ParticleSystemRenderer renderer = go.GetComponent<ParticleSystemRenderer>();
-            renderer.material = new Material(Shader.Find("Particles/Standard Unlit"));
+            Shader urpParticle = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (urpParticle == null) urpParticle = Shader.Find("Particles/Standard Unlit");
+            var mat = new Material(urpParticle);
+            mat.enableInstancing = true;
+            renderer.sharedMaterial = mat;
+
+            go.AddComponent<AbyssGame.ScalableVfxResponder>();
 
             return go;
         }

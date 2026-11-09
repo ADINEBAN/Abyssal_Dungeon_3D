@@ -454,9 +454,16 @@ namespace AbyssGame
                 new Vector2(0.10f, 0.66f), new Vector2(0.90f, 0.78f), Vector2.zero, Vector2.zero,
                 TogglePauseModal, GameUIKit.GetIcon("crossed_swords"));
 
-            GameUIKit.MakeStyledButton("Settings", box.transform, "CÀI ĐẶT ÂM THANH (SETTINGS)", 16, UIButtonStyle.Secondary,
+            GameUIKit.MakeStyledButton("Settings", box.transform, "CÀI ĐẶT ĐỒ HỌA & ÂM THANH", 16, UIButtonStyle.Secondary,
                 new Vector2(0.10f, 0.50f), new Vector2(0.90f, 0.62f), Vector2.zero, Vector2.zero,
-                () => _settingsModal.SetActive(true), GameUIKit.GetIcon("settings"));
+                () =>
+                {
+                    if (_settingsModal != null)
+                    {
+                        _settingsModal.transform.SetAsLastSibling();
+                        _settingsModal.SetActive(true);
+                    }
+                }, GameUIKit.GetIcon("settings"));
 
             GameUIKit.MakeStyledButton("Town", box.transform, "RÚT VỀ THỊ TRẤN (AETHER HAVEN)", 16, UIButtonStyle.Secondary,
                 new Vector2(0.10f, 0.34f), new Vector2(0.90f, 0.46f), Vector2.zero, Vector2.zero,

@@ -1,45 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &364557247391288660
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6701750249326223542}
-  - component: {fileID: 6115263089293088579}
-  m_Layer: 0
-  m_Name: PFB_M01_DS_Shrinesheal_01_col
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6701750249326223542
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 364557247391288660}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.5242, z: -0.1592}
-  m_LocalScale: {x: 1.0863307, y: 0.9446386, z: 0.5464104}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4094106849954110700}
-  m_RootOrder: 2
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &6115263089293088579
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 364557247391288660}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &1495589114318172601
 GameObject:
   m_ObjectHideFlags: 0
@@ -91,7 +51,6 @@ GameObject:
   - component: {fileID: 4468941483521637137}
   - component: {fileID: 2841292813343776378}
   - component: {fileID: 1319890770371889153}
-  - component: {fileID: 5406588212812894784}
   m_Layer: 0
   m_Name: Quad (4)
   m_TagString: Untagged
@@ -164,25 +123,46 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!205 &5406588212812894784
-LODGroup:
+--- !u!1 &3439632131482518326
+GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2258247459138151481}
-  serializedVersion: 2
-  m_LocalReferencePoint: {x: 0, y: 0, z: 0}
-  m_Size: 1.0000005
-  m_FadeMode: 0
-  m_AnimateCrossFading: 0
-  m_LastLODIsBillboard: 0
-  m_LODs:
-  - screenRelativeHeight: 0.05361269
-    fadeTransitionWidth: 0
-    renderers:
-    - renderer: {fileID: 1319890770371889153}
-  m_Enabled: 1
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3570265105641022420}
+  - component: {fileID: 4683365990681871124}
+  m_Layer: 0
+  m_Name: PFB_M01_DS_Shrinesheal_01_col
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3570265105641022420
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3439632131482518326}
+  m_LocalRotation: {x: -0, y: -0, z: 0.38268322, w: 0.9238797}
+  m_LocalPosition: {x: 0.0058, y: 2.1322, z: -0.1592}
+  m_LocalScale: {x: 0.9132079, y: 0.93426734, z: 0.5464104}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4094106849954110700}
+  m_RootOrder: 3
+  m_LocalEulerAnglesHint: {x: -0, y: -0, z: -44.99997}
+--- !u!33 &4683365990681871124
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3439632131482518326}
+  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &3521666910146052066
 GameObject:
   m_ObjectHideFlags: 0
@@ -194,7 +174,6 @@ GameObject:
   - component: {fileID: 4094106849954110700}
   - component: {fileID: 6583519214400405758}
   - component: {fileID: 263473851853014519}
-  - component: {fileID: 3638783005815584540}
   m_Layer: 0
   m_Name: Model
   m_TagString: Untagged
@@ -216,8 +195,8 @@ Transform:
   m_Children:
   - {fileID: 4468941483521637137}
   - {fileID: 3105760082629243814}
-  - {fileID: 6701750249326223542}
-  - {fileID: 4071145406700003374}
+  - {fileID: 4713758416491909234}
+  - {fileID: 3570265105641022420}
   m_Father: {fileID: 1889760909358336091}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: -0, z: -0}
@@ -271,25 +250,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!205 &3638783005815584540
-LODGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3521666910146052066}
-  serializedVersion: 2
-  m_LocalReferencePoint: {x: -0.033415496, y: 0.6451081, z: -0.033574104}
-  m_Size: 1.2966316
-  m_FadeMode: 0
-  m_AnimateCrossFading: 0
-  m_LastLODIsBillboard: 0
-  m_LODs:
-  - screenRelativeHeight: 0.034757942
-    fadeTransitionWidth: 0
-    renderers:
-    - renderer: {fileID: 263473851853014519}
-  m_Enabled: 1
 --- !u!1 &4498475294203390927
 GameObject:
   m_ObjectHideFlags: 0
@@ -299,6 +259,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1889760909358336091}
+  - component: {fileID: 2172820900903918736}
   m_Layer: 0
   m_Name: HealingShrine
   m_TagString: Untagged
@@ -322,7 +283,27 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &7438473885271696599
+--- !u!205 &2172820900903918736
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4498475294203390927}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0.8899999, z: 0}
+  m_Size: 1.7799999
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.025
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 263473851853014519}
+    - renderer: {fileID: 1319890770371889153}
+  m_Enabled: 1
+--- !u!1 &6490346811292214979
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -330,8 +311,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 4071145406700003374}
-  - component: {fileID: 4827371331918284082}
+  - component: {fileID: 4713758416491909234}
+  - component: {fileID: 7789211861346462421}
   m_Layer: 0
   m_Name: PFB_M01_DS_Shrinesheal_01_col
   m_TagString: Untagged
@@ -339,26 +320,26 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &4071145406700003374
+--- !u!4 &4713758416491909234
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7438473885271696599}
-  m_LocalRotation: {x: -0, y: -0, z: 0.38268322, w: 0.9238797}
-  m_LocalPosition: {x: 0.0058, y: 2.1322, z: -0.1592}
-  m_LocalScale: {x: 0.9132079, y: 0.93426734, z: 0.5464104}
+  m_GameObject: {fileID: 6490346811292214979}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.5242, z: -0.1592}
+  m_LocalScale: {x: 1.0863307, y: 0.9446386, z: 0.5464104}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4094106849954110700}
-  m_RootOrder: 3
-  m_LocalEulerAnglesHint: {x: -0, y: -0, z: -44.99997}
---- !u!33 &4827371331918284082
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &7789211861346462421
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7438473885271696599}
+  m_GameObject: {fileID: 6490346811292214979}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}

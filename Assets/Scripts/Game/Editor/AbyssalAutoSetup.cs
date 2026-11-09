@@ -749,15 +749,44 @@ namespace AbyssGame.EditorTools
             wInst.name = instanceName;
             StripAllCollidersAndShadowSettings(wInst, castShadows: true);
 
-            // Preserve the weapon prefab's artist-authored localRotation & localScale when parenting to RH_WP / LH_WP!
-            Quaternion authoredRot = wInst.transform.localRotation;
-            Vector3 authoredPos = wInst.transform.localPosition;
             Vector3 authoredScale = wInst.transform.localScale;
+            if (authoredScale.sqrMagnitude < 0.001f) authoredScale = Vector3.one;
+
+            // Normalize any nested mesh child that had a baked 270-deg X pre-rotation (e.g. MES_G1P_Wpn_WizardStaff_0101)
+            // because all G1P weapon mesh vertices are authored with their blade/shaft along local +Z.
+            var childTransforms = wInst.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < childTransforms.Length; i++)
+            {
+                Transform ct = childTransforms[i];
+                if (ct == wInst.transform) continue;
+                ct.localRotation = Quaternion.identity;
+                ct.localPosition = Vector3.zero;
+            }
 
             wInst.transform.SetParent(socket, false);
-            wInst.transform.localRotation = authoredRot;
             wInst.transform.localScale = authoredScale;
-            wInst.transform.localPosition = authoredPos.sqrMagnitude > 0.09f ? Vector3.zero : authoredPos;
+
+            if (string.Equals(weaponPrefabName, "Wpn_RangerBow", StringComparison.OrdinalIgnoreCase))
+            {
+                // In G1P_WPN_Longbow animations, LH_WP.right (+X) is vertical (+Y world) and LH_WP.up (+Y) points forward (+Z world),
+                // while Wpn_RangerBow's 2.08m bow limbs lie along local Z. Euler(0, 90, 90) stands the bow vertically in the archer's left hand.
+                wInst.transform.localRotation = Quaternion.Euler(0f, 90f, 90f);
+                wInst.transform.localPosition = new Vector3(0.02f, 0f, 0f);
+            }
+            else if (string.Equals(weaponPrefabName, "Wpn_MageStaff", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(weaponPrefabName, "Wpn_DruidStaff", StringComparison.OrdinalIgnoreCase))
+            {
+                // Align staff shaft along RH_WP (+Z) and shift grip to the middle of the wooden shaft instead of the bottom tip.
+                wInst.transform.localRotation = Quaternion.identity;
+                wInst.transform.localPosition = new Vector3(0f, 0f, -0.52f);
+            }
+            else
+            {
+                // All G1P 1H/2H swords, maces, hammers, daggers, shovels, and shields align with RH_WP / LH_WP at identity rotation.
+                wInst.transform.localRotation = Quaternion.identity;
+                wInst.transform.localPosition = Vector3.zero;
+            }
+
             return wInst;
         }
 
@@ -914,7 +943,7 @@ namespace AbyssGame.EditorTools
                 ("EscapeFloorPortal",           $"{envDir}/Env_EscapeFloorPortal.prefab",     Quaternion.identity,          new Vector3(3.20f, 0.35f, 3.20f), EnvNormMode.UniformWidthBottomZero,  0f,    null),
 
                 // 3D Equipment Drop Pickups & Elite Crown Banner
-                ("Weap_Knight_RunicLongsword",  $"{wpnDir}/Wpn_KnightSword.prefab",           Quaternion.identity,          new Vector3(0.35f, 1.05f, 0.35f), EnvNormMode.UniformHeightCentered,   0f,    null),
+                ("Weap_Knight_RunicLongsword",  $"{wpnDir}/Wpn_KnightSword.prefab",           Quaternion.Euler(270f, 0f, 0f), new Vector3(0.35f, 1.05f, 0.35f), EnvNormMode.UniformHeightCentered,   0f,    null),
                 ("Equip_Armor_Cuirass",         $"{envDir}/Loot_ArmorBox.prefab",             Quaternion.identity,          new Vector3(0.75f, 0.55f, 0.75f), EnvNormMode.UniformWidthCentered,    0f,    null),
                 ("Equip_Helmet_Gothic",         $"{envDir}/Loot_Helm.prefab",                 Quaternion.identity,          new Vector3(0.55f, 0.58f, 0.55f), EnvNormMode.UniformHeightCentered,   0f,    null),
                 ("Equip_Ring_Signet",           $"{envDir}/Loot_GemRing.prefab",              Quaternion.identity,          new Vector3(0.45f, 0.25f, 0.45f), EnvNormMode.UniformWidthCentered,    0f,    null),
@@ -1014,6 +1043,32 @@ namespace AbyssGame.EditorTools
                 root.transform.rotation = Quaternion.identity;
                 root.transform.localScale = Vector3.one;
                 child.transform.SetParent(root.transform, true);
+
+                // Configure LODGroup for props, pillars, statues, arches, rocks, and ruins so QualitySettings.lodBias
+                // scales draw distance cleanly across Low / Medium / High / Ultra / Cinematic presets.
+                bool isStructuralFloorOrWall = p.outName == "DungeonFloor_ChannelTile"
+                                            || p.outName == "DungeonWall_Modular"
+                                            || p.outName == "StoneStairs_Grand"
+                                            || p.outName == "IronPortcullis";
+                if (!isStructuralFloorOrWall)
+                {
+                    foreach (var nestedLod in child.GetComponentsInChildren<LODGroup>(true))
+                    {
+                        UnityEngine.Object.DestroyImmediate(nestedLod);
+                    }
+                    Renderer[] lod0Renderers = child.GetComponentsInChildren<Renderer>(true);
+                    if (lod0Renderers != null && lod0Renderers.Length > 0)
+                    {
+                        var lodGroup = root.AddComponent<LODGroup>();
+                        bool isSmallProp = p.targetSize.y < 1.9f;
+                        float cullScreenHeight = isSmallProp ? 0.025f : 0.008f;
+                        lodGroup.SetLODs(new[]
+                        {
+                            new LOD(cullScreenHeight, lod0Renderers)
+                        });
+                        lodGroup.RecalculateBounds();
+                    }
+                }
 
                 PrefabUtility.SaveAsPrefabAsset(root, $"Assets/Prefabs/Environment/{p.outName}.prefab");
                 PrefabUtility.SaveAsPrefabAsset(root, $"Assets/Resources/EnvironmentKit/{p.outName}.prefab");

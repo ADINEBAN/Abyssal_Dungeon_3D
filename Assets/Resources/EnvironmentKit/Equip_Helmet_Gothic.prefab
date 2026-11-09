@@ -42,7 +42,6 @@ GameObject:
   - component: {fileID: 1748659299395487129}
   - component: {fileID: 7469158101183071930}
   - component: {fileID: 8872835016693595295}
-  - component: {fileID: 2443411935331280612}
   m_Layer: 0
   m_Name: Model
   m_TagString: Untagged
@@ -116,25 +115,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!205 &2443411935331280612
-LODGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2083415393097728660}
-  serializedVersion: 2
-  m_LocalReferencePoint: {x: 0, y: -0.00000011920929, z: 0.5164099}
-  m_Size: 1.4775331
-  m_FadeMode: 0
-  m_AnimateCrossFading: 0
-  m_LastLODIsBillboard: 0
-  m_LODs:
-  - screenRelativeHeight: 0.03960725
-    fadeTransitionWidth: 0
-    renderers:
-    - renderer: {fileID: 8872835016693595295}
-  m_Enabled: 1
 --- !u!1 &2750895556463375582
 GameObject:
   m_ObjectHideFlags: 0
@@ -237,6 +217,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4932760183855559978}
+  - component: {fileID: 7938521580295811604}
   m_Layer: 0
   m_Name: Equip_Helmet_Gothic
   m_TagString: Untagged
@@ -260,6 +241,25 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!205 &7938521580295811604
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6402880749525557754}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0, z: 0}
+  m_Size: 0.5799999
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.025
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 8872835016693595295}
+  m_Enabled: 1
 --- !u!1 &8336489451565854161
 GameObject:
   m_ObjectHideFlags: 0

@@ -322,26 +322,37 @@ def build_gothic_panel(
     img = Image.fromarray(arr.astype(np.uint8))
     draw = ImageDraw.Draw(img)
 
-    # 1. Outer Dark Iron Shadow & Bevel (0..3px)
-    draw.rectangle([0, 0, w - 1, h - 1], outline=(10, 7, 5, 255), width=2)
+    # 1. Outer Dark Forged Iron Shadow & Chiselled Stone Bevel (0..4px)
+    draw.rectangle([0, 0, w - 1, h - 1], outline=(8, 6, 4, 255), width=2)
     draw.rectangle([2, 2, w - 3, h - 3], outline=outer_rim + (255,), width=2)
 
-    # 2. Primary Antique Gold / Bronze Frame (4..6px)
-    draw.rectangle([4, 4, w - 5, h - 5], outline=mid_gold + (255,), width=2)
-    # Top edge specular bevel
-    draw.line([(5, 5), (w - 6, 5)], fill=highlight_gold + (255,), width=1)
+    # 2. Primary Heavy Antique Gold / Bronze Architectural Frame (4..8px)
+    draw.rectangle([4, 4, w - 5, h - 5], outline=mid_gold + (255,), width=3)
+    draw.line([(5, 5), (w - 6, 5)], fill=highlight_gold + (255,), width=2)
+    draw.line([(5, 5), (5, h - 6)], fill=highlight_gold + (220,), width=1)
 
-    # 3. Recessed Dark Channel (7..10px)
-    draw.rectangle([7, 7, w - 8, h - 8], outline=(16, 11, 8, 255), width=3)
+    # 3. Recessed Ancient Stone Channel with Wrought-Iron Rivet Studs (8..14px)
+    draw.rectangle([7, 7, w - 8, h - 8], outline=(14, 10, 7, 255), width=6)
+    draw.rectangle([9, 9, w - 10, h - 10], outline=(outer_rim[0] + 18, outer_rim[1] + 14, outer_rim[2] + 10, 230), width=2)
 
-    # 4. Inner Engraved Bronze Hairline (11px)
-    draw.rectangle([11, 11, w - 12, h - 12], outline=inner_bronze + (235,), width=1)
+    # Edge rivets along the recessed channel (inside 32px border zone and along midpoints)
+    for pos in (22, 48, 88, w // 2, w - 89, w - 49, w - 23):
+        if 18 <= pos <= w - 19:
+            for ry in (10, h - 11):
+                draw.ellipse([pos - 2, ry - 2, pos + 2, ry + 2], fill=highlight_gold + (235,), outline=(18, 12, 8, 255))
+            for rx in (10, w - 11):
+                draw.ellipse([rx - 2, pos - 2, rx + 2, pos + 2], fill=highlight_gold + (235,), outline=(18, 12, 8, 255))
+
+    # 4. Inner Engraved Bronze Moulding & Gothic Filigree Hairline (14..20px)
+    draw.rectangle([13, 13, w - 14, h - 14], outline=inner_bronze + (255,), width=2)
+    draw.line([(14, 14), (w - 15, 14)], fill=highlight_gold + (195,), width=1)
+    draw.rectangle([16, 16, w - 17, h - 17], outline=(12, 8, 6, 235), width=2)
 
     if ornate_level >= 2:
-        draw.rectangle([14, 14, w - 15, h - 15], outline=(inner_bronze[0] // 2, inner_bronze[1] // 2, inner_bronze[2] // 2, 180), width=1)
+        draw.rectangle([19, 19, w - 20, h - 20], outline=(inner_bronze[0], inner_bronze[1], inner_bronze[2], 190), width=1)
 
     # 5. Corner Gothic Filigree & Rivets (inside the 32px 9-slice border zone)
-    draw_corner_filigree(draw, w, h, 5, mid_gold + (255,), highlight_gold + (255,), ornate_level=ornate_level)
+    draw_corner_filigree(draw, w, h, 4, mid_gold + (255,), highlight_gold + (255,), ornate_level=max(2, ornate_level))
 
     return img
 
@@ -646,6 +657,51 @@ def build_decor_and_bars():
             pts.append((cc + int(math.cos(ang) * r), cc + int(math.sin(ang) * r)))
         cdraw.polygon(pts, outline=(214, 174, 86, 150))
     save_ui_png(cimg, os.path.join(ddir, "Pedestal_Crest_Gold.png"))
+
+    # 6. Corner_Gothic_Filigree.png (96x96 Top-Left sculpted antique gold Gothic corner ornament)
+    cw = 96
+    co = Image.new("RGBA", (cw, cw), (0, 0, 0, 0))
+    cod = ImageDraw.Draw(co)
+    gold_dk = (118, 82, 34, 255)
+    gold_md = (214, 174, 86, 255)
+    gold_hi = (252, 228, 146, 255)
+    iron_bg = (26, 18, 12, 240)
+    # Outer L-plate with stepped gothic cusps
+    cod.polygon([(2, 2), (86, 2), (76, 12), (24, 12), (12, 24), (12, 76), (2, 86)], fill=iron_bg, outline=gold_md)
+    cod.line([(3, 3), (83, 3)], fill=gold_hi, width=2)
+    cod.line([(3, 3), (3, 83)], fill=gold_hi, width=2)
+    cod.line([(13, 13), (68, 13)], fill=gold_md, width=2)
+    cod.line([(13, 13), (13, 68)], fill=gold_md, width=2)
+    # Gothic diagonal arch & trefoil tracery in corner
+    cod.line([(12, 46), (46, 12)], fill=gold_md, width=3)
+    cod.line([(14, 54), (54, 14)], fill=gold_hi, width=1)
+    cod.polygon([(18, 18), (34, 22), (22, 34)], fill=gold_md, outline=gold_hi)
+    # Corner amber-gold jewel stud
+    cod.polygon([(14, 6), (22, 14), (14, 22), (6, 14)], fill=gold_hi, outline=gold_dk)
+    cod.ellipse([11, 11, 17, 17], fill=(255, 246, 196, 255))
+    save_ui_png(co, os.path.join(ddir, "Corner_Gothic_Filigree.png"))
+
+    # 7. Panel_Ancient_Surface.png (256x256 tileable weathered stone & aged parchment-leather relief with faint quatrefoil watermark)
+    ps = 256
+    yy, xx = np.mgrid[0:ps, 0:ps].astype(np.float32)
+    n_coarse = np.sin(xx * (2 * math.pi / 128.0) + np.cos(yy * (2 * math.pi / 128.0))) * 0.5
+    n_med = np.sin(xx * (2 * math.pi / 64.0) - yy * (2 * math.pi / 64.0)) * 0.35
+    n_fine = np.cos(xx * (2 * math.pi / 32.0) + yy * (2 * math.pi / 32.0)) * 0.25
+    # Subtle Gothic quatrefoil tile pattern every 128px
+    qx = ((xx % 128.0) / 64.0) - 1.0
+    qy = ((yy % 128.0) / 64.0) - 1.0
+    qr = np.hypot(qx, qy)
+    qang = np.arctan2(qy, qx)
+    qring = np.exp(-((qr - (0.42 + 0.14 * np.abs(np.cos(2.0 * qang)))) ** 2) / 0.008) * 28.0
+    qcross = np.exp(-(np.minimum(np.abs(qx), np.abs(qy)) ** 2) / 0.004) * np.where(qr < 0.35, 18.0, 0.0)
+    surf_v = np.clip(128.0 + (n_coarse + n_med + n_fine) * 26.0 + qring + qcross, 70, 220).astype(np.uint8)
+    surf_arr = np.dstack([
+        np.clip(surf_v * 1.08, 0, 255).astype(np.uint8),
+        np.clip(surf_v * 0.92, 0, 255).astype(np.uint8),
+        np.clip(surf_v * 0.72, 0, 255).astype(np.uint8),
+        np.full((ps, ps), 54, dtype=np.uint8)
+    ])
+    save_ui_png(Image.fromarray(surf_arr, "RGBA"), os.path.join(ddir, "Panel_Ancient_Surface.png"))
 
 
 def make_medallion_base(size: int = 96, tint_bg=(32, 22, 15), rim_col=(214, 174, 86)) -> Image.Image:
@@ -1177,6 +1233,120 @@ def build_ornate_gothic_brick_pbr_textures():
     Image.fromarray(mask_arr, "RGBA").save(os.path.join(pbr_dir, "T_GothicStone_Mask.png"))
 
 
+def build_ornate_cathedral_floor_pbr_textures():
+    """Generates a 512x512 Ornate Gothic Cathedral Flagstone & Carved Quatrefoil Medallion Floor PBR texture set
+    (T_CathedralFloor_Albedo, T_CathedralFloor_Normal, T_CathedralFloor_AO, T_CathedralFloor_Mask)."""
+    pbr_dir = os.path.join(ROOT, "Assets", "Resources", "Environment", "PBR")
+    os.makedirs(pbr_dir, exist_ok=True)
+    sz = 512
+    yy, xx = np.mgrid[0:sz, 0:sz].astype(np.float32)
+
+    # Normalized tile coordinates (-1..1 across the 4m x 4m cathedral floor tile)
+    nx = (xx / (sz - 1.0)) * 2.0 - 1.0
+    ny = (yy / (sz - 1.0)) * 2.0 - 1.0
+    ax = np.abs(nx)
+    ay = np.abs(ny)
+    r = np.hypot(nx, ny)
+    theta = np.arctan2(ny, nx)
+
+    # 1. Outer Flagstone Border & Cruciform Gothic Rib Channels
+    border_band = np.maximum(ax, ay) > 0.78
+    inner_trim_gold = np.logical_or(
+        np.abs(np.maximum(ax, ay) - 0.78) < 0.022,
+        np.logical_and(np.minimum(ax, ay) < 0.022, np.maximum(ax, ay) < 0.78)
+    )
+
+    # 4x4 Ashlar Flagstone Grid with deep chiselled joints
+    grid_x = (xx % 128.0) / 128.0
+    grid_y = (yy % 128.0) / 128.0
+    joint_dist = np.minimum(np.minimum(grid_x, 1.0 - grid_x), np.minimum(grid_y, 1.0 - grid_y))
+    slab_bevel = np.clip((joint_dist - 0.035) / 0.065, 0.0, 1.0)
+    slab_bevel = slab_bevel * slab_bevel * (3.0 - 2.0 * slab_bevel)
+
+    # 2. Central Carved Gothic Sanctuary Quatrefoil Medallion & Octagonal Ring
+    medallion_ring = np.abs(r - 0.42) < 0.028
+    quatrefoil_curve = 0.24 + 0.09 * np.abs(np.cos(2.0 * theta))
+    quatrefoil_rib = np.abs(r - quatrefoil_curve) < 0.024
+    oct_star = np.abs(r - (0.14 + 0.05 * np.cos(4.0 * theta))) < 0.020
+    center_gem = r < 0.085
+
+    # Corner Gothic Rosettes inside the 4 quadrants
+    qx = np.abs(ax - 0.42)
+    qy = np.abs(ay - 0.42)
+    qr = np.hypot(qx, qy)
+    qang = np.arctan2(qy, qx)
+    quad_rosette = np.logical_or(
+        np.abs(qr - 0.16) < 0.018,
+        np.abs(qr - (0.09 + 0.035 * np.abs(np.cos(2.0 * qang)))) < 0.016
+    )
+
+    gold_inlay = np.logical_or.reduce([
+        inner_trim_gold, medallion_ring, quatrefoil_rib, oct_star, center_gem, quad_rosette
+    ])
+
+    # Multi-scale cathedral stone grain
+    grain = (
+        np.sin(xx * 0.08 + np.cos(yy * 0.07) * 2.0) * 0.45 +
+        np.cos(xx * 0.23 - yy * 0.19) * 0.35 +
+        np.sin(xx * 0.51 + yy * 0.47) * 0.20
+    ) * 0.08
+
+    # Heightmap
+    height = slab_bevel * (0.68 + np.where(border_band, 0.12, 0.0)) + grain
+    height = np.where(gold_inlay, 0.92 + grain * 0.25, height)
+    height = np.clip(height, 0.0, 1.0)
+
+    # Albedo RGB: Warm weathered Gothic limestone/basalt flagstones + antique bronze-gold inlays
+    stone_r = np.where(border_band, 108.0, 92.0) + grain * 95.0
+    stone_g = np.where(border_band, 96.0, 82.0) + grain * 85.0
+    stone_b = np.where(border_band, 84.0, 74.0) + grain * 75.0
+
+    mortar_r, mortar_g, mortar_b = 24.0, 20.0, 18.0
+    alb_r = mortar_r + (stone_r - mortar_r) * slab_bevel
+    alb_g = mortar_g + (stone_g - mortar_g) * slab_bevel
+    alb_b = mortar_b + (stone_b - mortar_b) * slab_bevel
+
+    # Antique gold inlay color
+    gold_r = 198.0 + grain * 60.0
+    gold_g = 154.0 + grain * 48.0
+    gold_b = 76.0 + grain * 28.0
+
+    final_r = np.clip(np.where(gold_inlay, gold_r, alb_r), 0, 255).astype(np.uint8)
+    final_g = np.clip(np.where(gold_inlay, gold_g, alb_g), 0, 255).astype(np.uint8)
+    final_b = np.clip(np.where(gold_inlay, gold_b, alb_b), 0, 255).astype(np.uint8)
+    final_a = np.full((sz, sz), 255, dtype=np.uint8)
+
+    Image.fromarray(np.dstack([final_r, final_g, final_b, final_a]), "RGBA").save(
+        os.path.join(pbr_dir, "T_CathedralFloor_Albedo.png")
+    )
+
+    # Tangent-space Normal Map
+    strength = 6.0
+    dh_dx = (np.roll(height, -1, axis=1) - np.roll(height, 1, axis=1)) * strength
+    dh_dy = (np.roll(height, -1, axis=0) - np.roll(height, 1, axis=0)) * strength
+    nx_n = -dh_dx
+    ny_n = dh_dy
+    nz_n = np.ones_like(height)
+    inv_len = 1.0 / np.sqrt(nx_n * nx_n + ny_n * ny_n + nz_n * nz_n)
+    nrm_r = np.clip((nx_n * inv_len * 0.5 + 0.5) * 255.0, 0, 255).astype(np.uint8)
+    nrm_g = np.clip((ny_n * inv_len * 0.5 + 0.5) * 255.0, 0, 255).astype(np.uint8)
+    nrm_b = np.clip((nz_n * inv_len * 0.5 + 0.5) * 255.0, 0, 255).astype(np.uint8)
+    Image.fromarray(np.dstack([nrm_r, nrm_g, nrm_b, final_a]), "RGBA").save(
+        os.path.join(pbr_dir, "T_CathedralFloor_Normal.png")
+    )
+
+    ao_u8 = (np.clip(0.35 + height * 0.65, 0.0, 1.0) * 255.0).astype(np.uint8)
+    Image.fromarray(np.dstack([ao_u8, ao_u8, ao_u8, final_a]), "RGBA").save(
+        os.path.join(pbr_dir, "T_CathedralFloor_AO.png")
+    )
+
+    metal_u8 = np.where(gold_inlay, 195, 20).astype(np.uint8)
+    smooth_u8 = np.where(gold_inlay, 175, np.clip(65.0 + slab_bevel * 55.0, 45, 135)).astype(np.uint8)
+    Image.fromarray(np.dstack([metal_u8, ao_u8, np.zeros_like(ao_u8), smooth_u8]), "RGBA").save(
+        os.path.join(pbr_dir, "T_CathedralFloor_Mask.png")
+    )
+
+
 def main():
     ensure_folder_meta(RES_UI)
     setup_fonts()
@@ -1186,7 +1356,8 @@ def main():
     build_all_icons()
     upgrade_class_portraits_and_backgrounds()
     build_ornate_gothic_brick_pbr_textures()
-    print("Successfully built Ancient Gothic UI Asset Kit & Ornate Gothic Brick PBR Textures!")
+    build_ornate_cathedral_floor_pbr_textures()
+    print("Successfully built Ancient Gothic UI Asset Kit & Ornate Gothic Brick/Floor PBR Textures!")
 
 
 if __name__ == "__main__":

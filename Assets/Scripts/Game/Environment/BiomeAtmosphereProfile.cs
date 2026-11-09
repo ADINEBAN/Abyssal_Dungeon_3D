@@ -303,9 +303,20 @@ namespace AbyssGame
 
         private void InitSystem()
         {
-            QualitySettings.shadows = ShadowQuality.All;
-            QualitySettings.shadowResolution = UnityEngine.ShadowResolution.VeryHigh;
-            QualitySettings.shadowDistance = Mathf.Max(50f, QualitySettings.shadowDistance);
+            var preset = GraphicsManager.Instance != null ? GraphicsManager.Instance.ActivePreset : null;
+            if (preset != null)
+            {
+                QualitySettings.shadows = preset.enableMainLightShadows
+                    ? (preset.softShadows ? ShadowQuality.All : ShadowQuality.HardOnly)
+                    : ShadowQuality.Disable;
+                QualitySettings.shadowDistance = preset.shadowDistance;
+            }
+            else
+            {
+                QualitySettings.shadows = ShadowQuality.All;
+                QualitySettings.shadowResolution = UnityEngine.ShadowResolution.VeryHigh;
+                QualitySettings.shadowDistance = Mathf.Max(50f, QualitySettings.shadowDistance);
+            }
 
             foreach (var l in FindObjectsOfType<Light>())
             {
@@ -328,14 +339,28 @@ namespace AbyssGame
             if (_dirLight != null)
             {
                 RenderSettings.sun = _dirLight;
-                _dirLight.shadows = LightShadows.Soft;
+                if (preset != null)
+                {
+                    _dirLight.shadows = preset.enableMainLightShadows
+                        ? (preset.softShadows ? LightShadows.Soft : LightShadows.Hard)
+                        : LightShadows.None;
+                    _dirLight.shadowResolution = preset.mainLightShadowResolution >= 4096
+                        ? LightShadowResolution.VeryHigh
+                        : (preset.mainLightShadowResolution >= 2048 ? LightShadowResolution.High : LightShadowResolution.Medium);
+                }
+                else
+                {
+                    _dirLight.shadows = LightShadows.Soft;
+                    _dirLight.shadowResolution = LightShadowResolution.VeryHigh;
+                }
                 _dirLight.shadowStrength = 0.95f;
                 _dirLight.shadowBias = 0.015f;
                 _dirLight.shadowNormalBias = 0.20f;
-                _dirLight.shadowResolution = LightShadowResolution.VeryHigh;
             }
 
             BuildEnvironmentalParticleEmitter();
+            if (GraphicsManager.Instance != null)
+                GraphicsManager.Instance.ApplyActivePresetToCurrentScene();
         }
 
         public void ApplyBiome(DungeonBiome biome, bool instant = false)

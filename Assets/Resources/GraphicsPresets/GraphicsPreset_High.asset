@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7840a7139b533a428a2586a9e0e2674, type: 3}
+  m_Name: GraphicsPreset_High
+  m_EditorClassIdentifier: 
+  tier: 2
+  presetName: High
+  vietnameseName: "Cao (High - Chu\u1EA9n 1080p60)"
+  description: "H\u01B0\u1EDBng t\u1EDBi 1080p 60 FPS tr\xEAn GTX 1650 4GB / RTX
+    2050. Render Scale 100%, 2x MSAA + SMAA, b\xF3ng 2048px (50m), SSAO Half-Res,
+    VFX Cao."
+  qualitySettingsIndex: 2
+  urpPipelineAsset: {fileID: 11400000, guid: 4f0cea06e66010a41b506e4822e7e231, type: 2}
+  renderScale: 1
+  minAdaptiveRenderScale: 0.8
+  maxAdaptiveRenderScale: 1
+  msaaSampleCount: 2
+  cameraAntialiasing: 2
+  smaaQuality: 1
+  antiAliasingOption: 3
+  supportsHDR: 1
+  shadowQualityOption: 3
+  enableMainLightShadows: 1
+  softShadows: 1
+  mainLightShadowResolution: 2048
+  shadowCascadeCount: 2
+  shadowDistance: 50
+  enableAdditionalLightShadows: 0
+  additionalLightsShadowResolution: 1024
+  maxAdditionalLightsPerObject: 6
+  maxActiveScenePointLights: 10
+  enableRealtimeReflectionProbes: 1
+  viewDistanceOption: 2
+  viewDistanceCullMeters: 72
+  distantAnimatorThrottleMeters: 38
+  lodBias: 1
+  maximumLODLevel: 0
+  textureQualityOption: 2
+  masterTextureLimit: 0
+  anisotropicFiltering: 2
+  skinWeights: 4
+  vfxQualityOption: 2
+  particleDensityMultiplier: 1
+  particleRaycastBudget: 256
+  enableVfxPointLights: 1
+  enableVfxShockwaveRings: 1
+  enableVfxSecondarySparks: 1
+  enableGroundMist: 1
+  enableAmbientDustParticles: 1
+  enableTorchFlickerMotion: 1
+  enablePostProcessing: 1
+  enableTonemapping: 1
+  bloomQualityOption: 2
+  enableBloom: 1
+  bloomHighQualityFiltering: 0
+  bloomIntensity: 0.55
+  enableVignette: 1
+  enableSplitToning: 1
+  ambientOcclusionOption: 1
+  enableSSAO: 1
+  ssaoDownsample: 1
+  ssaoIntensity: 0.45
+  ssaoSampleCount: 4
+  defaultVSyncCount: 1
+  targetFrameRate: 60

@@ -86,6 +86,23 @@ namespace AbyssGame.EditorTools
 
         public static AnimationClip LoadHeroClip(string className, string stateName)
         {
+            // Guardian wields 1H Mace + Shield (RH_WP + LH_WP); use 1H+Shield locomotion/idle stance from Cleric/Knight
+            // instead of the 2H-grip animation that crossed the left-hand shield across the chest.
+            if (className == "Guardian" && (stateName == "Idle" || stateName == "Run" || stateName == "Jump" || stateName == "Attack"))
+            {
+                string oneHandShieldPath = $"{ExportedAnimDir}/Heroes/Cleric/Hero_Cleric_{stateName}.anim";
+                var ohsClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(oneHandShieldPath);
+                if (ohsClip != null) return ohsClip;
+            }
+
+            // Druid wields a 2m Nature Staff in RH_WP; use Staff Idle/Run stance from Mage instead of unarmed fist stance.
+            if (className == "Druid" && (stateName == "Idle" || stateName == "Run"))
+            {
+                string staffStancePath = $"{ExportedAnimDir}/Heroes/Mage/Hero_Mage_{stateName}.anim";
+                var staffClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(staffStancePath);
+                if (staffClip != null) return staffClip;
+            }
+
             string classPath = $"{ExportedAnimDir}/Heroes/{className}/Hero_{className}_{stateName}.anim";
             var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(classPath);
             if (clip != null) return clip;

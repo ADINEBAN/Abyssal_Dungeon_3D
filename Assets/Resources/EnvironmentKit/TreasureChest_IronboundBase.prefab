@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8071963222308284715}
+  - component: {fileID: 4568180558798675678}
   m_Layer: 0
   m_Name: TreasureChest_IronboundBase
   m_TagString: Untagged
@@ -32,6 +33,25 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!205 &4568180558798675678
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2979157702251571993}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0.26781833, z: -0.0021029115}
+  m_Size: 1.352603
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.025
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 6397194728768961429}
+  m_Enabled: 1
 --- !u!1 &8089400650506609722
 GameObject:
   m_ObjectHideFlags: 0
@@ -43,7 +63,6 @@ GameObject:
   - component: {fileID: 7053560079678636067}
   - component: {fileID: 949913019039859248}
   - component: {fileID: 6397194728768961429}
-  - component: {fileID: 4374516661646671966}
   m_Layer: 0
   m_Name: Model
   m_TagString: Untagged
@@ -116,22 +135,3 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!205 &4374516661646671966
-LODGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8089400650506609722}
-  serializedVersion: 2
-  m_LocalReferencePoint: {x: 0, y: 0.35239252, z: -0.0027669668}
-  m_Size: 1.7797406
-  m_FadeMode: 1
-  m_AnimateCrossFading: 0
-  m_LastLODIsBillboard: 0
-  m_LODs:
-  - screenRelativeHeight: 0.047708325
-    fadeTransitionWidth: 0.1
-    renderers:
-    - renderer: {fileID: 6397194728768961429}
-  m_Enabled: 1

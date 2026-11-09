@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 4782291306494965300}
   - component: {fileID: 3883817756712094295}
   - component: {fileID: 1379702568348784619}
-  - component: {fileID: 1099364788220311230}
   m_Layer: 0
   m_Name: Model
   m_TagString: unknown_20010
@@ -84,25 +83,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!205 &1099364788220311230
-LODGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3333351417174629443}
-  serializedVersion: 2
-  m_LocalReferencePoint: {x: -0.23042373, y: 0.07813555, z: 0}
-  m_Size: 0.6387171
-  m_FadeMode: 0
-  m_AnimateCrossFading: 0
-  m_LastLODIsBillboard: 0
-  m_LODs:
-  - screenRelativeHeight: 0.019302558
-    fadeTransitionWidth: 0
-    renderers:
-    - renderer: {fileID: 1379702568348784619}
-  m_Enabled: 1
 --- !u!1 &4385164138746490173
 GameObject:
   m_ObjectHideFlags: 0
@@ -112,6 +92,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8613462617381414080}
+  - component: {fileID: 711994267337785238}
   m_Layer: 0
   m_Name: WallTorchSconce
   m_TagString: Untagged
@@ -135,3 +116,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!205 &711994267337785238
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4385164138746490173}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0.000000029802322, y: 0, z: 0.000000014901161}
+  m_Size: 0.67999995
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.025
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 1379702568348784619}
+  m_Enabled: 1

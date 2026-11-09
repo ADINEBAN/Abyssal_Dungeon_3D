@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5201733400106593926}
+  - component: {fileID: 7523514168823178996}
   m_Layer: 0
   m_Name: EscapeFloorPortal
   m_TagString: Untagged
@@ -32,6 +33,25 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!205 &7523514168823178996
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5179237024436372134}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0.18119776, z: 0}
+  m_Size: 3.2
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.025
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 7652657889142214772}
+  m_Enabled: 1
 --- !u!1 &7837132344899008660
 GameObject:
   m_ObjectHideFlags: 0
@@ -43,7 +63,6 @@ GameObject:
   - component: {fileID: 662059874562446092}
   - component: {fileID: 5751136205158079454}
   - component: {fileID: 7652657889142214772}
-  - component: {fileID: 3740278261178861002}
   m_Layer: 0
   m_Name: Model
   m_TagString: Untagged
@@ -116,22 +135,3 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!205 &3740278261178861002
-LODGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7837132344899008660}
-  serializedVersion: 2
-  m_LocalReferencePoint: {x: 0, y: 0.023272127, z: 0}
-  m_Size: 3.035155
-  m_FadeMode: 1
-  m_AnimateCrossFading: 0
-  m_LastLODIsBillboard: 0
-  m_LODs:
-  - screenRelativeHeight: 0.08136138
-    fadeTransitionWidth: 0.1
-    renderers:
-    - renderer: {fileID: 7652657889142214772}
-  m_Enabled: 1

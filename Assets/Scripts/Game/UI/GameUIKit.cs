@@ -29,123 +29,6 @@ namespace AbyssGame
     }
 
     /// <summary>
-    /// Interactive Gothic Button feedback component:
-    /// - Hover: Brightens antique gold border & metallic plate
-    /// - Pressed: Insets label downward by 2px like forged metal
-    /// - Selected: Displays illuminated golden rune plate
-    /// - Disabled: Low-contrast weathered dark iron
-    /// </summary>
-    public class UIButtonGothicFX : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
-    {
-        public Image targetImage;
-        public Outline borderOutline;
-        public RectTransform labelRect;
-        public UIButtonStyle style = UIButtonStyle.Secondary;
-        public Color baseColor = Color.white;
-        public Color baseOutlineColor = new Color(0.85f, 0.69f, 0.34f, 0.85f);
-
-        private Vector2 _labelBaseMin;
-        private Vector2 _labelBaseMax;
-        private bool _hasLabelBase;
-        private bool _hovered;
-        private bool _pressed;
-
-        private void Awake()
-        {
-            if (targetImage == null) targetImage = GetComponent<Image>();
-            if (borderOutline == null) borderOutline = GetComponent<Outline>();
-            CacheLabelOffsets();
-            ApplyVisualState();
-        }
-
-        public void CacheLabelOffsets()
-        {
-            if (labelRect == null)
-            {
-                var txt = GetComponentInChildren<Text>();
-                if (txt != null) labelRect = txt.rectTransform;
-            }
-            if (labelRect != null && !_hasLabelBase)
-            {
-                _labelBaseMin = labelRect.offsetMin;
-                _labelBaseMax = labelRect.offsetMax;
-                _hasLabelBase = true;
-            }
-        }
-
-        public void OnPointerEnter(PointerEventData eventData)
-        {
-            _hovered = true;
-            ApplyVisualState();
-        }
-
-        public void OnPointerExit(PointerEventData eventData)
-        {
-            _hovered = false;
-            _pressed = false;
-            ApplyVisualState();
-        }
-
-        public void OnPointerDown(PointerEventData eventData)
-        {
-            _pressed = true;
-            ApplyVisualState();
-        }
-
-        public void OnPointerUp(PointerEventData eventData)
-        {
-            _pressed = false;
-            ApplyVisualState();
-        }
-
-        private void OnDisable()
-        {
-            _hovered = false;
-            _pressed = false;
-            ApplyVisualState();
-        }
-
-        public void ApplyVisualState()
-        {
-            if (targetImage == null) return;
-            var btn = GetComponent<Button>();
-            bool interactable = btn == null || btn.interactable;
-
-            if (!interactable || style == UIButtonStyle.Disabled)
-            {
-                targetImage.color = new Color(0.55f, 0.50f, 0.45f, 0.85f);
-                if (borderOutline != null) borderOutline.effectColor = new Color(0.32f, 0.28f, 0.24f, 0.65f);
-            }
-            else if (_pressed)
-            {
-                targetImage.color = new Color(baseColor.r * 0.84f, baseColor.g * 0.82f, baseColor.b * 0.78f, baseColor.a);
-                if (borderOutline != null) borderOutline.effectColor = GameUIKit.ColGoldBright;
-            }
-            else if (_hovered)
-            {
-                targetImage.color = new Color(
-                    Mathf.Clamp01(baseColor.r * 1.16f + 0.05f),
-                    Mathf.Clamp01(baseColor.g * 1.14f + 0.04f),
-                    Mathf.Clamp01(baseColor.b * 1.10f + 0.02f),
-                    baseColor.a);
-                if (borderOutline != null) borderOutline.effectColor = GameUIKit.ColGoldBright;
-            }
-            else
-            {
-                targetImage.color = baseColor;
-                if (borderOutline != null) borderOutline.effectColor = baseOutlineColor;
-            }
-
-            if (labelRect != null && _hasLabelBase)
-            {
-                float shift = (_pressed && interactable) ? -2f : 0f;
-                labelRect.offsetMin = _labelBaseMin + new Vector2(0f, shift);
-                labelRect.offsetMax = _labelBaseMax + new Vector2(0f, shift);
-            }
-        }
-    }
-
-    /// <summary>
     /// Official Design System & UI Factory for ABYSSAL DUNGEON:
     /// Style: ANCIENT GOTHIC – ANTIQUE GOLD & DARK BROWN
     /// Provides 8 9-sliced Gothic Panel types, 6 Gothic Button types, Cinzel/Gothic Typography,
@@ -448,10 +331,70 @@ namespace AbyssGame
             outline.effectDistance = new Vector2(1.5f, -1.5f);
 
             var shadow = rt.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.65f);
-            shadow.effectDistance = new Vector2(3f, -4f);
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.72f);
+            shadow.effectDistance = new Vector2(3.5f, -4.5f);
+
+            // Ancient Gothic Luxury surface relief & filigree corner brackets
+            AddAncientGothicPanelDecor(rt, style);
 
             return img;
+        }
+
+        private static void AddAncientGothicPanelDecor(RectTransform panelRt, UIPanelStyle style)
+        {
+            if (panelRt == null) return;
+
+            // 1. Non-stretched tiled weathered stone & parchment relief inside the frame
+            Sprite surfaceSp = GetDecorSprite("Panel_Ancient_Surface");
+            if (surfaceSp != null)
+            {
+                var surfRt = MakeRect("_GothicDecor_Relief", panelRt, Vector2.zero, Vector2.one, new Vector2(10f, 10f), new Vector2(-10f, -10f));
+                var surfImg = surfRt.gameObject.AddComponent<Image>();
+                surfImg.sprite = surfaceSp;
+                surfImg.type = Image.Type.Tiled;
+                surfImg.pixelsPerUnitMultiplier = 1.25f;
+                surfImg.color = new Color(1f, 0.94f, 0.82f, 0.24f);
+                surfImg.raycastTarget = false;
+            }
+
+            // 2. Inner recessed antique bronze-gold filigree rim
+            var rimRt = MakeRect("_GothicDecor_InnerRim", panelRt, Vector2.zero, Vector2.one, new Vector2(7f, 7f), new Vector2(-7f, -7f));
+            var rimImg = rimRt.gameObject.AddComponent<Image>();
+            rimImg.color = new Color(0f, 0f, 0f, 0f);
+            rimImg.raycastTarget = false;
+            var rimOutline = rimRt.gameObject.AddComponent<Outline>();
+            rimOutline.effectColor = (style == UIPanelStyle.Ornate || style == UIPanelStyle.Dialog)
+                ? new Color(ColGold.r, ColGold.g, ColGold.b, 0.42f)
+                : new Color(ColBronze.r, ColBronze.g, ColBronze.b, 0.30f);
+            rimOutline.effectDistance = new Vector2(1f, -1f);
+
+            // 3. 4 Non-stretched sculpted antique-gold Gothic corner brackets on major panels
+            bool addCornerBrackets = style == UIPanelStyle.Ornate
+                                  || style == UIPanelStyle.Dialog
+                                  || style == UIPanelStyle.Character
+                                  || style == UIPanelStyle.Inventory
+                                  || style == UIPanelStyle.SkillTree
+                                  || style == UIPanelStyle.Lobby;
+            Sprite cornerSp = addCornerBrackets ? GetDecorSprite("Corner_Gothic_Filigree") : null;
+            if (cornerSp != null)
+            {
+                float cSize = (style == UIPanelStyle.Dialog || style == UIPanelStyle.Ornate) ? 30f : 24f;
+                CreateCornerFiligree("_GothicDecor_CornerTL", panelRt, cornerSp, new Vector2(0f, 1f), new Vector2(3f, -3f - cSize), new Vector2(3f + cSize, -3f), new Vector3(1f, 1f, 1f));
+                CreateCornerFiligree("_GothicDecor_CornerTR", panelRt, cornerSp, new Vector2(1f, 1f), new Vector2(-3f - cSize, -3f - cSize), new Vector2(-3f, -3f), new Vector3(-1f, 1f, 1f));
+                CreateCornerFiligree("_GothicDecor_CornerBL", panelRt, cornerSp, new Vector2(0f, 0f), new Vector2(3f, 3f), new Vector2(3f + cSize, 3f + cSize), new Vector3(1f, -1f, 1f));
+                CreateCornerFiligree("_GothicDecor_CornerBR", panelRt, cornerSp, new Vector2(1f, 0f), new Vector2(-3f - cSize, 3f), new Vector2(-3f, 3f + cSize), new Vector3(-1f, -1f, 1f));
+            }
+        }
+
+        private static void CreateCornerFiligree(string name, Transform parent, Sprite sp, Vector2 anchor, Vector2 offMin, Vector2 offMax, Vector3 scale)
+        {
+            var rt = MakeRect(name, parent, anchor, anchor, offMin, offMax);
+            rt.localScale = scale;
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = sp;
+            img.preserveAspect = true;
+            img.color = new Color(1f, 0.96f, 0.86f, 0.92f);
+            img.raycastTarget = false;
         }
 
         public static Image MakePanel(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax, Color bg, Color? borderColor = null)
@@ -1196,49 +1139,349 @@ namespace AbyssGame
             return modal.gameObject;
         }
 
-        public static GameObject BuildSettingsModal(Transform canvasRoot)
+        public static GameObject BuildSettingsModal(Transform canvasRoot, bool includeResetSave = false)
         {
             var img = MakeStyledPanel("SettingsModal", canvasRoot, UIPanelStyle.Dialog,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-420f, -260f), new Vector2(420f, 260f));
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-640f, -420f), new Vector2(640f, 420f));
             var modal = img.gameObject;
 
             MakeIcon("SetIc", img.transform, GetIcon("settings"),
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -62f), new Vector2(68f, -22f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -58f), new Vector2(66f, -20f));
 
-            MakeText("Title", img.transform, "CÀI ĐẶT ÂM THANH & HIỆU NĂNG", 24, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleLeft,
-                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(78f, -66f), new Vector2(-24f, -16f));
+            MakeText("Title", img.transform, "CỔ ĐÀI THIẾT LẬP ĐỒ HỌA THÍCH ỨNG & ÂM THANH (URP 12.1.7)", 22, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleLeft,
+                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(76f, -62f), new Vector2(-24f, -14f));
 
             MakeGothicDivider("SetDiv", img.transform,
-                new Vector2(0.05f, 1f), new Vector2(0.95f, 1f), new Vector2(0f, -76f), new Vector2(0f, -58f));
+                new Vector2(0.025f, 1f), new Vector2(0.975f, 1f), new Vector2(0f, -72f), new Vector2(0f, -54f));
 
-            var p = GameSession.I.Profile;
-            Text volLbl = MakeText("VolLbl", img.transform, $"Âm lượng tổng: {Mathf.RoundToInt(p.masterVol * 100)}%", 18, FontStyle.Bold, ColParchment, TextAnchor.MiddleCenter,
-                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(24f, -135f), new Vector2(-24f, -92f));
+            var content = MakeRect("SettingsContent", img.transform, Vector2.zero, Vector2.one, new Vector2(24f, 82f), new Vector2(-24f, -74f));
 
-            MakeStyledButton("VolDown", img.transform, "- 10% Âm Lượng", 16, UIButtonStyle.Secondary,
-                new Vector2(0.10f, 1f), new Vector2(0.47f, 1f), new Vector2(0f, -196f), new Vector2(0f, -144f), () =>
+            Text telemetryTxt = null;
+            Action rebuildUI = null;
+
+            rebuildUI = () =>
+            {
+                for (int i = content.childCount - 1; i >= 0; i--)
+                    UnityEngine.Object.Destroy(content.GetChild(i).gameObject);
+
+                var gm = GraphicsManager.Instance;
+                var hw = gm != null ? gm.HardwareReport : GraphicsDetector.AnalyzeHardware();
+                var s = gm != null && gm.SettingsData != null ? gm.SettingsData : new UserGraphicsSettingsData();
+                var curTier = gm != null ? gm.CurrentTier : hw.staticRecommendedTier;
+
+                // 1. Hardware & Real-Time Performance Monitor Plaque (Top: y = 0.81 .. 1.00)
+                var hwBox = MakeStyledPanel("HardwarePlaque", content, UIPanelStyle.Character,
+                    new Vector2(0f, 0.81f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
+
+                string memType = hw.isIntegratedOrSharedMemory
+                    ? $"RAM dùng chung (Báo cáo: {hw.reportedVramMB} MB • Ngân sách an toàn: ~{hw.estimatedDedicatedVramMB} MB)"
+                    : $"VRAM rời: {hw.reportedVramMB} MB (RAM hệ thống: {hw.systemRamMB} MB)";
+
+                telemetryTxt = MakeText("HwInfo", hwBox.transform,
+                    $"<color=#F8DC85>PHẦN CỨNG:</color> {hw.gpuName} ({hw.graphicsApi}) • CPU: {hw.cpuCores} nhân @ {hw.cpuFrequencyMHz} MHz\n" +
+                    $"• Bộ nhớ: <color=#EDE0BA>{memType}</color>\n" +
+                    $"• Khuyến nghị Tự động: <color=#78E888>{hw.staticRecommendedTier.ToString().ToUpper()}</color> — {hw.recommendationSummary}",
+                    12, FontStyle.Normal, ColParchment, TextAnchor.MiddleLeft,
+                    new Vector2(0.02f, 0.05f), new Vector2(0.98f, 0.95f), Vector2.zero, Vector2.zero);
+
+                // 2. Control #1: Graphics Preset (Low / Medium / High / Ultra / Cinematic) + Auto-Detect (y = 0.66 .. 0.79)
+                MakeText("PresetHdr", content,
+                    $"1. CẤU HÌNH TỔNG THỂ (PRESET) — {(s.hasUserManualSelection ? "<color=#F8DC85>Chế độ Thủ công</color>" : "<color=#78E888>Chế độ Khuyến nghị</color>")} (★ = Khuyến nghị cho máy bạn):",
+                    13, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleLeft,
+                    new Vector2(0f, 0.735f), new Vector2(0.72f, 0.80f), Vector2.zero, Vector2.zero);
+
+                MakeStyledButton("BtnAutoDetect", content, "TỰ ĐỘNG ĐO & KHUYẾN NGHỊ", 12, UIButtonStyle.Primary,
+                    new Vector2(0.73f, 0.735f), new Vector2(1f, 0.80f), Vector2.zero, Vector2.zero, () =>
+                    {
+                        gm?.ApplyAutoRecommendedPreset((_, __) =>
+                        {
+                            if (modal != null && modal.activeInHierarchy) rebuildUI();
+                        });
+                        rebuildUI();
+                    });
+
+                GraphicsQualityTier[] tiers = (GraphicsQualityTier[])Enum.GetValues(typeof(GraphicsQualityTier));
+                for (int i = 0; i < tiers.Length; i++)
                 {
-                    p.masterVol = Mathf.Clamp01(p.masterVol - 0.1f);
-                    GameAudio.I.ApplyVolumes();
-                    GameSession.I.SaveProfile();
-                    volLbl.text = $"Âm lượng tổng: {Mathf.RoundToInt(p.masterVol * 100)}%";
-                });
+                    GraphicsQualityTier t = tiers[i];
+                    float x0 = i * 0.202f;
+                    float x1 = Mathf.Min(1f, x0 + 0.192f);
+                    bool isSel = (t == curTier);
+                    bool isRec = (t == hw.staticRecommendedTier);
+                    string recBadge = isRec ? " ★" : "";
+                    UIButtonStyle bStyle = isSel ? UIButtonStyle.Selected : UIButtonStyle.Secondary;
 
-            MakeStyledButton("VolUp", img.transform, "+ 10% Âm Lượng", 16, UIButtonStyle.Primary,
-                new Vector2(0.53f, 1f), new Vector2(0.90f, 1f), new Vector2(0f, -196f), new Vector2(0f, -144f), () =>
+                    MakeStyledButton("Tier_" + t, content, $"{t.ToString().ToUpper()}{recBadge}", 13, bStyle,
+                        new Vector2(x0, 0.64f), new Vector2(x1, 0.725f), Vector2.zero, Vector2.zero, () =>
+                        {
+                            gm?.SetQualityTier(t, isUserManualSelection: true, saveImmediately: true);
+                            rebuildUI();
+                        });
+                }
+
+                // 3. 2-Column Grid of Granular Graphics Controls (#2 .. #14) + Adaptive Controller (y = 0.13 .. 0.62)
+                var gridBox = MakeStyledPanel("GranularGridBox", content, UIPanelStyle.Standard,
+                    new Vector2(0f, 0.13f), new Vector2(1f, 0.625f), Vector2.zero, Vector2.zero);
+
+                // Helper to create a Gothic Option Row inside the 2-column x 7-row grid
+                void MakeOptionRow(int col, int row, string label, string valueText, Action onPrev, Action onNext)
                 {
-                    p.masterVol = Mathf.Clamp01(p.masterVol + 0.1f);
-                    GameAudio.I.ApplyVolumes();
-                    GameSession.I.SaveProfile();
-                    volLbl.text = $"Âm lượng tổng: {Mathf.RoundToInt(p.masterVol * 100)}%";
-                });
+                    float colX0 = col == 0 ? 0.018f : 0.510f;
+                    float colX1 = col == 0 ? 0.490f : 0.982f;
+                    float rowH = 1f / 7.2f;
+                    float y1 = 0.97f - row * rowH;
+                    float y0 = y1 - rowH + 0.015f;
 
-            MakeStyledButton("Close", img.transform, "LƯU & ĐÓNG", 17, UIButtonStyle.Primary,
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-130f, 22f), new Vector2(130f, 72f),
-                () => modal.SetActive(false), GetIcon("check_seal"));
+                    var rowRt = MakeRect($"Opt_{col}_{row}", gridBox.transform,
+                        new Vector2(colX0, y0), new Vector2(colX1, y1), Vector2.zero, Vector2.zero);
+
+                    MakeText("Lbl", rowRt, label, 12, FontStyle.Bold, ColParchment, TextAnchor.MiddleLeft,
+                        new Vector2(0.0f, 0f), new Vector2(0.47f, 1f), Vector2.zero, Vector2.zero);
+
+                    MakeStyledButton("Prev", rowRt, "◀", 12, UIButtonStyle.Secondary,
+                        new Vector2(0.48f, 0.06f), new Vector2(0.57f, 0.94f), Vector2.zero, Vector2.zero, () =>
+                        {
+                            onPrev?.Invoke();
+                            rebuildUI();
+                        });
+
+                    var valPanel = MakeStyledPanel("ValBox", rowRt, UIPanelStyle.Inventory,
+                        new Vector2(0.58f, 0.06f), new Vector2(0.89f, 0.94f), Vector2.zero, Vector2.zero);
+                    MakeText("ValTxt", valPanel.transform, valueText, 12, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleCenter,
+                        Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+                    MakeStyledButton("Next", rowRt, "▶", 12, UIButtonStyle.Secondary,
+                        new Vector2(0.90f, 0.06f), new Vector2(0.99f, 0.94f), Vector2.zero, Vector2.zero, () =>
+                        {
+                            onNext?.Invoke();
+                            rebuildUI();
+                        });
+                }
+
+                // Control #2: Resolution
+                Resolution[] resList = gm != null ? gm.GetAvailableResolutions() : new[] { new Resolution { width = Screen.width, height = Screen.height, refreshRate = 60 } };
+                int curResIdx = gm != null ? gm.GetCurrentResolutionIndex() : 0;
+                string resLabel = $"{s.resolutionWidth} × {s.resolutionHeight}";
+                MakeOptionRow(0, 0, "2. Độ phân giải (Resolution):", resLabel,
+                    () =>
+                    {
+                        int next = (curResIdx - 1 + resList.Length) % resList.Length;
+                        gm?.SetResolution(resList[next].width, resList[next].height, 60);
+                    },
+                    () =>
+                    {
+                        int next = (curResIdx + 1) % resList.Length;
+                        gm?.SetResolution(resList[next].width, resList[next].height, 60);
+                    });
+
+                // Control #3: Display Mode (Fullscreen / Borderless / Windowed)
+                string[] dispNames = { "Toàn màn hình (Full)", "Không viền (Borderless)", "Cửa sổ (Windowed)" };
+                int dispIdx = Mathf.Clamp(s.displayMode, 0, 2);
+                MakeOptionRow(0, 1, "3. Chế độ Hiển thị:", dispNames[dispIdx],
+                    () => gm?.SetDisplayMode((DisplayModeOption)((dispIdx + 2) % 3)),
+                    () => gm?.SetDisplayMode((DisplayModeOption)((dispIdx + 1) % 3)));
+
+                // Control #4: FPS Limit (30 / 60 / 90 / 120 / Unlimited)
+                int[] fpsChoices = { 30, 60, 90, 120, -1 };
+                int fpsIdx = Array.IndexOf(fpsChoices, s.targetFrameRate);
+                if (fpsIdx < 0) fpsIdx = 1;
+                string fpsText = s.targetFrameRate <= 0 ? "Không giới hạn" : $"{s.targetFrameRate} FPS";
+                MakeOptionRow(0, 2, "4. Giới hạn FPS:", fpsText,
+                    () => gm?.SetFpsLimit(fpsChoices[(fpsIdx + fpsChoices.Length - 1) % fpsChoices.Length]),
+                    () => gm?.SetFpsLimit(fpsChoices[(fpsIdx + 1) % fpsChoices.Length]));
+
+                // Control #5: VSync
+                MakeOptionRow(0, 3, "5. Đồng bộ dọc (VSync):", s.vSyncEnabled ? "<color=#78E888>BẬT</color>" : "<color=#BDA685>TẮT</color>",
+                    () => gm?.SetVSync(!s.vSyncEnabled),
+                    () => gm?.SetVSync(!s.vSyncEnabled));
+
+                // Control #6: Render Scale (50% .. 125%)
+                int scalePct = Mathf.RoundToInt(s.renderScale * 100f);
+                MakeOptionRow(0, 4, "6. Tỷ lệ Render (Render Scale):", $"{scalePct}%",
+                    () => gm?.SetRenderScale(Mathf.Clamp(s.renderScale - 0.05f, 0.50f, 1.25f), false),
+                    () => gm?.SetRenderScale(Mathf.Clamp(s.renderScale + 0.05f, 0.50f, 1.25f), false));
+
+                // Control #7: Shadow Quality
+                string[] shNames = { "Tắt (Off)", "Thấp (Low)", "Trung bình (Med)", "Cao (High)", "Cực cao (Ultra)" };
+                int shIdx = Mathf.Clamp(s.shadowQuality, 0, 4);
+                MakeOptionRow(0, 5, "7. Chất lượng Bóng đổ:", shNames[shIdx],
+                    () => gm?.SetShadowQuality((ShadowQualityOption)((shIdx + 4) % 5), false),
+                    () => gm?.SetShadowQuality((ShadowQualityOption)((shIdx + 1) % 5), false));
+
+                // Control #8: Texture Quality
+                string[] texNames = { "Thấp (1/4 VRAM)", "Trung bình (1/2)", "Nguyên bản (Full)" };
+                int texIdx = Mathf.Clamp(s.textureQuality, 0, 2);
+                MakeOptionRow(0, 6, "8. Độ nét Vân bề mặt (Texture):", texNames[texIdx],
+                    () => gm?.SetTextureQuality((TextureQualityOption)((texIdx + 2) % 3), false),
+                    () => gm?.SetTextureQuality((TextureQualityOption)((texIdx + 1) % 3), false));
+
+                // Right Column (#9 .. #14 + Adaptive Quality toggle)
+                // Control #9: Anti-Aliasing
+                string[] aaNames = { "Tắt (Off)", "FXAA (Nhẹ)", "SMAA", "MSAA 2x + SMAA", "MSAA 4x + SMAA" };
+                int aaIdx = Mathf.Clamp(s.antiAliasing, 0, 4);
+                MakeOptionRow(1, 0, "9. Khử răng cưa (Anti-Aliasing):", aaNames[aaIdx],
+                    () => gm?.SetAntiAliasing((AntiAliasingOption)((aaIdx + 4) % 5), false),
+                    () => gm?.SetAntiAliasing((AntiAliasingOption)((aaIdx + 1) % 5), false));
+
+                // Control #10: Ambient Occlusion (SSAO)
+                string[] aoNames = { "Tắt (Off)", "Bán phần (Half-Res)", "Toàn phần (Full-Res)" };
+                int aoIdx = Mathf.Clamp(s.ambientOcclusion, 0, 2);
+                MakeOptionRow(1, 1, "10. Bóng tiếp xúc (SSAO):", aoNames[aoIdx],
+                    () => gm?.SetAmbientOcclusion((AmbientOcclusionOption)((aoIdx + 2) % 3), false),
+                    () => gm?.SetAmbientOcclusion((AmbientOcclusionOption)((aoIdx + 1) % 3), false));
+
+                // Control #11: Bloom
+                string[] blNames = { "Tắt (Off)", "Nhẹ (Low)", "Trung bình (Med)", "Rực rỡ (High)" };
+                int blIdx = Mathf.Clamp(s.bloomQuality, 0, 3);
+                MakeOptionRow(1, 2, "11. Hiệu ứng Phát sáng (Bloom):", blNames[blIdx],
+                    () => gm?.SetBloom((BloomQualityOption)((blIdx + 3) % 4), false),
+                    () => gm?.SetBloom((BloomQualityOption)((blIdx + 1) % 4), false));
+
+                // Control #12: VFX Quality
+                string[] vfxNames = { "Thấp (Low)", "Trung bình (Med)", "Cao (High)", "Cực cao (Ultra)", "Điện ảnh (Cinematic)" };
+                int vfxIdx = Mathf.Clamp(s.vfxQuality, 0, 4);
+                MakeOptionRow(1, 3, "12. Chất lượng Kỹ năng (VFX):", vfxNames[vfxIdx],
+                    () => gm?.SetVfxQuality((VfxQualityOption)((vfxIdx + 4) % 5), false),
+                    () => gm?.SetVfxQuality((VfxQualityOption)((vfxIdx + 1) % 5), false));
+
+                // Control #13: View Distance
+                string[] vdNames = { "Gần (Near 38m)", "Trung bình (52m)", "Xa (Far 72m)", "Rất xa (Ultra 100m)" };
+                int vdIdx = Mathf.Clamp(s.viewDistance, 0, 3);
+                MakeOptionRow(1, 4, "13. Tầm nhìn (View Distance):", vdNames[vdIdx],
+                    () => gm?.SetViewDistance((ViewDistanceOption)((vdIdx + 3) % 4), false),
+                    () => gm?.SetViewDistance((ViewDistanceOption)((vdIdx + 1) % 4), false));
+
+                // Control #14: Effects Density
+                int densPct = Mathf.RoundToInt(s.effectsDensity * 100f);
+                MakeOptionRow(1, 5, "14. Mật độ Hạt (Effects Density):", $"{densPct}%",
+                    () => gm?.SetEffectsDensity(Mathf.Clamp(s.effectsDensity - 0.10f, 0.35f, 1.35f), false),
+                    () => gm?.SetEffectsDensity(Mathf.Clamp(s.effectsDensity + 0.10f, 0.35f, 1.35f), false));
+
+                // Adaptive Quality Controller Toggle (Row 6 of Col 1)
+                string adapLabel = s.adaptiveResolutionEnabled
+                    ? (s.adaptiveQualityDowngradeEnabled ? "<color=#78E888>Scale + Hạ Tier</color>" : "<color=#78E888>BẬT (Scale/VFX)</color>")
+                    : "<color=#BDA685>TẮT</color>";
+                MakeOptionRow(1, 6, "Thích ứng FPS (Adaptive Quality):", adapLabel,
+                    () =>
+                    {
+                        if (!s.adaptiveResolutionEnabled) { gm?.SetAdaptiveResolution(true); gm?.SetAdaptiveQualityDowngrade(false); }
+                        else if (!s.adaptiveQualityDowngradeEnabled) { gm?.SetAdaptiveQualityDowngrade(true); }
+                        else { gm?.SetAdaptiveResolution(false); gm?.SetAdaptiveQualityDowngrade(false); }
+                    },
+                    () =>
+                    {
+                        if (!s.adaptiveResolutionEnabled) { gm?.SetAdaptiveResolution(true); gm?.SetAdaptiveQualityDowngrade(false); }
+                        else if (!s.adaptiveQualityDowngradeEnabled) { gm?.SetAdaptiveQualityDowngrade(true); }
+                        else { gm?.SetAdaptiveResolution(false); gm?.SetAdaptiveQualityDowngrade(false); }
+                    });
+
+                // 4. Bottom Action Bar: Audio Volume + #15 Apply + #16 Restore Defaults (+ Optional Reset Save) (y = 0.01 .. 0.11)
+                var p = GameSession.I != null ? GameSession.I.Profile : null;
+                float curVol = p != null ? p.masterVol : 0.8f;
+                Text volLbl = MakeText("VolLbl", content, $"Âm lượng: <color=#F8DC85>{Mathf.RoundToInt(curVol * 100)}%</color>",
+                    13, FontStyle.Bold, ColParchment, TextAnchor.MiddleLeft,
+                    new Vector2(0.00f, 0.01f), new Vector2(0.15f, 0.11f), Vector2.zero, Vector2.zero);
+
+                MakeStyledButton("VolDown", content, "-10% Âm", 12, UIButtonStyle.Secondary,
+                    new Vector2(0.155f, 0.01f), new Vector2(0.255f, 0.11f), Vector2.zero, Vector2.zero, () =>
+                    {
+                        if (p == null) return;
+                        p.masterVol = Mathf.Clamp01(p.masterVol - 0.1f);
+                        GameAudio.I?.ApplyVolumes();
+                        GameSession.I?.SaveProfile();
+                        volLbl.text = $"Âm lượng: <color=#F8DC85>{Mathf.RoundToInt(p.masterVol * 100)}%</color>";
+                    });
+
+                MakeStyledButton("VolUp", content, "+10% Âm", 12, UIButtonStyle.Secondary,
+                    new Vector2(0.265f, 0.01f), new Vector2(0.365f, 0.11f), Vector2.zero, Vector2.zero, () =>
+                    {
+                        if (p == null) return;
+                        p.masterVol = Mathf.Clamp01(p.masterVol + 0.1f);
+                        GameAudio.I?.ApplyVolumes();
+                        GameSession.I?.SaveProfile();
+                        volLbl.text = $"Âm lượng: <color=#F8DC85>{Mathf.RoundToInt(p.masterVol * 100)}%</color>";
+                    });
+
+                // Control #15: Apply Settings
+                MakeStyledButton("BtnApplySettings", content, "15. ÁP DỤNG (APPLY)", 13, UIButtonStyle.Primary,
+                    new Vector2(0.385f, 0.01f), new Vector2(0.585f, 0.11f), Vector2.zero, Vector2.zero, () =>
+                    {
+                        gm?.ApplyAndSave();
+                        rebuildUI();
+                    }, GetIcon("check_seal"));
+
+                // Control #16: Restore Defaults
+                MakeStyledButton("BtnRestoreDefaults", content, "16. MẶC ĐỊNH (DEFAULT)", 12, UIButtonStyle.Secondary,
+                    new Vector2(0.595f, 0.01f), new Vector2(0.805f, 0.11f), Vector2.zero, Vector2.zero, () =>
+                    {
+                        gm?.RestoreDefaultSettings();
+                        rebuildUI();
+                    });
+
+                if (includeResetSave)
+                {
+                    MakeStyledButton("ResetSave", content, "XÓA HỒ SƠ (LV.1)", 12, UIButtonStyle.Danger,
+                        new Vector2(0.815f, 0.01f), new Vector2(1.00f, 0.11f), Vector2.zero, Vector2.zero, () =>
+                        {
+                            PlayerPrefs.DeleteKey("AbyssalDungeon3D_Profile_v2");
+                            AtomicSaveSystem.DeleteAtomicSaves();
+                            if (GameSession.I != null) UnityEngine.Object.Destroy(GameSession.I.gameObject);
+                            GameSession.GoToScene("MainMenu");
+                        });
+                }
+            };
+
+            rebuildUI();
+
+            var updater = modal.AddComponent<SettingsModalTelemetryBehaviour>();
+            updater.GetTelemetryText = () => telemetryTxt;
+
+            MakeStyledButton("Close", img.transform, "LƯU & ĐÓNG CỔ ĐÀI", 15, UIButtonStyle.Primary,
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-160f, 16f), new Vector2(160f, 64f),
+                () =>
+                {
+                    GraphicsManager.Instance?.ApplyAndSave();
+                    modal.SetActive(false);
+                }, GetIcon("check_seal"));
 
             modal.SetActive(false);
             return modal;
+        }
+
+        private class SettingsModalTelemetryBehaviour : MonoBehaviour
+        {
+            public Func<Text> GetTelemetryText;
+            private float _timer;
+
+            private void Update()
+            {
+                _timer -= Time.unscaledDeltaTime;
+                if (_timer > 0f) return;
+                _timer = 0.35f;
+
+                Text txt = GetTelemetryText?.Invoke();
+                var gm = GraphicsManager.Instance;
+                if (txt == null || gm == null) return;
+
+                var hw = gm.HardwareReport;
+                var pm = gm.PerfMonitor;
+                var aq = gm.AdaptiveController;
+                float fps = pm != null ? pm.SmoothedFps : (1f / Mathf.Max(0.001f, Time.unscaledDeltaTime));
+                float low1 = pm != null ? pm.OnePercentLowFps : fps;
+                float ms = pm != null ? pm.SmoothedCpuFrameTimeMs : (Time.unscaledDeltaTime * 1000f);
+                float rScale = aq != null ? aq.CurrentRenderScale : (gm.SettingsData != null ? gm.SettingsData.renderScale : 1f);
+                long draws = pm != null ? pm.DrawCallsCount : 0;
+                long batches = pm != null ? pm.BatchesCount : 0;
+
+                string memType = hw.isIntegratedOrSharedMemory
+                    ? $"RAM dùng chung ({hw.reportedVramMB} MB • An toàn: ~{hw.estimatedDedicatedVramMB} MB)"
+                    : $"VRAM rời: {hw.reportedVramMB} MB (RAM: {hw.systemRamMB} MB)";
+
+                txt.text =
+                    $"<color=#F8DC85>PHẦN CỨNG:</color> {hw.gpuName} ({hw.graphicsApi})  |  <color=#78E888>FPS: {fps:0} (1% Low: {low1:0} • {ms:0.1} ms) • Scale: {Mathf.RoundToInt(rScale * 100)}% • DrawCalls: {draws} (Batches: {batches})</color>\n" +
+                    $"• Bộ nhớ Đồ họa: <color=#EDE0BA>{memType}</color> • Đang cấp phát: <color=#EDE0BA>{(pm != null ? pm.TotalAllocatedMemoryMB : 0f):0} MB</color>\n" +
+                    $"• Khuyến nghị: <color=#78E888>{hw.staticRecommendedTier.ToString().ToUpper()}</color> — {(aq != null ? aq.StatusSummary : hw.recommendationSummary)}";
+            }
         }
     }
 }

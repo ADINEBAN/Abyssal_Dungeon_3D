@@ -76,6 +76,7 @@ namespace AbyssGame
                 m.EnableKeyword("_EMISSION");
                 if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", emission);
             }
+            m.enableInstancing = true;
             return m;
         }
 
@@ -97,6 +98,7 @@ namespace AbyssGame
                 m.EnableKeyword("_EMISSION");
                 m.SetColor("_EmissionColor", emission);
             }
+            m.enableInstancing = true;
             return m;
         }
 

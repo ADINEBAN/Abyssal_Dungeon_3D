@@ -6,8 +6,8 @@ using UnityEngine.Rendering;
 namespace AbyssGame
 {
     /// <summary>
-    /// AAA Combat Juice, Hit-Stop, 3D Curved Slash Ribbons, Directional Hit Sparks, Renderer Flash,
-    /// Stylish Combo Counter, and 3D Status Effect Auras (Phase 3 - Section 3.2 & game-feel skill).
+    /// AAA Combat Juice, Hit-Stop, Pooled 3D Curved Slash Ribbons, Pooled Directional Hit Sparks,
+    /// Renderer Flash, Stylish Combo Counter, and 3D Status Effect Auras (Phase 3 Scalable VFX & game-feel skill).
     /// </summary>
     public class CombatFeelManager : MonoBehaviour
     {
@@ -92,7 +92,6 @@ namespace AbyssGame
         /// </summary>
         public void TriggerHitStop(float duration = 0.042f, float slowScale = 0.05f)
         {
-            // Never interfere if game is Paused (timeScale == 0)
             if (Time.timeScale < 0.005f && !_inHitStop) return;
             duration = Mathf.Clamp(duration, 0.018f, 0.095f);
             _hitStopToken++;
@@ -107,14 +106,14 @@ namespace AbyssGame
             if (token == _hitStopToken)
             {
                 _inHitStop = false;
-                // Restore to 1f only if user did not open Pause menu during the 45ms hit-stop
                 if (Time.timeScale > 0.001f)
                     Time.timeScale = 1f;
             }
         }
 
         /// <summary>
-        /// Spawns a procedural 3D curved crescent weapon slash arc mesh animated with AbyssalWeaponTrail.shader.
+        /// Spawns a pooled procedural 3D curved crescent weapon slash arc mesh animated with AbyssalWeaponTrail.shader.
+        /// Scales transparency & secondary layers according to VfxQualitySystem while keeping attack readability 100% intact.
         /// </summary>
         public void SpawnSlashArc(
             Vector3 worldOrigin,
@@ -134,26 +133,19 @@ namespace AbyssGame
                 if (_slashShader == null) _slashShader = Shader.Find("AbyssalDungeon/WeaponTrail");
             }
 
-            var go = new GameObject("VfxSlashArc");
-            go.transform.position = worldOrigin;
-            go.transform.rotation = facingRot * Quaternion.Euler(0f, 0f, tiltDegrees);
-
-            var fx = go.AddComponent<SlashArcRibbonFx>();
+            Quaternion rot = facingRot * Quaternion.Euler(0f, 0f, tiltDegrees);
+            var fx = GameObjectPool.GetSlashArc(worldOrigin, rot);
             fx.Init(_slashShader, radius, arcDegrees, ribbonWidth, coreColor, edgeColor, duration, reverseSweep);
         }
 
         /// <summary>
-        /// Spawns directional 3D impact sparks + shockwave ring at the exact hurtbox contact point,
+        /// Spawns pooled directional 3D impact sparks + shockwave ring at the exact hurtbox contact point,
         /// plus a crisp 90ms MaterialPropertyBlock emission flash on the struck unit.
         /// </summary>
         public void SpawnHitImpact(Vector3 contactPoint, Vector3 hitDir, Color accent, bool heavyOrCrit, ActorUnit victim = null)
         {
-            var go = new GameObject("VfxHitSparks");
-            go.transform.position = contactPoint;
             if (hitDir.sqrMagnitude < 0.001f) hitDir = Vector3.up;
-            go.transform.rotation = Quaternion.LookRotation(hitDir.normalized);
-
-            var burst = go.AddComponent<DirectionalSparkBurstFx>();
+            var burst = GameObjectPool.GetSparkBurst(contactPoint, Quaternion.LookRotation(hitDir.normalized));
             burst.Init(accent, heavyOrCrit);
 
             if (victim != null && victim.MainVisual != null && !victim.IsDead)
@@ -184,58 +176,91 @@ namespace AbyssGame
             {
                 var r = renderers[i];
                 if (r == null || r is TrailRenderer || r is ParticleSystemRenderer) continue;
-                r.SetPropertyBlock(null); // Cleanly revert to shared material state
+                r.SetPropertyBlock(null);
             }
         }
     }
 
     /// <summary>
-    /// Procedural 3D Crescent Ribbon Mesh for Melee Swings, Combo Finishers, and Heavy Overhead Smashes.
+    /// Pooled Procedural 3D Crescent Ribbon Mesh for Melee Swings, Combo Finishers, and Heavy Overhead Smashes.
+    /// Reuses its Mesh and Material across pool cycles without per-swing allocations.
     /// </summary>
     public class SlashArcRibbonFx : MonoBehaviour
     {
         private Mesh _mesh;
+        private MeshFilter _mf;
+        private MeshRenderer _mr;
         private Material _mat;
+        private Vector3[] _verts;
+        private Vector2[] _uvs;
+        private Color[] _cols;
+        private int[] _tris;
         private float _dur;
         private float _t;
+        private float _alphaScale = 1f;
         private Color _edgeCol;
 
         public void Init(Shader shader, float radius, float arcDeg, float width, Color coreCol, Color edgeCol, float duration, bool reverse)
         {
             _dur = Mathf.Max(0.10f, duration);
+            _t = 0f;
             _edgeCol = edgeCol;
-            _mesh = BuildCrescentMesh(Mathf.Max(0.9f, radius), Mathf.Clamp(arcDeg, 40f, 340f), Mathf.Clamp(width, 0.25f, 1.6f), reverse);
 
-            var mf = gameObject.AddComponent<MeshFilter>();
-            mf.sharedMesh = _mesh;
+            VfxTierRules rules = VfxQualitySystem.CurrentRules;
+            _alphaScale = rules.transparencyAlphaScale;
 
-            var mr = gameObject.AddComponent<MeshRenderer>();
-            mr.shadowCastingMode = ShadowCastingMode.Off;
-            mr.receiveShadows = false;
+            UpdateCrescentMesh(Mathf.Max(0.9f, radius), Mathf.Clamp(arcDeg, 40f, 340f), Mathf.Clamp(width, 0.25f, 1.6f), reverse);
 
-            if (shader != null)
+            if (_mf == null)
             {
-                _mat = new Material(shader);
-                _mat.SetColor("_MainColor", coreCol);
-                _mat.SetColor("_EdgeColor", edgeCol);
-                _mat.SetFloat("_Progress", 0f);
-                _mat.SetFloat("_Opacity", 0.95f);
+                _mf = gameObject.GetComponent<MeshFilter>();
+                if (_mf == null) _mf = gameObject.AddComponent<MeshFilter>();
+                _mf.sharedMesh = _mesh;
             }
-            else
+
+            if (_mr == null)
             {
-                _mat = CharacterVisualFactory.MakeTransparentMat(new Color(edgeCol.r, edgeCol.g, edgeCol.b, 0.72f), coreCol * 2f);
+                _mr = gameObject.GetComponent<MeshRenderer>();
+                if (_mr == null) _mr = gameObject.AddComponent<MeshRenderer>();
+                _mr.shadowCastingMode = ShadowCastingMode.Off;
+                _mr.receiveShadows = false;
             }
-            mr.sharedMaterial = _mat;
+
+            if (_mat == null)
+            {
+                if (shader != null)
+                    _mat = new Material(shader);
+                else
+                    _mat = CharacterVisualFactory.MakeTransparentMat(new Color(edgeCol.r, edgeCol.g, edgeCol.b, 0.72f), coreCol * 2f);
+                _mr.sharedMaterial = _mat;
+            }
+
+            if (_mat != null)
+            {
+                if (_mat.HasProperty("_MainColor")) _mat.SetColor("_MainColor", coreCol);
+                if (_mat.HasProperty("_EdgeColor")) _mat.SetColor("_EdgeColor", edgeCol);
+                if (_mat.HasProperty("_Progress")) _mat.SetFloat("_Progress", 0f);
+                if (_mat.HasProperty("_Opacity")) _mat.SetFloat("_Opacity", 0.95f * _alphaScale);
+            }
+
+            transform.localScale = Vector3.one * 0.88f;
         }
 
-        private static Mesh BuildCrescentMesh(float outerR, float arcDeg, float width, bool reverse)
+        private void UpdateCrescentMesh(float outerR, float arcDeg, float width, bool reverse)
         {
             const int segs = 18;
             int vCount = (segs + 1) * 2;
-            var verts = new Vector3[vCount];
-            var uvs = new Vector2[vCount];
-            var cols = new Color[vCount];
-            var tris = new int[segs * 6];
+            bool firstBuild = (_mesh == null);
+
+            if (firstBuild)
+            {
+                _mesh = new Mesh { name = "PooledSlashCrescent" };
+                _mesh.MarkDynamic();
+                _verts = new Vector3[vCount];
+                _uvs = new Vector2[vCount];
+                _cols = new Color[vCount];
+                _tris = new int[segs * 6];
+            }
 
             float halfRad = arcDeg * 0.5f * Mathf.Deg2Rad;
             for (int i = 0; i <= segs; i++)
@@ -244,42 +269,45 @@ namespace AbyssGame
                 float uSweep = reverse ? (1f - u) : u;
                 float ang = Mathf.Lerp(-halfRad, halfRad, uSweep);
 
-                // Taper crescent width at both ends so blade arc looks sharp and calligraphic
                 float taper = Mathf.Sin(Mathf.PI * Mathf.Clamp01(u));
                 float innerR = Mathf.Max(0.15f, outerR - width * (0.25f + 0.75f * taper));
 
                 float s = Mathf.Sin(ang);
                 float c = Mathf.Cos(ang);
 
-                verts[i * 2 + 0] = new Vector3(s * innerR, 0f, c * innerR);
-                verts[i * 2 + 1] = new Vector3(s * outerR, 0f, c * outerR);
+                _verts[i * 2 + 0] = new Vector3(s * innerR, 0f, c * innerR);
+                _verts[i * 2 + 1] = new Vector3(s * outerR, 0f, c * outerR);
 
-                uvs[i * 2 + 0] = new Vector2(u, 0f);
-                uvs[i * 2 + 1] = new Vector2(u, 1f);
-
-                cols[i * 2 + 0] = new Color(1f, 1f, 1f, 0.35f * taper);
-                cols[i * 2 + 1] = new Color(1f, 1f, 1f, 1.0f * taper);
-
-                if (i < segs)
+                if (firstBuild)
                 {
-                    int b = i * 2;
-                    int t = i * 6;
-                    tris[t + 0] = b + 0;
-                    tris[t + 1] = b + 1;
-                    tris[t + 2] = b + 3;
-                    tris[t + 3] = b + 0;
-                    tris[t + 4] = b + 3;
-                    tris[t + 5] = b + 2;
+                    _uvs[i * 2 + 0] = new Vector2(u, 0f);
+                    _uvs[i * 2 + 1] = new Vector2(u, 1f);
+
+                    _cols[i * 2 + 0] = new Color(1f, 1f, 1f, 0.35f * taper);
+                    _cols[i * 2 + 1] = new Color(1f, 1f, 1f, 1.0f * taper);
+
+                    if (i < segs)
+                    {
+                        int b = i * 2;
+                        int t = i * 6;
+                        _tris[t + 0] = b + 0;
+                        _tris[t + 1] = b + 1;
+                        _tris[t + 2] = b + 3;
+                        _tris[t + 3] = b + 0;
+                        _tris[t + 4] = b + 3;
+                        _tris[t + 5] = b + 2;
+                    }
                 }
             }
 
-            var mesh = new Mesh { name = "SlashCrescent" };
-            mesh.vertices = verts;
-            mesh.uv = uvs;
-            mesh.colors = cols;
-            mesh.triangles = tris;
-            mesh.RecalculateBounds();
-            return mesh;
+            _mesh.vertices = _verts;
+            if (firstBuild)
+            {
+                _mesh.uv = _uvs;
+                _mesh.colors = _cols;
+                _mesh.triangles = _tris;
+            }
+            _mesh.RecalculateBounds();
         }
 
         private void Update()
@@ -291,11 +319,12 @@ namespace AbyssGame
             if (_mat != null)
             {
                 if (_mat.HasProperty("_Progress")) _mat.SetFloat("_Progress", u);
-                if (_mat.HasProperty("_Opacity")) _mat.SetFloat("_Opacity", Mathf.Pow(1f - u, 0.75f));
-                if (_mat.HasProperty("_BaseColor")) _mat.SetColor("_BaseColor", new Color(_edgeCol.r, _edgeCol.g, _edgeCol.b, (1f - u) * 0.7f));
+                if (_mat.HasProperty("_Opacity")) _mat.SetFloat("_Opacity", Mathf.Pow(1f - u, 0.75f) * _alphaScale);
+                if (_mat.HasProperty("_BaseColor")) _mat.SetColor("_BaseColor", new Color(_edgeCol.r, _edgeCol.g, _edgeCol.b, (1f - u) * 0.7f * _alphaScale));
             }
 
-            if (_t >= _dur) Destroy(gameObject);
+            if (_t >= _dur)
+                GameObjectPool.ReleaseSlashArc(this);
         }
 
         private void OnDestroy()
@@ -306,34 +335,83 @@ namespace AbyssGame
     }
 
     /// <summary>
-    /// Snappy 3D Impact Spark Streaks + Expanding Shockwave Ring at weapon contact point.
+    /// Pooled Snappy 3D Impact Spark Streaks + Expanding Shockwave Ring at weapon contact point.
+    /// Pre-allocates up to MaxPooledSparks child Transforms once and scales active count via VfxQualitySystem.
     /// </summary>
     public class DirectionalSparkBurstFx : MonoBehaviour
     {
+        private const int MaxPooledSparks = 14;
+
         private Transform[] _sparks;
+        private Renderer[] _sparkRenderers;
         private Vector3[] _vels;
         private Transform _ring;
+        private Renderer _ringRenderer;
         private Material _sparkMat;
         private Material _ringMat;
+        private MaterialPropertyBlock _mpb;
+
+        private int _activeCount;
+        private bool _ringActive;
         private float _dur;
         private float _t;
         private bool _heavy;
 
+        private void EnsureAllocated()
+        {
+            if (_sparks != null) return;
+
+            _mpb = new MaterialPropertyBlock();
+            _sparkMat = CharacterVisualFactory.MakeMat(Color.white, 0.9f, 0f, Color.white * 2.5f);
+            _ringMat = CharacterVisualFactory.MakeTransparentMat(new Color(1f, 1f, 1f, 0.62f), Color.white * 2f);
+
+            _sparks = new Transform[MaxPooledSparks];
+            _sparkRenderers = new Renderer[MaxPooledSparks];
+            _vels = new Vector3[MaxPooledSparks];
+
+            for (int i = 0; i < MaxPooledSparks; i++)
+            {
+                var sp = CharacterVisualFactory.Prim(
+                    PrimitiveType.Cube, "Spark" + i, transform,
+                    Vector3.zero, new Vector3(0.035f, 0.035f, 0.25f), _sparkMat);
+                _sparks[i] = sp.transform;
+                _sparkRenderers[i] = sp.GetComponent<Renderer>();
+                sp.SetActive(false);
+            }
+
+            var ringGo = CharacterVisualFactory.Prim(
+                PrimitiveType.Cylinder, "ImpactRing", transform,
+                Vector3.zero, new Vector3(0.2f, 0.012f, 0.2f), _ringMat,
+                Quaternion.Euler(90f, 0f, 0f));
+            _ring = ringGo.transform;
+            _ringRenderer = ringGo.GetComponent<Renderer>();
+        }
+
         public void Init(Color accent, bool heavyOrCrit)
         {
+            EnsureAllocated();
+
             _heavy = heavyOrCrit;
             _dur = heavyOrCrit ? 0.28f : 0.19f;
+            _t = 0f;
+
+            VfxTierRules rules = VfxQualitySystem.CurrentRules;
             Color bright = Color.Lerp(accent, new Color(1f, 0.94f, 0.65f), heavyOrCrit ? 0.65f : 0.35f);
 
-            _sparkMat = CharacterVisualFactory.MakeMat(bright, 0.9f, 0f, bright * 3.2f);
-            _ringMat = CharacterVisualFactory.MakeTransparentMat(new Color(bright.r, bright.g, bright.b, 0.62f), bright * 2f);
+            _mpb.Clear();
+            _mpb.SetColor("_BaseColor", bright);
+            _mpb.SetColor("_Color", bright);
+            _mpb.SetColor("_EmissionColor", bright * 3.0f);
 
-            int count = heavyOrCrit ? 8 : 5;
-            _sparks = new Transform[count];
-            _vels = new Vector3[count];
+            int baseCount = heavyOrCrit ? 8 : 5;
+            _activeCount = Mathf.Clamp(Mathf.RoundToInt(baseCount * rules.particleCountMultiplier), 2, MaxPooledSparks);
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < MaxPooledSparks; i++)
             {
+                bool active = i < _activeCount;
+                _sparks[i].gameObject.SetActive(active);
+                if (!active) continue;
+
                 Vector3 dir = Quaternion.Euler(
                     Random.Range(-52f, 52f),
                     Random.Range(-65f, 65f),
@@ -342,20 +420,28 @@ namespace AbyssGame
                 float spd = Random.Range(4.5f, heavyOrCrit ? 11.5f : 8.2f);
                 _vels[i] = transform.TransformDirection(dir) * spd + Vector3.up * Random.Range(1.2f, 3.2f);
 
-                var sp = CharacterVisualFactory.Prim(
-                    PrimitiveType.Cube, "Spark" + i, null,
-                    transform.position,
-                    new Vector3(0.035f, 0.035f, heavyOrCrit ? 0.34f : 0.22f),
-                    _sparkMat,
-                    Quaternion.LookRotation(_vels[i].normalized));
-                sp.transform.SetParent(transform, true);
-                _sparks[i] = sp.transform;
+                _sparks[i].position = transform.position;
+                _sparks[i].rotation = Quaternion.LookRotation(_vels[i].normalized);
+                _sparks[i].localScale = new Vector3(0.035f, 0.035f, heavyOrCrit ? 0.34f : 0.22f);
+                if (_sparkRenderers[i] != null)
+                    _sparkRenderers[i].SetPropertyBlock(_mpb);
             }
 
-            _ring = CharacterVisualFactory.Prim(
-                PrimitiveType.Cylinder, "ImpactRing", transform,
-                Vector3.zero, new Vector3(0.2f, 0.012f, 0.2f), _ringMat,
-                Quaternion.Euler(90f, 0f, 0f)).transform;
+            _ringActive = rules.enableShockwaveRings || heavyOrCrit;
+            if (_ring != null)
+            {
+                _ring.gameObject.SetActive(_ringActive);
+                if (_ringActive)
+                {
+                    _ring.localPosition = Vector3.zero;
+                    _ring.localScale = new Vector3(0.22f, 0.01f, 0.22f);
+                    if (_ringRenderer != null)
+                    {
+                        _mpb.SetColor("_BaseColor", new Color(bright.r, bright.g, bright.b, 0.62f * rules.transparencyAlphaScale));
+                        _ringRenderer.SetPropertyBlock(_mpb);
+                    }
+                }
+            }
         }
 
         private void Update()
@@ -364,7 +450,7 @@ namespace AbyssGame
             _t += dt;
             float u = Mathf.Clamp01(_t / _dur);
 
-            for (int i = 0; i < _sparks.Length; i++)
+            for (int i = 0; i < _activeCount; i++)
             {
                 if (_sparks[i] == null) continue;
                 _vels[i] += Vector3.down * (14f * dt);
@@ -375,13 +461,14 @@ namespace AbyssGame
                 _sparks[i].localScale = new Vector3(0.032f * (1f - u * 0.6f), 0.032f * (1f - u * 0.6f), len);
             }
 
-            if (_ring != null)
+            if (_ringActive && _ring != null)
             {
                 float r = Mathf.Lerp(0.22f, _heavy ? 1.85f : 1.05f, Mathf.Sqrt(u));
                 _ring.localScale = new Vector3(r, 0.01f, r);
             }
 
-            if (_t >= _dur) Destroy(gameObject);
+            if (_t >= _dur)
+                GameObjectPool.ReleaseSparkBurst(this);
         }
 
         private void OnDestroy()
@@ -393,7 +480,7 @@ namespace AbyssGame
 
     /// <summary>
     /// Real-time 3D Status & Shield Visual Auras attached to ActorUnit:
-    /// Shows readable 3D cues for Shield dome, Stagger/Stun stars, Freeze ice crystal, Burn embers, Poison miasma, and Rage aura.
+    /// Shows readable 3D cues for Stagger/Stun stars and Burn embers.
     /// </summary>
     public class StatusVisualAttachment : MonoBehaviour
     {
@@ -424,10 +511,8 @@ namespace AbyssGame
 
             float t = Time.time;
 
-            // 1. Aegis Shield Dome — disabled bulky sphere so characters stay clean without overlapping bubbles/frames
             if (_shieldDome != null) _shieldDome.SetActive(false);
 
-            // 2. Stun / Stagger Break Orbiting Stars above Head
             bool dazed = _unit.IsStaggered || _unit.HasStatus(StatusType.Stun);
             if (dazed && _staggerStars == null)
             {
@@ -451,10 +536,8 @@ namespace AbyssGame
                 if (dazed) _staggerStars.transform.Rotate(0f, 220f * Time.deltaTime, 0f);
             }
 
-            // 3. Freeze / Slow — no cylinder ring at feet
             if (_freezeCrystal != null) _freezeCrystal.SetActive(false);
 
-            // 4. Burn Orbiting Embers
             bool burning = _unit.HasStatus(StatusType.Burn);
             if (burning && _burnRing == null)
             {
@@ -480,10 +563,7 @@ namespace AbyssGame
                 }
             }
 
-            // 5. Poison Miasma — disabled bulky sphere
             if (_poisonRing != null) _poisonRing.SetActive(false);
-
-            // 6. Curse Hex Sigil — disabled cylinder at feet
             if (_curseHex != null) _curseHex.SetActive(false);
         }
 
@@ -498,4 +578,3 @@ namespace AbyssGame
         }
     }
 }
-

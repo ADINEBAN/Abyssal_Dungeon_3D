@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6733484862964323022}
+  - component: {fileID: 8802992239697292762}
   m_Layer: 0
   m_Name: Crystal
   m_TagString: Untagged
@@ -32,6 +33,25 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!205 &8802992239697292762
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5180015401543911011}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0.8249999, z: 0}
+  m_Size: 1.6499999
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.025
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 2540509301214384970}
+  m_Enabled: 1
 --- !u!1 &8263503251870526596
 GameObject:
   m_ObjectHideFlags: 0

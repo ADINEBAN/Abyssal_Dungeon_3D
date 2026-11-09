@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 4687027624398481977}
   - component: {fileID: 2460094666375728196}
   - component: {fileID: 245789852919262695}
-  - component: {fileID: 3070126050522084571}
   m_Layer: 0
   m_Name: MES_M01_DS_ShrinesReborn_01b
   m_TagString: Untagged
@@ -84,25 +83,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!205 &3070126050522084571
-LODGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4818744303320853034}
-  serializedVersion: 2
-  m_LocalReferencePoint: {x: 0.0028994977, y: 0.038856983, z: 0}
-  m_Size: 0.656967
-  m_FadeMode: 0
-  m_AnimateCrossFading: 0
-  m_LastLODIsBillboard: 0
-  m_LODs:
-  - screenRelativeHeight: 0.03590633
-    fadeTransitionWidth: 0
-    renderers:
-    - renderer: {fileID: 245789852919262695}
-  m_Enabled: 1
 --- !u!1 &5131013821772316630
 GameObject:
   m_ObjectHideFlags: 0
@@ -112,6 +92,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2100108428669233985}
+  - component: {fileID: 7414107221754109565}
   m_Layer: 0
   m_Name: Altar
   m_TagString: Untagged
@@ -135,6 +116,26 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!205 &7414107221754109565
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5131013821772316630}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0.91, z: 0}
+  m_Size: 1.82
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.025
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 8974418849616758567}
+    - renderer: {fileID: 245789852919262695}
+  m_Enabled: 1
 --- !u!1 &5247213131542581658
 GameObject:
   m_ObjectHideFlags: 0
@@ -146,7 +147,6 @@ GameObject:
   - component: {fileID: 2747813685903635424}
   - component: {fileID: 7488829521879230243}
   - component: {fileID: 8974418849616758567}
-  - component: {fileID: 2795393963918883066}
   m_Layer: 0
   m_Name: MES_M01_DS_ShrinesReborn_01a
   m_TagString: Untagged
@@ -219,25 +219,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!205 &2795393963918883066
-LODGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5247213131542581658}
-  serializedVersion: 2
-  m_LocalReferencePoint: {x: -0.020746112, y: 1.0322051, z: 0.12322384}
-  m_Size: 2.31464
-  m_FadeMode: 0
-  m_AnimateCrossFading: 0
-  m_LastLODIsBillboard: 0
-  m_LODs:
-  - screenRelativeHeight: 0.06204702
-    fadeTransitionWidth: 0
-    renderers:
-    - renderer: {fileID: 8974418849616758567}
-  m_Enabled: 1
 --- !u!1 &6906026633750610817
 GameObject:
   m_ObjectHideFlags: 0

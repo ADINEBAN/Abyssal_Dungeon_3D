@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using AbyssGame;
 
 namespace AbyssalDungeon.UI
 {
@@ -21,49 +23,80 @@ namespace AbyssalDungeon.UI
 
         private void Start()
         {
-            applyButton.onClick.AddListener(ApplySettings);
-            resetButton.onClick.AddListener(ResetToDefault);
-            
+            if (applyButton != null) applyButton.onClick.AddListener(ApplySettings);
+            if (resetButton != null) resetButton.onClick.AddListener(ResetToDefault);
+
+            PopulateQualityDropdown();
             LoadSettings();
+        }
+
+        private void PopulateQualityDropdown()
+        {
+            if (qualityDropdown == null) return;
+            qualityDropdown.ClearOptions();
+            qualityDropdown.AddOptions(new List<string> { "Low", "Medium", "High", "Ultra", "Cinematic" });
         }
 
         private void LoadSettings()
         {
-            masterVolumeSlider.value = PlayerPrefs.GetFloat("MasterVol", 1f);
-            musicVolumeSlider.value = PlayerPrefs.GetFloat("MusicVol", 1f);
-            sfxVolumeSlider.value = PlayerPrefs.GetFloat("SFXVol", 1f);
+            if (masterVolumeSlider != null) masterVolumeSlider.value = PlayerPrefs.GetFloat("MasterVol", 1f);
+            if (musicVolumeSlider != null) musicVolumeSlider.value = PlayerPrefs.GetFloat("MusicVol", 1f);
+            if (sfxVolumeSlider != null) sfxVolumeSlider.value = PlayerPrefs.GetFloat("SFXVol", 1f);
 
-            qualityDropdown.value = PlayerPrefs.GetInt("Quality", QualitySettings.GetQualityLevel());
-            fullscreenToggle.isOn = PlayerPrefs.GetInt("Fullscreen", Screen.fullScreen ? 1 : 0) == 1;
+            int curTier = GraphicsManager.Instance != null
+                ? (int)GraphicsManager.Instance.CurrentTier
+                : PlayerPrefs.GetInt("Quality", QualitySettings.GetQualityLevel());
+
+            if (qualityDropdown != null) qualityDropdown.value = Mathf.Clamp(curTier, 0, 4);
+            if (fullscreenToggle != null) fullscreenToggle.isOn = PlayerPrefs.GetInt("Fullscreen", Screen.fullScreen ? 1 : 0) == 1;
         }
 
         private void ApplySettings()
         {
-            // Audio (Normally route to AudioMixer)
-            PlayerPrefs.SetFloat("MasterVol", masterVolumeSlider.value);
-            PlayerPrefs.SetFloat("MusicVol", musicVolumeSlider.value);
-            PlayerPrefs.SetFloat("SFXVol", sfxVolumeSlider.value);
+            if (masterVolumeSlider != null) PlayerPrefs.SetFloat("MasterVol", masterVolumeSlider.value);
+            if (musicVolumeSlider != null) PlayerPrefs.SetFloat("MusicVol", musicVolumeSlider.value);
+            if (sfxVolumeSlider != null) PlayerPrefs.SetFloat("SFXVol", sfxVolumeSlider.value);
 
-            // Graphics
-            QualitySettings.SetQualityLevel(qualityDropdown.value);
-            PlayerPrefs.SetInt("Quality", qualityDropdown.value);
+            int selected = qualityDropdown != null ? Mathf.Clamp(qualityDropdown.value, 0, 4) : 1;
+            if (GraphicsManager.Instance != null)
+            {
+                GraphicsManager.Instance.SetQualityTier((GraphicsQualityTier)selected, isUserManualSelection: true, saveImmediately: true);
+                if (fullscreenToggle != null)
+                    GraphicsManager.Instance.SetFullscreen(fullscreenToggle.isOn);
+            }
+            else
+            {
+                QualitySettings.SetQualityLevel(selected);
+                PlayerPrefs.SetInt("Quality", selected);
+                if (fullscreenToggle != null)
+                {
+                    Screen.fullScreen = fullscreenToggle.isOn;
+                    PlayerPrefs.SetInt("Fullscreen", fullscreenToggle.isOn ? 1 : 0);
+                }
+                PlayerPrefs.Save();
+            }
 
-            Screen.fullScreen = fullscreenToggle.isOn;
-            PlayerPrefs.SetInt("Fullscreen", fullscreenToggle.isOn ? 1 : 0);
-
-            PlayerPrefs.Save();
             Debug.Log("Settings Applied and Saved.");
         }
 
         private void ResetToDefault()
         {
-            masterVolumeSlider.value = 1f;
-            musicVolumeSlider.value = 1f;
-            sfxVolumeSlider.value = 1f;
-            
-            qualityDropdown.value = 2; // Medium/High
-            fullscreenToggle.isOn = true;
-            
+            if (masterVolumeSlider != null) masterVolumeSlider.value = 1f;
+            if (musicVolumeSlider != null) musicVolumeSlider.value = 1f;
+            if (sfxVolumeSlider != null) sfxVolumeSlider.value = 1f;
+
+            if (GraphicsManager.Instance != null)
+            {
+                GraphicsManager.Instance.ApplyAutoRecommendedPreset();
+                if (qualityDropdown != null)
+                    qualityDropdown.value = (int)GraphicsManager.Instance.CurrentTier;
+            }
+            else if (qualityDropdown != null)
+            {
+                qualityDropdown.value = (int)GraphicsDetector.AnalyzeHardware().staticRecommendedTier;
+            }
+
+            if (fullscreenToggle != null) fullscreenToggle.isOn = true;
             ApplySettings();
         }
     }

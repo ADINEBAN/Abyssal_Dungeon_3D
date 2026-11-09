@@ -92,6 +92,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2940046361459383370}
+  - component: {fileID: 1671797873035744474}
   m_Layer: 0
   m_Name: GothicArchVault
   m_TagString: Untagged
@@ -115,3 +116,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!205 &1671797873035744474
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7550204261051279061}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: -0.00000011920929, y: 2.5500002, z: 0}
+  m_Size: 5.1000004
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.008
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 5903351835461951258}
+  m_Enabled: 1

@@ -84,6 +84,7 @@ namespace AbyssGame
             EnsureCameraAndLight();
             _ = GameSession.I;
             _ = GameAudio.I;
+            _ = GraphicsManager.Instance;
 
             // Remove OrbitCamera3D on menu scenes
             var orbit = Camera.main != null ? Camera.main.GetComponent<OrbitCamera3D>() : null;
@@ -127,6 +128,9 @@ namespace AbyssGame
                     _activeRoot.AddComponent<MainMenuSceneView>().Build();
                     break;
             }
+
+            if (GraphicsManager.Instance != null)
+                GraphicsManager.Instance.ApplyActivePresetToCurrentScene();
         }
 
         private static void EnsureCameraAndLight()

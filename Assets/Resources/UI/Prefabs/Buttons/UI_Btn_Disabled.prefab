@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 5320404397742879760}
   - component: {fileID: 909657039639999541}
   - component: {fileID: 7846084136330774795}
-  - component: {fileID: 7907642972212841405}
+  - component: {fileID: 3913347190279995626}
   m_Layer: 0
   m_Name: UI_Btn_Disabled
   m_TagString: Untagged
@@ -139,7 +139,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &7907642972212841405
+--- !u!114 &3913347190279995626
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -148,7 +148,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 4117404014528460342}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: f59cf9f20ff8d4440bfd6cf465a6b7a3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   targetImage: {fileID: 5320404397742879760}

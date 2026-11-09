@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7840a7139b533a428a2586a9e0e2674, type: 3}
+  m_Name: GraphicsPreset_Cinematic
+  m_EditorClassIdentifier: 
+  tier: 4
+  presetName: Cinematic
+  vietnameseName: "\u0110i\u1EC7n \u1EA2nh (Cinematic)"
+  description: "Ch\u1EA5t l\u01B0\u1EE3ng h\xECnh \u1EA3nh t\u1ED1i \u0111a m\xE0
+    ph\u1EA7n c\u1EE9ng h\u1ED7 tr\u1EE3. Supersampling 115%, 4x MSAA, b\xF3ng 4096px
+    (120m), SSAO 12-sample, VFX C\u1EF1c \u0111\u1EA1i."
+  qualitySettingsIndex: 4
+  urpPipelineAsset: {fileID: 11400000, guid: 91b012913c36dfd4c922ae5a50b5e715, type: 2}
+  renderScale: 1.15
+  minAdaptiveRenderScale: 0.9
+  maxAdaptiveRenderScale: 1.15
+  msaaSampleCount: 4
+  cameraAntialiasing: 2
+  smaaQuality: 2
+  antiAliasingOption: 4
+  supportsHDR: 1
+  shadowQualityOption: 4
+  enableMainLightShadows: 1
+  softShadows: 1
+  mainLightShadowResolution: 4096
+  shadowCascadeCount: 4
+  shadowDistance: 120
+  enableAdditionalLightShadows: 1
+  additionalLightsShadowResolution: 4096
+  maxAdditionalLightsPerObject: 8
+  maxActiveScenePointLights: 24
+  enableRealtimeReflectionProbes: 1
+  viewDistanceOption: 3
+  viewDistanceCullMeters: 135
+  distantAnimatorThrottleMeters: 75
+  lodBias: 2
+  maximumLODLevel: 0
+  textureQualityOption: 2
+  masterTextureLimit: 0
+  anisotropicFiltering: 2
+  skinWeights: 255
+  vfxQualityOption: 3
+  particleDensityMultiplier: 1.5
+  particleRaycastBudget: 2048
+  enableVfxPointLights: 1
+  enableVfxShockwaveRings: 1
+  enableVfxSecondarySparks: 1
+  enableGroundMist: 1
+  enableAmbientDustParticles: 1
+  enableTorchFlickerMotion: 1
+  enablePostProcessing: 1
+  enableTonemapping: 1
+  bloomQualityOption: 3
+  enableBloom: 1
+  bloomHighQualityFiltering: 1
+  bloomIntensity: 0.62
+  enableVignette: 1
+  enableSplitToning: 1
+  ambientOcclusionOption: 2
+  enableSSAO: 1
+  ssaoDownsample: 0
+  ssaoIntensity: 0.55
+  ssaoSampleCount: 12
+  defaultVSyncCount: 1
+  targetFrameRate: -1

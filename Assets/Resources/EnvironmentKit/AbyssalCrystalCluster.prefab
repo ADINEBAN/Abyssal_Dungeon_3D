@@ -92,6 +92,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8034817522101578214}
+  - component: {fileID: 7403814526567361857}
   m_Layer: 0
   m_Name: AbyssalCrystalCluster
   m_TagString: Untagged
@@ -115,3 +116,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!205 &7403814526567361857
+LODGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4445024258761597204}
+  serializedVersion: 2
+  m_LocalReferencePoint: {x: 0, y: 0.8249999, z: 0}
+  m_Size: 1.6499999
+  m_FadeMode: 0
+  m_AnimateCrossFading: 0
+  m_LastLODIsBillboard: 0
+  m_LODs:
+  - screenRelativeHeight: 0.025
+    fadeTransitionWidth: 0
+    renderers:
+    - renderer: {fileID: 1970969628354552687}
+  m_Enabled: 1

@@ -256,54 +256,7 @@ namespace AbyssGame
 
         private void BuildSettingsModal(Transform root)
         {
-            var img = GameUIKit.MakeStyledPanel("SettingsModal", root, UIPanelStyle.Dialog,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-420f, -260f), new Vector2(420f, 260f));
-            _settingsModal = img.gameObject;
-
-            GameUIKit.MakeIcon("SetIc", img.transform, GameUIKit.GetIcon("settings"),
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -62f), new Vector2(68f, -22f));
-
-            GameUIKit.MakeText("Title", img.transform, "CÀI ĐẶT ÂM THANH & HIỆU NĂNG", 24, FontStyle.Bold, GameUIKit.ColGoldBright, TextAnchor.MiddleLeft,
-                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(78f, -66f), new Vector2(-24f, -16f));
-
-            GameUIKit.MakeGothicDivider("SetDiv", img.transform,
-                new Vector2(0.05f, 1f), new Vector2(0.95f, 1f), new Vector2(0f, -76f), new Vector2(0f, -58f));
-
-            var p = GameSession.I.Profile;
-            Text volLbl = GameUIKit.MakeText("VolLbl", img.transform, $"Âm lượng tổng: {Mathf.RoundToInt(p.masterVol * 100)}%", 18, FontStyle.Bold, GameUIKit.ColParchment, TextAnchor.MiddleCenter,
-                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(24f, -135f), new Vector2(-24f, -92f));
-
-            GameUIKit.MakeStyledButton("VolDown", img.transform, "- 10% Âm Lượng", 16, UIButtonStyle.Secondary,
-                new Vector2(0.10f, 1f), new Vector2(0.47f, 1f), new Vector2(0f, -196f), new Vector2(0f, -144f), () =>
-                {
-                    p.masterVol = Mathf.Clamp01(p.masterVol - 0.1f);
-                    GameAudio.I.ApplyVolumes();
-                    GameSession.I.SaveProfile();
-                    volLbl.text = $"Âm lượng tổng: {Mathf.RoundToInt(p.masterVol * 100)}%";
-                });
-
-            GameUIKit.MakeStyledButton("VolUp", img.transform, "+ 10% Âm Lượng", 16, UIButtonStyle.Primary,
-                new Vector2(0.53f, 1f), new Vector2(0.90f, 1f), new Vector2(0f, -196f), new Vector2(0f, -144f), () =>
-                {
-                    p.masterVol = Mathf.Clamp01(p.masterVol + 0.1f);
-                    GameAudio.I.ApplyVolumes();
-                    GameSession.I.SaveProfile();
-                    volLbl.text = $"Âm lượng tổng: {Mathf.RoundToInt(p.masterVol * 100)}%";
-                });
-
-            GameUIKit.MakeStyledButton("ResetSave", img.transform, "KHỞI TẠO LẠI HỒ SƠ (LV.1)", 15, UIButtonStyle.Danger,
-                new Vector2(0.14f, 1f), new Vector2(0.86f, 1f), new Vector2(0f, -268f), new Vector2(0f, -216f), () =>
-                {
-                    PlayerPrefs.DeleteKey("AbyssalDungeon3D_Profile_v2");
-                    Destroy(GameSession.I.gameObject);
-                    GameSession.GoToScene("MainMenu");
-                });
-
-            GameUIKit.MakeStyledButton("Close", img.transform, "LƯU & ĐÓNG", 17, UIButtonStyle.Primary,
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-130f, 22f), new Vector2(130f, 72f),
-                () => _settingsModal.SetActive(false), GameUIKit.GetIcon("check_seal"));
-
-            _settingsModal.SetActive(false);
+            _settingsModal = GameUIKit.BuildSettingsModal(root, includeResetSave: true);
         }
     }
 
