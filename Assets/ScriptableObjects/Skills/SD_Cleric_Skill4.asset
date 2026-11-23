@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 041fcb1fd22e7be42baff1e63bfabb1f, type: 3}
+  m_Name: SD_Cleric_Skill4
+  m_EditorClassIdentifier: 
+  skillName: Resurrection
+  description: "H\u1ED3i sinh \u0111\u1ED3ng \u0111\u1ED9i g\u1EE5c ng\xE3 v\xE0
+    h\u1ED3i m\xE1u c\u1EA3 \u0111\u1ED9i."
+  icon: {fileID: 0}
+  skillType: 0
+  damageType: 0
+  isUltimate: 0
+  manaCost: 80
+  cooldown: 40
+  castTime: 0
+  damageMultiplier: 2
+  range: 10
+  radius: 0
+  duration: 0
+  statusEffect: 0
+  statusDuration: 0
+  vfxPrefab: {fileID: 4776982330568684955, guid: 646aeed6813c4fa4aac94c238b46086d,
+    type: 3}

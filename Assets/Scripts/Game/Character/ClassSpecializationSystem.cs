@@ -77,7 +77,7 @@ namespace AbyssGame
             tagText = "";
             if (item == null) return false;
 
-            if (item.archetype == EquipArchetype.Universal || item.slot == ItemSlot.Ring || item.slot == ItemSlot.Amulet)
+            if (item.archetype == EquipArchetype.Universal || item.slot == ItemSlot.Ring || item.slot == ItemSlot.Amulet || item.slot == ItemSlot.Relic)
             {
                 statMultiplier = 1.0f;
                 tagText = "[Đa Dụng]";

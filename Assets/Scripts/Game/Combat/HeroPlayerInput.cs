@@ -32,6 +32,8 @@ namespace AbyssGame
         public bool UIBlockingCursor = false;
 
         private Camera _cam;
+        private Transform _cachedTargetTransform;
+        private ActorUnit _cachedTargetUnit;
         private float _baseFov = 58f;
         private float _fovKick;
         private float _fovKickVel;
@@ -169,8 +171,13 @@ namespace AbyssGame
 
             _orbitDistance = Mathf.Lerp(_orbitDistance, Distance, 1f - Mathf.Exp(-14f * dt));
 
-            // 1. Pivot SmoothDamp + Teleport Guard + Planar Look-Ahead
-            Vector3 targetPos = Target.position;
+            // 1. Pivot SmoothDamp + Interpolated Physics Position + Teleport Guard + Planar Look-Ahead
+            if (_cachedTargetTransform != Target)
+            {
+                _cachedTargetTransform = Target;
+                _cachedTargetUnit = Target != null ? Target.GetComponent<ActorUnit>() : null;
+            }
+            Vector3 targetPos = _cachedTargetUnit != null ? _cachedTargetUnit.InterpolatedPosition : Target.position;
             if (!_pivotInitialized || Vector3.Distance(targetPos, _lastTargetPos) > 6.5f)
             {
                 _pivotInitialized = true;
@@ -198,19 +205,10 @@ namespace AbyssGame
             {
                 desiredLookAhead = Vector3.ClampMagnitude(planarVel * 0.085f, 0.58f);
             }
-            _lookAheadOffset = Vector3.SmoothDamp(_lookAheadOffset, desiredLookAhead, ref _lookAheadVel, 0.20f, 12f, dt);
+            _lookAheadOffset = Vector3.SmoothDamp(_lookAheadOffset, desiredLookAhead, ref _lookAheadVel, 0.18f, 14f, dt);
 
             Vector3 rawAnchor = targetPos + PivotOffset + _lookAheadOffset;
-            Vector3 curXz = new Vector3(_smoothedPivot.x, 0f, _smoothedPivot.z);
-            Vector3 dstXz = new Vector3(rawAnchor.x, 0f, rawAnchor.z);
-
-            // Subtle 4cm micro-deadzone when stationary prevents camera micro-jitter
-            if (planarVel.sqrMagnitude > 0.05f || Vector3.Distance(curXz, dstXz) > 0.04f)
-            {
-                curXz = Vector3.SmoothDamp(curXz, dstXz, ref _pivotVelXz, 0.052f, 60f, dt);
-            }
-            float newPivotY = Mathf.SmoothDamp(_smoothedPivot.y, rawAnchor.y, ref _pivotVelY, 0.085f, 40f, dt);
-            _smoothedPivot = new Vector3(curXz.x, newPivotY, curXz.z);
+            _smoothedPivot = Vector3.SmoothDamp(_smoothedPivot, rawAnchor, ref _pivotVelXz, 0.045f, 70f, dt);
 
             // 2. Soft Target Lock-On Framing (over-the-shoulder toward locked enemy)
             if (isLockedOn && lockSys.LockedTarget != null && Time.timeScale > 0.01f)
@@ -280,7 +278,7 @@ namespace AbyssGame
             // 5. Dynamic FOV (Sprint speed sensation + Dodge FOV punch + Boss Lock focus)
             if (_cam != null)
             {
-                ActorUnit hero = Target.GetComponent<ActorUnit>();
+                ActorUnit hero = _cachedTargetUnit;
                 float sprintFov = (hero != null && hero.IsSprinting) ? 4.5f : 0f;
                 float lockFov = (isLockedOn && lockSys.LockedTarget != null && lockSys.LockedTarget.IsBoss) ? -1.8f : 0f;
                 _fovKick = Mathf.SmoothDamp(_fovKick, 0f, ref _fovKickVel, 0.18f, 40f, dt);
@@ -349,6 +347,7 @@ namespace AbyssGame
         private bool _shiftExhausted;
         private float _rmbDownTime;
         private float _rmbMouseTravel;
+        private Vector3 _pendingMoveVel;
 
         private void Awake()
         {
@@ -431,6 +430,7 @@ namespace AbyssGame
 
             if (!Unit.CanAct())
             {
+                _pendingMoveVel = Vector3.zero;
                 Unit.StopMovingAnim();
                 return;
             }
@@ -438,10 +438,12 @@ namespace AbyssGame
             // 1. Consume highest-priority buffered action on the exact frame Hero becomes ready
             if (_inputBuffer.HasBufferedAction && TryExecuteBufferedAction(moveDir, aimDir, aimPoint))
             {
+                _pendingMoveVel = Vector3.zero;
                 return;
             }
 
             // 2. Locomotion: Walk (0.52x) / Run (1.0x) / Sprint (1.38x) + Lock-On Combat Strafe
+            // Input is captured in Update(); physics movement executes in FixedUpdate().
             if (hasMove)
             {
                 float gaitMult = Unit.IsSprinting ? 1.38f : (Unit.IsWalking ? 0.52f : 1.0f);
@@ -458,10 +460,11 @@ namespace AbyssGame
                     Unit.FaceDirection(moveDir, Unit.IsSprinting ? 18f : 15f);
                 }
 
-                Unit.MoveWorld(moveDir.normalized * (moveSpd * dt));
+                _pendingMoveVel = moveDir.normalized * moveSpd;
             }
             else
             {
+                _pendingMoveVel = Vector3.zero;
                 Unit.StopMovingAnim();
             }
 
@@ -469,6 +472,17 @@ namespace AbyssGame
             if (!pointerOverUi && !uiBlocking && Input.GetMouseButton(0))
             {
                 Unit.TryBasicAttack(aimDir, aimPoint);
+            }
+        }
+
+        private void FixedUpdate()
+        {
+            if (Time.timeScale < 0.01f || Unit == null || Unit.IsDead || !Unit.CanAct())
+                return;
+
+            if (_pendingMoveVel.sqrMagnitude > 0.0001f)
+            {
+                Unit.SetFixedMoveVelocity(_pendingMoveVel);
             }
         }
 

@@ -61,6 +61,9 @@ MonoBehaviour:
     range: 20
     isUltimate: 0
     vfxColor: {r: 1, g: 0.92, b: 0.55, a: 1}
+    vfxPoolKey: VFX_Cleric_Smite
+    vfxPrefab: {fileID: 4173514899726323992, guid: 4d1892040ee4f244bb41ac4e53cc205d,
+      type: 3}
   - skillName: Group Heal
     description: "H\u1ED3i m\xE1u c\u1EA3 \u0111\u1ED9i."
     kind: 5
@@ -71,6 +74,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 1, g: 0.92, b: 0.55, a: 1}
+    vfxPoolKey: VFX_Cleric_GroupHeal
+    vfxPrefab: {fileID: 2985301010262194211, guid: 2caee74312328c0448448dc1bbb2a3a6,
+      type: 3}
   - skillName: Purify
     description: "Gi\u1EA3i hi\u1EC7u \u1EE9ng x\u1EA5u + khi\xEAn 12% HP."
     kind: 16
@@ -81,6 +87,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 1, g: 0.92, b: 0.55, a: 1}
+    vfxPoolKey: VFX_Cleric_Purify
+    vfxPrefab: {fileID: 3383736296845653107, guid: 4793833eb3b9869468ceb57e2f5ff361,
+      type: 3}
   - skillName: Resurrection
     description: "H\u1ED3i sinh \u0111\u1ED3ng \u0111\u1ED9i g\u1EE5c ng\xE3 v\xE0
       h\u1ED3i m\xE1u c\u1EA3 \u0111\u1ED9i."
@@ -92,3 +101,10 @@ MonoBehaviour:
     range: 10
     isUltimate: 1
     vfxColor: {r: 1, g: 0.92, b: 0.55, a: 1}
+    vfxPoolKey: VFX_Cleric_Resurrection
+    vfxPrefab: {fileID: 4776982330568684955, guid: 646aeed6813c4fa4aac94c238b46086d,
+      type: 3}
+  projectileVfxPrefab: {fileID: 770198134436957383, guid: c60f3ddc24f1a9943ab0a57d64cc63ae,
+    type: 3}
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}

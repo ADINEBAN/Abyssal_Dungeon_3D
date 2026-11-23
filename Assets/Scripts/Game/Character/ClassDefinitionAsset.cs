@@ -24,6 +24,8 @@ namespace AbyssGame
         public float range;
         public bool isUltimate;
         public Color vfxColor;
+        public string vfxPoolKey;
+        public GameObject vfxPrefab;
     }
 
     /// <summary>
@@ -67,6 +69,10 @@ namespace AbyssGame
 
         [Header("4 Signature Class Skills (Q / W / E / R)")]
         public SkillSpecEntry[] skills = new SkillSpecEntry[4];
+
+        [Header("Pooled 3D VFX Bindings")]
+        public GameObject projectileVfxPrefab;
+        public GameObject dashVfxPrefab;
 
         public void SyncFromDatabase(ClassDef def)
         {

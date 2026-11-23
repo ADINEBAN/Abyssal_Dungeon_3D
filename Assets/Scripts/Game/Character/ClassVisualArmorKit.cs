@@ -107,6 +107,8 @@ namespace AbyssGame
             Transform exportedRig = visualRoot.transform.Find("Rig");
             if (exportedRig != null)
             {
+                visualRoot.transform.localScale = Vector3.one;
+                exportedRig.localScale = Vector3.one;
                 Transform rWeaponSocket = rHand != null ? rHand : visualRoot.transform;
                 Transform lWeaponSocket = lHand != null ? lHand : visualRoot.transform;
                 Transform mainWpn = rHand != null ? rHand.Find("SignatureMainWeapon") : null;

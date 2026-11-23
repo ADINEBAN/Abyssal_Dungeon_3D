@@ -29,7 +29,7 @@ namespace AbyssGame
 
     public enum StatusType { None, Burn, Poison, Slow, Freeze, Stun, Curse, AtkUp, DefUp, SpeedUp, Regen, Rage, Taunted }
     public enum Rarity { Common, Uncommon, Rare, Epic, Legendary, Mythic }
-    public enum ItemSlot { Weapon, Armor, Helmet, Ring, Amulet }
+    public enum ItemSlot { Weapon, Armor, Helmet, Ring, Amulet, Relic }
     public enum WeaponKind { None, SwordShield, GreatSword, Daggers, Bow, Staff, Wand, Fists, Mace, TowerShield, Claws }
     public enum ModelKind { Kachujin, Paladin, Vanguard, Golem, Treant }
     public enum Archetype { Melee, Ranged, Mage, Tank, Assassin, Elite, MiniBoss, Boss }
@@ -102,7 +102,7 @@ namespace AbyssGame
             new Color(0.80f, 0.80f, 0.80f), new Color(0.35f, 0.90f, 0.35f), new Color(0.30f, 0.60f, 1.00f),
             new Color(0.72f, 0.38f, 1.00f), new Color(1.00f, 0.60f, 0.10f), new Color(1.00f, 0.25f, 0.40f)
         };
-        public static readonly string[] SlotNames = { "Vũ khí", "Giáp", "Mũ", "Nhẫn", "Amulet" };
+        public static readonly string[] SlotNames = { "Vũ khí", "Giáp", "Mũ", "Nhẫn", "Dây chuyền", "Cổ vật" };
 
         public static readonly ClassDef[] Classes;
         public static readonly Dictionary<string, EnemyDef> Enemies = new Dictionary<string, EnemyDef>();

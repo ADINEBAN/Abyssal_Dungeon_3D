@@ -47,7 +47,9 @@ namespace AbyssGame
             DungeonBiome biome,
             bool openSouthDoor,
             bool openNorthDoor,
-            float doorwayWidth = 6f)
+            float doorwayWidth = 6f,
+            bool openWestDoor = false,
+            bool openEastDoor = false)
         {
             BiomeAtmosphereData bData = BiomeAtmosphereLibrary.Get(biome);
             Material wallMat = bData.preferMossyStone
@@ -95,21 +97,9 @@ namespace AbyssGame
             float westX = center.x - width * 0.5f;
             float eastX = center.x + width * 0.5f;
 
-            // West (-X, faces +X) & East (+X, faces -X)
-            AddWallCollider(wallGroup, new Vector3(westX - 0.3f, wallHeight * 0.5f, center.z), new Vector3(0.6f, wallHeight + 1f, length));
-            AddWallCollider(wallGroup, new Vector3(eastX + 0.3f, wallHeight * 0.5f, center.z), new Vector3(0.6f, wallHeight + 1f, length));
-
-            for (int iz = 0; iz < nz; iz++)
-            {
-                float z = startZ + iz * (length / nz);
-                ObjMeshLoader.SpawnPiece("DungeonWall_Modular", wallGroup,
-                    new Vector3(westX, 0f, z), Quaternion.Euler(0f, 90f, 0f),
-                    new Vector3(tileScaleZ, wallScaleY, 1f), wallMat, addBoxCollider: false, castShadows: false);
-
-                ObjMeshLoader.SpawnPiece("DungeonWall_Modular", wallGroup,
-                    new Vector3(eastX, 0f, z), Quaternion.Euler(0f, -90f, 0f),
-                    new Vector3(tileScaleZ, wallScaleY, 1f), wallMat, addBoxCollider: false, castShadows: false);
-            }
+            // West (-X, faces +X) & East (+X, faces -X) with optional West/East doorways
+            BuildSideWallWithOptionalGate(wallGroup, westX, center.z, length, wallHeight, doorwayWidth, openWestDoor, 90f, wallMat, pillarMat);
+            BuildSideWallWithOptionalGate(wallGroup, eastX, center.z, length, wallHeight, doorwayWidth, openEastDoor, -90f, wallMat, pillarMat);
 
             // South Wall (-Z, faces +Z)
             BuildEndWallWithOptionalGate(wallGroup, center.x, southZ, width, wallHeight, doorwayWidth, openSouthDoor, 0f, wallMat, pillarMat);
@@ -130,6 +120,9 @@ namespace AbyssGame
 
                 for (int side = -1; side <= 1; side += 2)
                 {
+                    if (side < 0 && openWestDoor && Mathf.Abs(pz - center.z) < doorwayWidth * 0.65f) continue;
+                    if (side > 0 && openEastDoor && Mathf.Abs(pz - center.z) < doorwayWidth * 0.65f) continue;
+
                     Vector3 pPos = new Vector3(center.x + side * aisleX, 0f, pz);
                     ObjMeshLoader.SpawnPiece("GothicPillar", colonnade,
                         pPos, Quaternion.identity, new Vector3(1f, pScaleY, 1f),
@@ -183,25 +176,26 @@ namespace AbyssGame
             float corridorLen,
             float corridorW,
             float wallHeight,
-            DungeonBiome biome)
+            DungeonBiome biome,
+            float centerX = 0f)
         {
             BiomeAtmosphereData bData = BiomeAtmosphereLibrary.Get(biome);
             Material wallMat = PbrMaterialLibrary.GothicStone(bData.wallStoneTint);
             Material floorMat = PbrMaterialLibrary.CathedralFloor(bData.floorStoneTint);
 
-            var cor = new GameObject("ModularCorridor").transform;
+            var cor = new GameObject("ModularCorridor_NS").transform;
             cor.SetParent(root, false);
             float centerZ = southZ + corridorLen * 0.5f;
 
             // Floor collider
             var fcGo = new GameObject("CorridorFloorCollider");
             fcGo.transform.SetParent(cor, false);
-            fcGo.transform.position = new Vector3(0f, -0.25f, centerZ);
+            fcGo.transform.position = new Vector3(centerX, -0.25f, centerZ);
             fcGo.AddComponent<BoxCollider>().size = new Vector3(corridorW + 0.6f, 0.5f, corridorLen + 0.8f);
 
             // Wall colliders
-            AddWallCollider(cor, new Vector3(-corridorW * 0.5f - 0.3f, wallHeight * 0.5f, centerZ), new Vector3(0.6f, wallHeight + 1f, corridorLen));
-            AddWallCollider(cor, new Vector3(corridorW * 0.5f + 0.3f, wallHeight * 0.5f, centerZ), new Vector3(0.6f, wallHeight + 1f, corridorLen));
+            AddWallCollider(cor, new Vector3(centerX - corridorW * 0.5f - 0.3f, wallHeight * 0.5f, centerZ), new Vector3(0.6f, wallHeight + 1f, corridorLen));
+            AddWallCollider(cor, new Vector3(centerX + corridorW * 0.5f + 0.3f, wallHeight * 0.5f, centerZ), new Vector3(0.6f, wallHeight + 1f, corridorLen));
 
             int segs = Mathf.Max(1, Mathf.RoundToInt(corridorLen / 4f));
             float segLen = corridorLen / segs;
@@ -211,28 +205,84 @@ namespace AbyssGame
             {
                 float z = southZ + (i + 0.5f) * segLen;
                 ObjMeshLoader.SpawnPiece("DungeonFloor_ChannelTile", cor,
-                    new Vector3(0f, 0f, z), Quaternion.identity,
+                    new Vector3(centerX, 0f, z), Quaternion.identity,
                     new Vector3(corridorW / 4f, 1f, segLen / 4f), floorMat, false, false);
 
                 ObjMeshLoader.SpawnPiece("DungeonWall_Modular", cor,
-                    new Vector3(-corridorW * 0.5f, 0f, z), Quaternion.Euler(0f, 90f, 0f),
+                    new Vector3(centerX - corridorW * 0.5f, 0f, z), Quaternion.Euler(0f, 90f, 0f),
                     new Vector3(segLen / 4f, wScaleY, 1f), wallMat, false, false);
 
                 ObjMeshLoader.SpawnPiece("DungeonWall_Modular", cor,
-                    new Vector3(corridorW * 0.5f, 0f, z), Quaternion.Euler(0f, -90f, 0f),
+                    new Vector3(centerX + corridorW * 0.5f, 0f, z), Quaternion.Euler(0f, -90f, 0f),
                     new Vector3(segLen / 4f, wScaleY, 1f), wallMat, false, false);
             }
 
             ObjMeshLoader.SpawnPiece("GothicArchVault", cor,
-                new Vector3(0f, 0f, centerZ), Quaternion.identity,
+                new Vector3(centerX, 0f, centerZ), Quaternion.identity,
                 new Vector3(corridorW / 4f, wallHeight / 5.1f, 1f), wallMat, false, false);
 
-            // Walkable Aged-Oak Wooden Plank Bridge along the corridor so transitioning between rooms plays authentic wood plank footsteps!
-            BuildWoodenPlankDeck(cor, "CorridorBridge", new Vector3(0f, 0f, centerZ), Mathf.Min(3.6f, corridorW - 1.2f), corridorLen - 0.6f);
+            BuildWoodenPlankDeck(cor, "CorridorBridge", new Vector3(centerX, 0f, centerZ), Mathf.Min(3.6f, corridorW - 1.2f), corridorLen - 0.6f);
 
-            SpawnWallTorch(cor, new Vector3(-corridorW * 0.5f + 0.1f, 2.35f, centerZ), Quaternion.Euler(0f, 90f, 0f),
+            SpawnWallTorch(cor, new Vector3(centerX - corridorW * 0.5f + 0.1f, 2.35f, centerZ), Quaternion.Euler(0f, 90f, 0f),
                 bData.torchLightColor, bData.torchCoreColor, withPointLight: true, range: 11f, intensity: 1.55f);
-            SpawnWallTorch(cor, new Vector3(corridorW * 0.5f - 0.1f, 2.35f, centerZ), Quaternion.Euler(0f, -90f, 0f),
+            SpawnWallTorch(cor, new Vector3(centerX + corridorW * 0.5f - 0.1f, 2.35f, centerZ), Quaternion.Euler(0f, -90f, 0f),
+                bData.torchLightColor, bData.torchCoreColor, withPointLight: false);
+        }
+
+        public static void BuildModularCorridorEW(
+            Transform root,
+            float westX,
+            float centerZ,
+            float corridorLen,
+            float corridorW,
+            float wallHeight,
+            DungeonBiome biome)
+        {
+            BiomeAtmosphereData bData = BiomeAtmosphereLibrary.Get(biome);
+            Material wallMat = PbrMaterialLibrary.GothicStone(bData.wallStoneTint);
+            Material floorMat = PbrMaterialLibrary.CathedralFloor(bData.floorStoneTint);
+
+            var cor = new GameObject("ModularCorridor_EW").transform;
+            cor.SetParent(root, false);
+            float centerX = westX + corridorLen * 0.5f;
+
+            var fcGo = new GameObject("CorridorFloorCollider_EW");
+            fcGo.transform.SetParent(cor, false);
+            fcGo.transform.position = new Vector3(centerX, -0.25f, centerZ);
+            fcGo.AddComponent<BoxCollider>().size = new Vector3(corridorLen + 0.8f, 0.5f, corridorW + 0.6f);
+
+            AddWallCollider(cor, new Vector3(centerX, wallHeight * 0.5f, centerZ - corridorW * 0.5f - 0.3f), new Vector3(corridorLen, wallHeight + 1f, 0.6f));
+            AddWallCollider(cor, new Vector3(centerX, wallHeight * 0.5f, centerZ + corridorW * 0.5f + 0.3f), new Vector3(corridorLen, wallHeight + 1f, 0.6f));
+
+            int segs = Mathf.Max(1, Mathf.RoundToInt(corridorLen / 4f));
+            float segLen = corridorLen / segs;
+            float wScaleY = wallHeight / 5.2f;
+
+            for (int i = 0; i < segs; i++)
+            {
+                float x = westX + (i + 0.5f) * segLen;
+                ObjMeshLoader.SpawnPiece("DungeonFloor_ChannelTile", cor,
+                    new Vector3(x, 0f, centerZ), Quaternion.identity,
+                    new Vector3(segLen / 4f, 1f, corridorW / 4f), floorMat, false, false);
+
+                ObjMeshLoader.SpawnPiece("DungeonWall_Modular", cor,
+                    new Vector3(x, 0f, centerZ - corridorW * 0.5f), Quaternion.Euler(0f, 0f, 0f),
+                    new Vector3(segLen / 4f, wScaleY, 1f), wallMat, false, false);
+
+                ObjMeshLoader.SpawnPiece("DungeonWall_Modular", cor,
+                    new Vector3(x, 0f, centerZ + corridorW * 0.5f), Quaternion.Euler(0f, 180f, 0f),
+                    new Vector3(segLen / 4f, wScaleY, 1f), wallMat, false, false);
+            }
+
+            ObjMeshLoader.SpawnPiece("GothicArchVault", cor,
+                new Vector3(centerX, 0f, centerZ), Quaternion.Euler(0f, 90f, 0f),
+                new Vector3(corridorW / 4f, wallHeight / 5.1f, 1f), wallMat, false, false);
+
+            BuildWoodenPlankDeck(cor, "CorridorBridge_EW", new Vector3(centerX, 0f, centerZ), corridorLen - 0.6f, Mathf.Min(3.6f, corridorW - 1.2f));
+
+            SpawnWallTorch(cor, new Vector3(centerX, 2.35f, centerZ - corridorW * 0.5f + 0.1f), Quaternion.Euler(0f, 0f, 0f),
+                bData.torchLightColor, bData.torchCoreColor, withPointLight: true, range: 11f, intensity: 1.55f);
+            SpawnWallTorch(cor, new Vector3(centerX, 2.35f, centerZ + corridorW * 0.5f - 0.1f), Quaternion.Euler(0f, 180f, 0f),
                 bData.torchLightColor, bData.torchCoreColor, withPointLight: false);
         }
 
@@ -542,6 +592,60 @@ namespace AbyssGame
             // Monumental Gothic Gate Frame around the 6m doorway
             ObjMeshLoader.SpawnPiece("GothicGateFrame", parent,
                 new Vector3(centerX, 0f, z), Quaternion.Euler(0f, yRot, 0f),
+                new Vector3(gapW / 6.0f, scaleY, 1f), frameMat, addBoxCollider: false, castShadows: false);
+        }
+
+        private static void BuildSideWallWithOptionalGate(
+            Transform parent,
+            float x,
+            float centerZ,
+            float roomLen,
+            float wallH,
+            float gapW,
+            bool hasDoorway,
+            float yRot,
+            Material wallMat,
+            Material frameMat)
+        {
+            float scaleY = wallH / 5.2f;
+            if (!hasDoorway)
+            {
+                AddWallCollider(parent, new Vector3(x + (yRot > 0f ? -0.3f : 0.3f), wallH * 0.5f, centerZ), new Vector3(0.6f, wallH + 1f, roomLen + 1f));
+                int n = Mathf.Max(1, Mathf.RoundToInt(roomLen / 4f));
+                float segL = roomLen / n;
+                float sz = centerZ - roomLen * 0.5f + segL * 0.5f;
+                for (int i = 0; i < n; i++)
+                {
+                    ObjMeshLoader.SpawnPiece("DungeonWall_Modular", parent,
+                        new Vector3(x, 0f, sz + i * segL), Quaternion.Euler(0f, yRot, 0f),
+                        new Vector3(segL / 4f, scaleY, 1f), wallMat, addBoxCollider: false, castShadows: false);
+                }
+                return;
+            }
+
+            float sideL = (roomLen - gapW) * 0.5f;
+            if (sideL > 0.4f)
+            {
+                AddWallCollider(parent, new Vector3(x, wallH * 0.5f, centerZ - (gapW * 0.5f + sideL * 0.5f)), new Vector3(0.7f, wallH + 1f, sideL));
+                AddWallCollider(parent, new Vector3(x, wallH * 0.5f, centerZ + (gapW * 0.5f + sideL * 0.5f)), new Vector3(0.7f, wallH + 1f, sideL));
+
+                int sidePanels = Mathf.Max(1, Mathf.RoundToInt(sideL / 4f));
+                float panelL = sideL / sidePanels;
+                for (int s = -1; s <= 1; s += 2)
+                {
+                    float baseEdge = s < 0 ? (centerZ - roomLen * 0.5f) : (centerZ + gapW * 0.5f);
+                    for (int i = 0; i < sidePanels; i++)
+                    {
+                        float pz = baseEdge + (i + 0.5f) * panelL;
+                        ObjMeshLoader.SpawnPiece("DungeonWall_Modular", parent,
+                            new Vector3(x, 0f, pz), Quaternion.Euler(0f, yRot, 0f),
+                            new Vector3(panelL / 4f, scaleY, 1f), wallMat, addBoxCollider: false, castShadows: false);
+                    }
+                }
+            }
+
+            ObjMeshLoader.SpawnPiece("GothicGateFrame", parent,
+                new Vector3(x, 0f, centerZ), Quaternion.Euler(0f, yRot, 0f),
                 new Vector3(gapW / 6.0f, scaleY, 1f), frameMat, addBoxCollider: false, castShadows: false);
         }
 

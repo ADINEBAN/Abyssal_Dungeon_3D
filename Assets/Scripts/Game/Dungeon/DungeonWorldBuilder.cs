@@ -8,17 +8,29 @@ namespace AbyssGame
     public class DungeonRoomRuntime
     {
         public int index;
+        public int gridX;
+        public int gridY;
         public RoomType type;
         public DungeonBiome biome;
         public string title;
+        public string subTypeLabel;
+        public bool isSanctuary;
         public Vector3 center;
         public float width;
         public float length;
         public bool activated;
         public bool cleared;
+        public bool visited;
+        public bool discovered;
+        public bool openNorth;
+        public bool openSouth;
+        public bool openWest;
+        public bool openEast;
         public DungeonGate entryGate;
         public DungeonGate exitGate;
         public WorldTreasureChest rewardChest;
+        public readonly List<int> connectedRoomIndices = new List<int>();
+        public readonly List<DungeonGate> roomGates = new List<DungeonGate>();
         public readonly List<ActorUnit> activeMonsters = new List<ActorUnit>();
         public readonly List<WorldRunePillar> puzzlePillars = new List<WorldRunePillar>();
     }
@@ -106,112 +118,178 @@ namespace AbyssGame
 
         private void ConstructRoomsGeometry()
         {
-            // Progression matching Section 3.5 & Section 2.1 (7 Distinct Biomes across 7 Rooms):
-            // 0 Entrance (ForgottenTemple) -> 1 Combat (AncientDungeon) -> 2 Elite (UndergroundFortress)
-            // -> 3 Puzzle/Event (AbyssalCave) -> 4 MiniBoss (CrystalChamber) -> 5 Combat (CursedForest) -> 6 Final Boss (BossArena)
-            var specs = new (RoomType type, float w, float len)[]
-            {
-                (RoomType.Entrance, 20f, 20f),
-                (RoomType.Combat,   24f, 24f),
-                (RoomType.Elite,    26f, 26f),
-                (RoomType.Puzzle,   24f, 24f),
-                (RoomType.MiniBoss, 26f, 26f),
-                (RoomType.Combat,   26f, 26f),
-                (RoomType.Boss,     34f, 34f)
-            };
+            int floor = GameSession.I.Profile.selectedFloor;
+            int seedOffset = GameSession.I.Profile.highestFloor + floor * 17;
+            var specs = ProceduralDungeonGenerator.GenerateSeededDungeon(floor, seedOffset, out _);
 
-            const float corridorLen = 8f;
+            const float pitch = ProceduralDungeonGenerator.GridCellPitch; // 34f
+            const float corridorLen = 10f; // 34f - 24f = 10f exact N/S and E/W bridge
             const float corridorW = 6f;
-            float cursorZ = 0f;
 
             for (int i = 0; i < specs.Length; i++)
             {
-                float w = specs[i].w;
-                float len = specs[i].len;
-                Vector3 center = new Vector3(0f, 0f, cursorZ + len * 0.5f);
-                DungeonBiome biome = BiomeAtmosphereLibrary.BiomeForDungeonRoom(i, specs[i].type);
+                var sp = specs[i];
+                float w = sp.width;
+                float len = sp.length;
+
+                // Boss room is 32x32 at gridY=4; shift Z by +4m so its South wall (124m) is 10m North of (0,3)'s North wall (114m)
+                float extraZ = sp.type == RoomType.Boss ? (len - 24f) * 0.5f : 0f;
+                Vector3 center = new Vector3(sp.gridX * pitch, 0f, sp.gridY * pitch + extraZ);
+                DungeonBiome biome = sp.biome;
 
                 var room = new DungeonRoomRuntime
                 {
                     index = i,
-                    type = specs[i].type,
+                    gridX = sp.gridX,
+                    gridY = sp.gridY,
+                    type = sp.type,
                     biome = biome,
-                    title = $"Phòng {i + 1}/7: {GameDB.RoomName(specs[i].type)}",
+                    title = !string.IsNullOrEmpty(sp.customTitle)
+                        ? sp.customTitle
+                        : $"Khu {i + 1}/{specs.Length}: {GameDB.RoomName(sp.type)}",
+                    subTypeLabel = !string.IsNullOrEmpty(sp.subTypeLabel) ? sp.subTypeLabel : GameDB.RoomName(sp.type),
+                    isSanctuary = sp.isSanctuary,
                     center = center,
                     width = w,
-                    length = len
+                    length = len,
+                    openNorth = sp.openNorth,
+                    openSouth = sp.openSouth,
+                    openWest = sp.openWest,
+                    openEast = sp.openEast
                 };
+                if (sp.connectedIndices != null)
+                    room.connectedRoomIndices.AddRange(sp.connectedIndices);
+
                 Rooms.Add(room);
 
-                var rRoot = new GameObject($"Room_{i}_{specs[i].type}_{biome}");
+                var rRoot = new GameObject($"Room_{i}_G({sp.gridX},{sp.gridY})_{sp.type}_{biome}");
                 rRoot.transform.SetParent(transform, false);
 
-                float wallH = specs[i].type == RoomType.Boss ? 6.6f : 5.2f;
-                bool hasSouthDoor = (i > 0);
-                bool hasNorthDoor = (i < specs.Length - 1);
+                float wallH = sp.type == RoomType.Boss ? 6.6f : 5.2f;
 
-                // Modular 3D Gothic Architecture (Pillars, Vault Arches, Recessed Channel Floor, Blind-Arch Walls, Sconce Torches, Mist & Decals)
+                // Modular 3D Gothic Architecture with N/S/E/W branching doorways
                 ModularDungeonArchitect.BuildModularRoomShell(
                     rRoot.transform, center, w, len, wallH, biome,
-                    openSouthDoor: hasSouthDoor, openNorthDoor: hasNorthDoor, doorwayWidth: corridorW);
+                    openSouthDoor: sp.openSouth, openNorthDoor: sp.openNorth,
+                    doorwayWidth: corridorW,
+                    openWestDoor: sp.openWest, openEastDoor: sp.openEast);
 
-                // Biome-specific 3D Prop Storytelling (Statues, Crystals, Braziers, Cursed Roots, Ruined Rubble, Boss Altar)
+                // Biome-specific 3D Prop Storytelling
                 ModularDungeonArchitect.DressBiomeEnvironmentProps(rRoot.transform, center, w, len, biome);
 
-                float southZ = cursorZ;
-                if (hasSouthDoor)
+                if (sp.openSouth)
                 {
-                    room.entryGate = DungeonGate.Create(rRoot.transform, new Vector3(0f, 0f, southZ), corridorW);
+                    var g = DungeonGate.Create(rRoot.transform, new Vector3(center.x, 0f, center.z - len * 0.5f), corridorW, eastWest: false);
+                    room.entryGate = g;
+                    room.roomGates.Add(g);
                 }
 
-                float northZ = cursorZ + len;
-                if (hasNorthDoor)
+                if (sp.openNorth)
                 {
-                    room.exitGate = DungeonGate.Create(rRoot.transform, new Vector3(0f, 0f, northZ), corridorW);
-                    ModularDungeonArchitect.BuildModularCorridor(rRoot.transform, northZ, corridorLen, corridorW, wallH, biome);
+                    float northZ = center.z + len * 0.5f;
+                    var g = DungeonGate.Create(rRoot.transform, new Vector3(center.x, 0f, northZ), corridorW, eastWest: false);
+                    room.exitGate = g;
+                    room.roomGates.Add(g);
+                    ModularDungeonArchitect.BuildModularCorridor(rRoot.transform, northZ, corridorLen, corridorW, wallH, biome, center.x);
+                }
+
+                if (sp.openWest)
+                {
+                    float westX = center.x - w * 0.5f;
+                    var g = DungeonGate.Create(rRoot.transform, new Vector3(westX, 0f, center.z), corridorW, eastWest: true);
+                    if (room.entryGate == null) room.entryGate = g;
+                    room.roomGates.Add(g);
+                }
+
+                if (sp.openEast)
+                {
+                    float eastX = center.x + w * 0.5f;
+                    var g = DungeonGate.Create(rRoot.transform, new Vector3(eastX, 0f, center.z), corridorW, eastWest: true);
+                    if (room.exitGate == null) room.exitGate = g;
+                    room.roomGates.Add(g);
+                    ModularDungeonArchitect.BuildModularCorridorEW(rRoot.transform, eastX, corridorLen, corridorW, wallH, center.z, biome);
                 }
 
                 DecorateRoom(room, rRoot.transform, wallH);
-                cursorZ = northZ + corridorLen;
+            }
+
+            // Initialize Fog of War from Entrance (0)
+            RevealFogOfWarForRoom(0);
+        }
+
+        public void RevealFogOfWarForRoom(int roomIdx)
+        {
+            if (roomIdx < 0 || roomIdx >= Rooms.Count) return;
+            var rm = Rooms[roomIdx];
+            rm.visited = true;
+            rm.discovered = true;
+            for (int k = 0; k < rm.connectedRoomIndices.Count; k++)
+            {
+                int nb = rm.connectedRoomIndices[k];
+                if (nb >= 0 && nb < Rooms.Count)
+                    Rooms[nb].discovered = true;
             }
         }
 
         private void DecorateRoom(DungeonRoomRuntime room, Transform root, float wallH)
         {
             Vector3 c = room.center;
-            float hl = room.length * 0.5f - 2.2f;
+            float hl = room.length * 0.5f - 2.4f;
+
+            if (room.index == 0)
+            {
+                // Entry abyssal portal behind party + starter Healing Shrine + Chapter 1 Lore Monolith
+                BuildDecorativePortal(root, c + new Vector3(0f, 0f, -6.2f), new Color(0.65f, 0.25f, 1f));
+                WorldHealingShrine.Create(root, c + new Vector3(5.2f, 0f, 1.5f));
+                WorldLoreMonolith.Create(root, c + new Vector3(-5.2f, 0f, 1.8f), 0);
+                return;
+            }
+
+            if (room.isSanctuary)
+            {
+                // Side-branch Healing Shrine Sanctuary (Room 5) + Chapter 2 Lore Monolith
+                WorldHealingShrine.Create(root, c + new Vector3(-3.8f, 0f, 1.5f));
+                WorldHealingShrine.Create(root, c + new Vector3(3.8f, 0f, 1.5f));
+                WorldLoreMonolith.Create(root, c + new Vector3(0f, 0f, -3.5f), 1);
+                room.rewardChest = WorldTreasureChest.Create(root, c + new Vector3(0f, 0f, 4.2f), 2);
+                room.rewardChest.UnlockChest();
+                return;
+            }
 
             switch (room.type)
             {
-                case RoomType.Entrance:
-                    // Entry abyssal portal behind party + starter Healing Shrine
-                    BuildDecorativePortal(root, c + new Vector3(0f, 0f, -6.2f), new Color(0.65f, 0.25f, 1f));
-                    WorldHealingShrine.Create(root, c + new Vector3(4.6f, 0f, 1.5f));
-                    break;
-
                 case RoomType.Combat:
-                    WorldDungeonTrap.Create(root, c + new Vector3(-3.8f, 0f, 0f), false);
-                    WorldDungeonTrap.Create(root, c + new Vector3(3.8f, 0f, 0f), room.index == 5);
-                    room.rewardChest = WorldTreasureChest.Create(root, c + new Vector3(0f, 0f, hl - 1.2f), room.index >= 5 ? 2 : 1);
-                    WorldEnvironmentalEvent.Create(root, c + new Vector3(6.2f, 0f, -2.5f),
-                        room.index == 1 ? "Tế Đàn Huyết Nguyệt" : "Giếng Hồn Vực Thẳm", room.index);
-                    if (room.index == 5)
-                        WorldHealingShrine.Create(root, c + new Vector3(-6.5f, 0f, hl - 1.5f));
+                    WorldDungeonTrap.Create(root, c + new Vector3(-3.8f, 0f, -2.2f), false);
+                    WorldDungeonTrap.Create(root, c + new Vector3(3.8f, 0f, 2.2f), room.index >= 4);
+                    room.rewardChest = WorldTreasureChest.Create(root, c + new Vector3(0f, 0f, hl - 1.2f), room.index >= 2 ? 2 : 1);
+                    if (room.index == 2 || room.index == 6)
+                    {
+                        // Side-branch Choice Altar (Tế Đàn Lựa Chọn) + Bonus Treasure Vault Chest
+                        string altarTitle = room.index == 2 ? "Tế Đàn Lựa Chọn Nguyền Rủa" : "Tế Đàn Phong Ấn Huyết Tinh";
+                        WorldChoiceAltar.Create(root, c + new Vector3(5.6f, 0f, -2.8f), altarTitle);
+                        var bonusChest = WorldTreasureChest.Create(root, c + new Vector3(-4.2f, 0f, hl - 1.4f), room.index == 6 ? 3 : 2);
+                        bonusChest.UnlockChest();
+                    }
+                    else
+                    {
+                        WorldEnvironmentalEvent.Create(root, c + new Vector3(5.8f, 0f, -3.2f), "Tế Đàn Huyết Nguyệt", room.index);
+                    }
                     break;
 
                 case RoomType.Elite:
                     WorldDungeonTrap.Create(root, c + new Vector3(0f, 0f, -2.5f), true);
-                    WorldEnvironmentalEvent.Create(root, c + new Vector3(-6.4f, 0f, 0f), "Lõi Năng Lượng Cổ Đại", room.index);
-                    room.rewardChest = WorldTreasureChest.Create(root, c + new Vector3(0f, 0f, hl - 1.2f), 2);
+                    WorldEnvironmentalEvent.Create(root, c + new Vector3(-6.4f, 0f, -2.8f), "Lõi Năng Lượng Cổ Đại", room.index);
+                    WorldLoreMonolith.Create(root, c + new Vector3(6.2f, 0f, -2.8f), 2);
+                    room.rewardChest = WorldTreasureChest.Create(root, c + new Vector3(4.5f, 0f, hl - 1.4f), 2);
                     break;
 
                 case RoomType.Puzzle:
-                    // 3 Rune Pillars that must be activated + Spike Traps around center
+                    // 3 Rune Pillars that must be activated + Spike Trap at center
                     Vector3[] runePos =
                     {
-                        c + new Vector3(-6f, 0f, -2f),
-                        c + new Vector3(6f, 0f, -2f),
-                        c + new Vector3(0f, 0f, 4.5f)
+                        c + new Vector3(-6f, 0f, -3.2f),
+                        c + new Vector3(6f, 0f, -3.2f),
+                        c + new Vector3(0f, 0f, 4.8f)
                     };
                     for (int r = 0; r < 3; r++)
                     {
@@ -278,6 +356,12 @@ namespace AbyssGame
                 new Vector3(0f, 0f, -2.8f)
             };
 
+            int desiredLocalSlot = (LanRoomBridge.HasInstance && LanRoomBridge.I.IsConnectedClient)
+                ? Mathf.Clamp(LanRoomBridge.I.LocalSlotIndex, 0, 3)
+                : 0;
+            if (GameSession.I.Party[desiredLocalSlot] == null || !GameSession.I.Party[desiredLocalSlot].active)
+                desiredLocalSlot = 0;
+
             int spawned = 0;
             for (int i = 0; i < 4; i++)
             {
@@ -287,7 +371,7 @@ namespace AbyssGame
                 var heroGo = new GameObject($"Hero_{i}_{slot.playerName}");
                 heroGo.transform.position = startCenter + offsets[Mathf.Clamp(spawned, 0, 3)];
                 var unit = heroGo.AddComponent<ActorUnit>();
-                bool isLocal = (spawned == 0);
+                bool isLocal = (i == desiredLocalSlot);
                 unit.InitHero(slot.classId, slot.buildId, GameSession.I.Profile.level, slot.playerName, isLocal, i);
 
                 if (isLocal)
@@ -303,7 +387,19 @@ namespace AbyssGame
                 }
                 else
                 {
-                    heroGo.AddComponent<HeroPartyAI>();
+                    bool isRemoteNetworkControlled =
+                        LanRoomBridge.HasInstance &&
+                        (LanRoomBridge.I.IsConnectedClient ||
+                         (LanRoomBridge.I.IsHosting && slot.isHuman && LanRoomBridge.I.ConnectedClientCount > 0));
+
+                    if (isRemoteNetworkControlled)
+                    {
+                        heroGo.AddComponent<RemoteNetInterpolator>();
+                    }
+                    else
+                    {
+                        heroGo.AddComponent<HeroPartyAI>();
+                    }
                 }
 
                 PartyUnits.Add(unit);
@@ -332,20 +428,24 @@ namespace AbyssGame
                 return;
             }
 
-            // Detect player entering next room
+            // Detect player entering any room in the 2D Branching Dungeon Graph
             if (LocalHero != null && !LocalHero.IsDead)
             {
+                float hx = LocalHero.transform.position.x;
                 float hz = LocalHero.transform.position.z;
                 for (int i = 0; i < Rooms.Count; i++)
                 {
                     var rm = Rooms[i];
-                    float minZ = rm.center.z - rm.length * 0.5f + 1.4f;
-                    float maxZ = rm.center.z + rm.length * 0.5f;
-                    if (hz >= minZ && hz <= maxZ)
+                    float minX = rm.center.x - rm.width * 0.5f + 1.1f;
+                    float maxX = rm.center.x + rm.width * 0.5f - 1.1f;
+                    float minZ = rm.center.z - rm.length * 0.5f + 1.1f;
+                    float maxZ = rm.center.z + rm.length * 0.5f - 1.1f;
+                    if (hx >= minX && hx <= maxX && hz >= minZ && hz <= maxZ)
                     {
                         if (CurrentRoomIndex != i)
                         {
                             CurrentRoomIndex = i;
+                            RevealFogOfWarForRoom(i);
                             if (BiomeAtmosphereController.Instance != null)
                                 BiomeAtmosphereController.Instance.ApplyBiome(rm.biome, instant: false);
                         }
@@ -387,32 +487,52 @@ namespace AbyssGame
             }
         }
 
+        private void SetAllRoomGates(DungeonRoomRuntime room, bool open)
+        {
+            if (room == null) return;
+            for (int i = 0; i < room.roomGates.Count; i++)
+            {
+                if (room.roomGates[i] != null) room.roomGates[i].SetOpen(open);
+            }
+            if (room.entryGate != null) room.entryGate.SetOpen(open);
+            if (room.exitGate != null) room.exitGate.SetOpen(open);
+        }
+
         private void ActivateRoom(int idx)
         {
             var room = Rooms[idx];
             if (room.activated) return;
             room.activated = true;
+            RevealFogOfWarForRoom(idx);
 
-            if (room.type == RoomType.Entrance)
+            if (room.type == RoomType.Entrance || room.isSanctuary)
             {
                 room.cleared = true;
-                if (room.exitGate != null) room.exitGate.SetOpen(true);
-                CurrentObjective = "Tiến về phía Bắc qua Cổng Sắt để bắt đầu vượt Phó Bản!";
+                SetAllRoomGates(room, true);
+                if (room.rewardChest != null) room.rewardChest.UnlockChest();
+                CurrentObjective = room.index == 0
+                    ? "Tiến về phía Bắc qua Cổng Sắt để khám phá Hầm Ngục Rẽ Nhánh!"
+                    : $"{room.title} — Hồi phục sinh lực tại Đài Hồi Phục [Phím F] hoặc khám phá nhánh tiếp theo.";
+                if (room.index > 0)
+                    ShowBanner($"{room.title.ToUpper()} — KHU VỰC AN TOÀN & HỒI PHỤC!", 3.2f);
                 return;
             }
 
-            // Lock gates during encounter & pull AI party inside room
-            if (room.entryGate != null) room.entryGate.SetOpen(false);
-            if (room.exitGate != null) room.exitGate.SetOpen(false);
+            // Lock all doorways of this room during encounter & pull AI party inside room bounds
+            SetAllRoomGates(room, false);
 
             foreach (var h in PartyUnits)
             {
                 if (h != null && !h.IsLocalPlayer && !h.IsDead)
                 {
-                    if (h.transform.position.z < room.center.z - room.length * 0.5f + 0.5f)
+                    bool outsideX = Mathf.Abs(h.transform.position.x - room.center.x) > room.width * 0.5f - 1.5f;
+                    bool outsideZ = Mathf.Abs(h.transform.position.z - room.center.z) > room.length * 0.5f - 1.5f;
+                    if (outsideX || outsideZ)
                     {
                         if (h.Controller != null) h.Controller.enabled = false;
-                        h.transform.position = LocalHero.transform.position + new Vector3(UnityEngine.Random.Range(-2f, 2f), 0f, 0.5f);
+                        Vector3 safeTarget = LocalHero != null ? LocalHero.transform.position : room.center;
+                        Vector3 dirToCenter = (room.center - safeTarget).normalized;
+                        h.transform.position = safeTarget + dirToCenter * 1.4f + new Vector3(UnityEngine.Random.Range(-1.5f, 1.5f), 0f, UnityEngine.Random.Range(-1.5f, 1.5f));
                         if (h.Controller != null) h.Controller.enabled = true;
                     }
                 }
@@ -542,9 +662,13 @@ namespace AbyssGame
                 int minRarity = m.IsBoss ? 3 : (m.IsMiniBoss ? 2 : (m.IsElite ? 1 : 0));
                 for (int i = 0; i < drops; i++)
                 {
-                    EquipItem item = LootRoller.RollItem(floor, minRarity, m.IsBoss ? 0.9f : 0f);
+                    float luck = m.IsBoss ? 0.9f : 0f;
+                    EquipItem item = LootRoller.RollItem(floor, minRarity, luck);
                     Vector3 offset = new Vector3(UnityEngine.Random.Range(-1.2f, 1.2f), 0f, UnityEngine.Random.Range(-1.2f, 1.2f));
-                    LootOrbPickup.Spawn(m.transform.position + offset, item);
+                    Vector3 dropPos = m.transform.position + offset;
+                    LootOrbPickup.Spawn(dropPos, item);
+                    if (LanRoomBridge.HasInstance && LanRoomBridge.I.IsHosting)
+                        LanRoomBridge.I.BroadcastInstancedLootDrop(dropPos, floor, minRarity, luck);
                 }
             }
         }
@@ -579,20 +703,86 @@ namespace AbyssGame
             GameSession.I.AddItemToBag(item, autoEquipIfBetter: true);
             if (LocalHero != null) LocalHero.RecalculateStats(false);
             GameAudio.I.PlaySfx(GameSfx.Loot, 0.85f);
-            string msg = $"Nhặt [{GameDB.RarityNames[(int)item.rarity]}] {item.name} ({item.Summary()})";
+            string instancedTag = GameModeManager.IsMultiplayerCoOp ? "[Loot Riêng Co-op] " : "";
+            string msg = $"{instancedTag}Nhặt [{GameDB.RarityNames[(int)item.rarity]}] {item.name} ({item.Summary()})";
             OnLootNotification?.Invoke(msg);
+        }
+
+        public void ApplyRemotePuzzlePillarActivation(int roomIdx, int pillarIdx)
+        {
+            DungeonRoomRuntime puzzleRoom = null;
+            if (roomIdx >= 0 && roomIdx < Rooms.Count) puzzleRoom = Rooms[roomIdx];
+            if (puzzleRoom == null)
+            {
+                for (int i = 0; i < Rooms.Count; i++)
+                {
+                    if (Rooms[i].type == RoomType.Puzzle && Rooms[i].puzzlePillars.Count > 0)
+                    {
+                        puzzleRoom = Rooms[i];
+                        break;
+                    }
+                }
+            }
+            if (puzzleRoom == null) return;
+
+            for (int i = 0; i < puzzleRoom.puzzlePillars.Count; i++)
+            {
+                var p = puzzleRoom.puzzlePillars[i];
+                if (p != null && p.PillarIndex == pillarIdx && !p.Activated)
+                {
+                    p.ActivateFromNetwork();
+                    break;
+                }
+            }
         }
 
         private void OnPuzzleRuneActivated(WorldRunePillar pillar)
         {
             GameAudio.I.PlaySfx(GameSfx.Heal, 0.9f);
             AwardExpAndGold(35, 20);
-            int lit = 0;
-            var room = Rooms[3];
-            foreach (var p in room.puzzlePillars) if (p.Activated) lit++;
-            if (pillar != null && room.exitGate != null)
+
+            DungeonRoomRuntime puzzleRoom = null;
+            int foundRoomIdx = -1;
+            for (int i = 0; i < Rooms.Count; i++)
             {
-                RuneSealEnergyBeam.SpawnConnectorBeam(transform, pillar.Position, room.exitGate.transform.position, new Color(1f, 0.85f, 0.28f));
+                if (Rooms[i].puzzlePillars.Contains(pillar) || Rooms[i].type == RoomType.Puzzle)
+                {
+                    puzzleRoom = Rooms[i];
+                    foundRoomIdx = i;
+                    if (Rooms[i].puzzlePillars.Contains(pillar)) break;
+                }
+            }
+            if (puzzleRoom == null && Rooms.Count > 3)
+            {
+                puzzleRoom = Rooms[3];
+                foundRoomIdx = 3;
+            }
+
+            if (pillar != null && !pillar.TriggeredRemotely && LanRoomBridge.HasInstance)
+            {
+                LanRoomBridge.I.BroadcastPuzzlePillarActivated(foundRoomIdx, pillar.PillarIndex);
+            }
+
+            int lit = 0;
+            if (puzzleRoom != null)
+            {
+                foreach (var p in puzzleRoom.puzzlePillars) if (p.Activated) lit++;
+                Vector3 targetConduitPos = puzzleRoom.rewardChest != null
+                    ? puzzleRoom.rewardChest.Position
+                    : (puzzleRoom.entryGate != null ? puzzleRoom.entryGate.transform.position : puzzleRoom.center);
+                if (pillar != null)
+                {
+                    RuneSealEnergyBeam.SpawnConnectorBeam(transform, pillar.Position, targetConduitPos, new Color(1f, 0.85f, 0.28f));
+                }
+                // Also link activated pillars to each other to form the runic triangle circuit
+                for (int i = 0; i < puzzleRoom.puzzlePillars.Count; i++)
+                {
+                    var other = puzzleRoom.puzzlePillars[i];
+                    if (other != null && other != pillar && other.Activated)
+                    {
+                        RuneSealEnergyBeam.SpawnConnectorBeam(transform, pillar.Position, other.Position, new Color(0.28f, 0.95f, 1f));
+                    }
+                }
             }
             ShowBanner($"Đã thắp sáng Ấn Phong Cổ ({lit}/3)!", 2.5f);
         }
@@ -600,8 +790,7 @@ namespace AbyssGame
         private void MarkRoomCleared(DungeonRoomRuntime room)
         {
             room.cleared = true;
-            if (room.entryGate != null) room.entryGate.SetOpen(true);
-            if (room.exitGate != null) room.exitGate.SetOpen(true);
+            SetAllRoomGates(room, true);
             if (room.rewardChest != null) room.rewardChest.UnlockChest();
 
             // Revive any downed teammates automatically on clearing a room!
@@ -625,7 +814,7 @@ namespace AbyssGame
                 if (AbyssDirectorAI.Instance != null)
                     AbyssDirectorAI.Instance.EvaluateAndAdjustNextEncounter(room.index);
 
-                CurrentObjective = $"Đã dọn sạch {GameDB.RoomName(room.type)}! Mở Rương [F] và tiến sang phòng tiếp theo.";
+                CurrentObjective = $"Đã dọn sạch {room.title}! Mở Rương [F] và chọn ngã rẽ tiếp theo trên Bản Đồ Cổ Ngữ.";
             }
         }
 
@@ -749,11 +938,13 @@ namespace AbyssGame
         private BoxCollider _blocker;
         private bool _open = true;
 
-        public static DungeonGate Create(Transform parent, Vector3 pos, float width)
+        public static DungeonGate Create(Transform parent, Vector3 pos, float width, bool eastWest = false)
         {
-            var go = new GameObject("DungeonGate");
+            var go = new GameObject(eastWest ? "DungeonGate_EW" : "DungeonGate_NS");
             go.transform.SetParent(parent, false);
             go.transform.position = pos;
+            if (eastWest)
+                go.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
 
             var g = go.AddComponent<DungeonGate>();
             g._blocker = go.AddComponent<BoxCollider>();
@@ -792,37 +983,375 @@ namespace AbyssGame
     {
         public EquipItem Item;
         private float _t;
+        private Transform _itemPivot;
+        private Transform _beamTransform;
+        private Transform _runeOuter;
+        private Transform _runeInner;
+
+        private static Mesh _cachedLootBeamMesh;
+        private static Texture2D _cachedRuneTex;
+        private static Texture2D _cachedBeamGradTex;
+        private static Material _cachedParticleMat;
+        private static readonly Material[] _cachedBeamMats = new Material[6];
+        private static readonly Material[] _cachedRuneMats = new Material[6];
+
+        private static readonly Color[] LootBeamPalette =
+        {
+            new Color(0.88f, 0.90f, 0.96f, 1f), // Common (White/Silver)
+            new Color(0.22f, 0.98f, 0.42f, 1f), // Uncommon (Emerald Green)
+            new Color(0.20f, 0.68f, 1.00f, 1f), // Rare (Sapphire Blue)
+            new Color(0.76f, 0.30f, 1.00f, 1f), // Epic (Arcane Purple)
+            new Color(1.00f, 0.64f, 0.12f, 1f), // Legendary (Golden Orange)
+            new Color(1.00f, 0.18f, 0.34f, 1f)  // Mythic (Crimson Red)
+        };
+
+        private static Mesh GetLootBeamMesh()
+        {
+            if (_cachedLootBeamMesh != null) return _cachedLootBeamMesh;
+            var go = Resources.Load<GameObject>("VFX/Meshes/VFX_LootBeam3D");
+            if (go != null)
+            {
+                var mf = go.GetComponentInChildren<MeshFilter>();
+                if (mf != null && mf.sharedMesh != null)
+                {
+                    _cachedLootBeamMesh = mf.sharedMesh;
+                    return _cachedLootBeamMesh;
+                }
+            }
+#if UNITY_EDITOR
+            var edGo = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/VFX/Meshes/VFX_LootBeam3D.fbx")
+                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/VFX/VFX_LootBeam3D.fbx");
+            if (edGo != null)
+            {
+                var mf = edGo.GetComponentInChildren<MeshFilter>();
+                if (mf != null && mf.sharedMesh != null)
+                {
+                    _cachedLootBeamMesh = mf.sharedMesh;
+                    return _cachedLootBeamMesh;
+                }
+            }
+#endif
+            return null;
+        }
+
+        private static Texture2D GetBeamGradientTex()
+        {
+            if (_cachedBeamGradTex != null) return _cachedBeamGradTex;
+            int w = 64, h = 128;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                name = "T_LootBeamGrad_HDR",
+                wrapMode = TextureWrapMode.Repeat,
+                filterMode = FilterMode.Bilinear
+            };
+            var px = new Color[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                float v = y / (float)(h - 1);
+                // Strong bright base fading softly toward top of open-ended pillar
+                float vFade = Mathf.Pow(1f - v, 1.35f) * Mathf.SmoothStep(0f, 0.06f, v);
+                for (int x = 0; x < w; x++)
+                {
+                    float u = x / (float)(w - 1);
+                    float streak = 0.72f + 0.28f * Mathf.Sin(u * Mathf.PI * 6f + v * 8f);
+                    float a = Mathf.Clamp01(vFade * streak);
+                    px[y * w + x] = new Color(1f, 1f, 1f, a);
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply(false, true);
+            _cachedBeamGradTex = tex;
+            return tex;
+        }
+
+        private static Texture2D GetRuneCircleTex()
+        {
+            if (_cachedRuneTex != null) return _cachedRuneTex;
+            int size = 128;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "T_LootRuneCircle_HDR",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+            var px = new Color[size * size];
+            float half = (size - 1) * 0.5f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (x - half) / half;
+                    float dy = (y - half) / half;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (r > 1f) { px[y * size + x] = Color.clear; continue; }
+
+                    float ang = Mathf.Atan2(dy, dx);
+                    float outerRing = Mathf.Exp(-Mathf.Pow((r - 0.88f) / 0.032f, 2f));
+                    float innerRing = Mathf.Exp(-Mathf.Pow((r - 0.68f) / 0.025f, 2f));
+                    float coreRing  = Mathf.Exp(-Mathf.Pow((r - 0.36f) / 0.028f, 2f));
+
+                    // Runic glyph ticks between innerRing and outerRing
+                    float runeBand = (r > 0.71f && r < 0.85f)
+                        ? Mathf.Clamp01(Mathf.Sin(ang * 16f) * Mathf.Cos((r - 0.78f) * 45f)) * 0.85f
+                        : 0f;
+
+                    // 6-pointed hexagram star lines inside the rune ring
+                    float star = 0f;
+                    if (r > 0.34f && r < 0.69f)
+                    {
+                        float s1 = Mathf.Abs(Mathf.Sin(ang * 3f));
+                        float targetR = Mathf.Lerp(0.36f, 0.67f, s1);
+                        star = Mathf.Exp(-Mathf.Pow((r - targetR) / 0.028f, 2f)) * 0.75f;
+                    }
+
+                    float centerGlow = Mathf.Clamp01(1f - r * 1.15f) * 0.24f;
+                    float a = Mathf.Clamp01(outerRing + innerRing * 0.85f + coreRing * 0.7f + runeBand + star + centerGlow);
+                    px[y * size + x] = new Color(1f, 1f, 1f, a);
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply(false, true);
+            _cachedRuneTex = tex;
+            return tex;
+        }
+
+        private static Material GetBeamMaterial(int rarityIdx)
+        {
+            rarityIdx = Mathf.Clamp(rarityIdx, 0, 5);
+            if (_cachedBeamMats[rarityIdx] != null) return _cachedBeamMats[rarityIdx];
+
+            Color col = LootBeamPalette[rarityIdx];
+            float hdrIntensity = 1.9f + rarityIdx * 0.48f;
+            Shader sh = Shader.Find("AbyssalDungeon/VFX_URP_Unlit");
+            Material mat;
+            if (sh != null)
+            {
+                mat = new Material(sh) { name = "M_LootBeam3D_" + rarityIdx };
+                mat.SetTexture("_MainTex", GetBeamGradientTex());
+                mat.SetColor("_MainColor", new Color(col.r, col.g, col.b, 0.78f));
+                mat.SetColor("_FresnelColor", Color.Lerp(col, Color.white, 0.45f));
+                mat.SetFloat("_FresnelPower", 2.0f);
+                mat.SetFloat("_EmissionIntensity", hdrIntensity);
+                mat.SetFloat("_ScrollSpeedX", 0.08f);
+                mat.SetFloat("_ScrollSpeedY", -0.65f);
+                mat.SetFloat("_EdgeFade", 1.15f);
+                mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+                mat.renderQueue = 3050;
+            }
+            else
+            {
+                mat = CharacterVisualFactory.MakeTransparentMat(new Color(col.r, col.g, col.b, 0.48f), col * hdrIntensity);
+            }
+            _cachedBeamMats[rarityIdx] = mat;
+            return mat;
+        }
+
+        private static Material GetRuneMaterial(int rarityIdx)
+        {
+            rarityIdx = Mathf.Clamp(rarityIdx, 0, 5);
+            if (_cachedRuneMats[rarityIdx] != null) return _cachedRuneMats[rarityIdx];
+
+            Color col = LootBeamPalette[rarityIdx];
+            float hdr = 2.2f + rarityIdx * 0.45f;
+            Shader sh = Shader.Find("AbyssalDungeon/VFX_URP_Unlit")
+                     ?? Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                     ?? Shader.Find("Sprites/Default");
+            var mat = new Material(sh) { name = "M_LootRuneCircle_" + rarityIdx };
+            Texture2D tex = GetRuneCircleTex();
+            if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", tex);
+            if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+            if (mat.HasProperty("_MainColor")) mat.SetColor("_MainColor", new Color(col.r, col.g, col.b, 0.92f));
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", col * hdr);
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", col * hdr);
+            if (mat.HasProperty("_FresnelColor")) mat.SetColor("_FresnelColor", Color.white);
+            if (mat.HasProperty("_EmissionIntensity")) mat.SetFloat("_EmissionIntensity", hdr);
+            if (mat.HasProperty("_ScrollSpeedX")) mat.SetFloat("_ScrollSpeedX", 0f);
+            if (mat.HasProperty("_ScrollSpeedY")) mat.SetFloat("_ScrollSpeedY", 0f);
+            if (mat.HasProperty("_EdgeFade")) mat.SetFloat("_EdgeFade", 0f);
+            if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            mat.renderQueue = 3045;
+            _cachedRuneMats[rarityIdx] = mat;
+            return mat;
+        }
 
         public static void Spawn(Vector3 pos, EquipItem item)
         {
-            var go = new GameObject("LootOrb_" + item.rarity);
-            go.transform.position = new Vector3(pos.x, 0.55f, pos.z);
-            Color col = GameDB.RarityColors[(int)item.rarity];
-            var orbMat = CharacterVisualFactory.MakeMat(col, 0.9f, 0.1f, col * 2.4f);
-            var beamMat = CharacterVisualFactory.MakeTransparentMat(new Color(col.r, col.g, col.b, 0.32f), col);
+            if (item == null) return;
+            int rIdx = Mathf.Clamp((int)item.rarity, 0, 5);
+            Color col = LootBeamPalette[rIdx];
 
-            string pieceName = EnemyVisualArmorKit.GetEquipmentMeshPieceName(item.slot);
-            ObjMeshLoader.SpawnPiece(pieceName, go.transform, Vector3.zero, Quaternion.identity, Vector3.one * 0.95f, orbMat, addBoxCollider: false);
-            CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "Beam", go.transform, new Vector3(0f, 1.1f, 0f), new Vector3(0.14f, 1.1f, 0.14f), beamMat);
+            var go = new GameObject("LootDrop3D_" + item.rarity);
+            go.transform.position = new Vector3(pos.x, 0.02f, pos.z);
 
             var p = go.AddComponent<LootOrbPickup>();
             p.Item = item;
+
+            // 1. 3D Equipment Mesh floating & rotating at waist/chest height
+            var itemPivot = new GameObject("ItemVisualPivot");
+            itemPivot.transform.SetParent(go.transform, false);
+            itemPivot.transform.localPosition = new Vector3(0f, 0.56f, 0f);
+            p._itemPivot = itemPivot.transform;
+
+            var orbMat = CharacterVisualFactory.MakeMat(
+                Color.Lerp(col, new Color(0.85f, 0.85f, 0.92f), 0.32f),
+                0.88f, 0.82f, col * (1.5f + rIdx * 0.35f));
+            string pieceName = EnemyVisualArmorKit.GetEquipmentMeshPieceName(item.slot);
+            ObjMeshLoader.SpawnPiece(pieceName, itemPivot.transform, Vector3.zero, Quaternion.Euler(16f, 0f, -14f), Vector3.one * 0.95f, orbMat, addBoxCollider: false);
+
+            // 2. Blender 3D Open-Ended Tapered Light Pillar + Swirling Helical Ribbons (VFX_LootBeam3D)
+            var beamGo = new GameObject("VFX_LootBeam3D");
+            beamGo.transform.SetParent(go.transform, false);
+            beamGo.transform.localPosition = Vector3.zero;
+            float beamRadiusScale = 0.65f + rIdx * 0.08f;
+            float beamHeightScale = 0.72f + rIdx * 0.11f;
+            beamGo.transform.localScale = new Vector3(beamRadiusScale, beamHeightScale, beamRadiusScale);
+            p._beamTransform = beamGo.transform;
+
+            Mesh lootMesh = GetLootBeamMesh();
+            Material beamMat = GetBeamMaterial(rIdx);
+            if (lootMesh != null)
+            {
+                var mf = beamGo.AddComponent<MeshFilter>();
+                mf.sharedMesh = lootMesh;
+                var mr = beamGo.AddComponent<MeshRenderer>();
+                mr.sharedMaterial = beamMat;
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                mr.receiveShadows = false;
+            }
+            else
+            {
+                CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "FallbackBeam", beamGo.transform, new Vector3(0f, 1.5f, 0f), new Vector3(0.35f, 1.5f, 0.35f), beamMat);
+            }
+
+            // 3. Rotating Ground Rune Magic Circle (Flush with Dungeon Floor)
+            var runeQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            runeQuad.name = "GroundRuneCircle";
+            Destroy(runeQuad.GetComponent<Collider>());
+            runeQuad.transform.SetParent(go.transform, false);
+            float runeSize = 1.35f + rIdx * 0.16f;
+            runeQuad.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+            runeQuad.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            runeQuad.transform.localScale = new Vector3(runeSize, runeSize, 1f);
+            var runeMr = runeQuad.GetComponent<MeshRenderer>();
+            runeMr.sharedMaterial = GetRuneMaterial(rIdx);
+            runeMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            runeMr.receiveShadows = false;
+            p._runeOuter = runeQuad.transform;
+
+            if (rIdx >= 2)
+            {
+                var innerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                innerQuad.name = "InnerRuneSeal";
+                Destroy(innerQuad.GetComponent<Collider>());
+                innerQuad.transform.SetParent(go.transform, false);
+                float innerSize = runeSize * 0.68f;
+                innerQuad.transform.localPosition = new Vector3(0f, 0.026f, 0f);
+                innerQuad.transform.localRotation = Quaternion.Euler(90f, 45f, 0f);
+                innerQuad.transform.localScale = new Vector3(innerSize, innerSize, 1f);
+                var inMr = innerQuad.GetComponent<MeshRenderer>();
+                inMr.sharedMaterial = GetRuneMaterial(rIdx);
+                inMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                inMr.receiveShadows = false;
+                p._runeInner = innerQuad.transform;
+            }
+
+            // 4. Rising Light Motes Particle System (Lightweight MX350 budget: 10..28 particles)
+            var psGo = new GameObject("RisingLootMotes");
+            psGo.transform.SetParent(go.transform, false);
+            psGo.transform.localPosition = new Vector3(0f, 0.08f, 0f);
+            var ps = psGo.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.loop = true;
+            main.playOnAwake = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.1f, 2.0f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.85f, 1.95f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.13f);
+            main.startColor = Color.Lerp(col, Color.white, 0.35f);
+            main.maxParticles = 10 + rIdx * 4;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+
+            var emission = ps.emission;
+            emission.rateOverTime = 5f + rIdx * 3.5f;
+
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = 0.42f + rIdx * 0.05f;
+            shape.rotation = new Vector3(-90f, 0f, 0f);
+
+            var colOverLife = ps.colorOverLifetime;
+            colOverLife.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(col, 0.4f), new GradientColorKey(col, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.95f, 0.2f), new GradientAlphaKey(0f, 1f) }
+            );
+            colOverLife.color = new ParticleSystem.MinMaxGradient(grad);
+
+            var psr = psGo.GetComponent<ParticleSystemRenderer>();
+            psr.renderMode = ParticleSystemRenderMode.Billboard;
+            psr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            psr.receiveShadows = false;
+            if (_cachedParticleMat == null)
+            {
+                Shader psh = Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Sprites/Default");
+                _cachedParticleMat = new Material(psh) { name = "M_LootMote_Shared" };
+                if (_cachedParticleMat.HasProperty("_BaseColor")) _cachedParticleMat.SetColor("_BaseColor", Color.white);
+            }
+            psr.sharedMaterial = _cachedParticleMat;
+
+            // 5. Floor Point Light for Uncommon+ drops
+            if (rIdx >= 1)
+            {
+                var lGo = new GameObject("LootGlowLight");
+                lGo.transform.SetParent(go.transform, false);
+                lGo.transform.localPosition = new Vector3(0f, 0.65f, 0f);
+                var lt = lGo.AddComponent<Light>();
+                lt.type = LightType.Point;
+                lt.shadows = LightShadows.None;
+                lt.color = col;
+                lt.range = 2.6f + rIdx * 0.45f;
+                lt.intensity = 1.1f + rIdx * 0.35f;
+            }
         }
 
         private void Update()
         {
             _t += Time.deltaTime;
-            transform.position = new Vector3(transform.position.x, 0.55f + Mathf.Sin(_t * 3.5f) * 0.12f, transform.position.z);
-            transform.Rotate(0f, 95f * Time.deltaTime, 0f);
+            if (_itemPivot != null)
+            {
+                _itemPivot.localPosition = new Vector3(0f, 0.56f + Mathf.Sin(_t * 3.4f) * 0.11f, 0f);
+                _itemPivot.Rotate(0f, 92f * Time.deltaTime, 0f, Space.World);
+            }
+            if (_beamTransform != null)
+            {
+                _beamTransform.Rotate(0f, -48f * Time.deltaTime, 0f, Space.Self);
+            }
+            if (_runeOuter != null)
+            {
+                _runeOuter.Rotate(0f, 0f, 36f * Time.deltaTime, Space.Self);
+            }
+            if (_runeInner != null)
+            {
+                _runeInner.Rotate(0f, 0f, -54f * Time.deltaTime, Space.Self);
+            }
 
             var dw = DungeonWorldBuilder.Instance;
             if (dw != null && dw.LocalHero != null && !dw.LocalHero.IsDead)
             {
-                float d = Vector3.Distance(transform.position, dw.LocalHero.transform.position);
+                Vector3 heroPos = dw.LocalHero.transform.position;
+                float d = Vector2.Distance(new Vector2(transform.position.x, transform.position.z), new Vector2(heroPos.x, heroPos.z));
                 if (d < 4.5f)
-                    transform.position = Vector3.MoveTowards(transform.position, dw.LocalHero.transform.position + Vector3.up * 0.9f, 12f * Time.deltaTime);
-                if (d < 1.5f)
                 {
+                    Vector3 targetGround = new Vector3(heroPos.x, 0.02f, heroPos.z);
+                    transform.position = Vector3.MoveTowards(transform.position, targetGround, 12.5f * Time.deltaTime);
+                }
+                if (d < 1.55f)
+                {
+                    int rIdx = Item != null ? Mathf.Clamp((int)Item.rarity, 0, 5) : 0;
+                    CharacterVisualFactory.SpawnBurst(heroPos + Vector3.up * 0.9f, LootBeamPalette[rIdx], 1.6f, 0.38f);
                     dw.CollectLootItem(Item);
                     Destroy(gameObject);
                 }
@@ -891,7 +1420,10 @@ namespace AbyssGame
             for (int i = 0; i < 2; i++)
             {
                 EquipItem it = LootRoller.RollItem(floor, _minRarity, 0.25f);
-                LootOrbPickup.Spawn(transform.position + new Vector3((i == 0 ? -0.7f : 0.7f), 0f, 0.9f), it);
+                Vector3 dropPos = transform.position + new Vector3((i == 0 ? -0.7f : 0.7f), 0f, 0.9f);
+                LootOrbPickup.Spawn(dropPos, it);
+                if (LanRoomBridge.HasInstance && LanRoomBridge.I.IsHosting)
+                    LanRoomBridge.I.BroadcastInstancedLootDrop(dropPos, floor, _minRarity, 0.25f);
             }
             CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 0.8f, new Color(1f, 0.85f, 0.25f), 2.2f, 0.5f);
         }
@@ -965,6 +1497,8 @@ namespace AbyssGame
         public Vector3 Position => transform.position;
         public float InteractRadius => 3.0f;
         public bool Activated { get; private set; }
+        public bool TriggeredRemotely { get; private set; }
+        public int PillarIndex => _index;
         private int _index;
         private Renderer _crystal;
         private Action<WorldRunePillar> _onActivated;
@@ -996,6 +1530,13 @@ namespace AbyssGame
 
         public bool CanInteract() => !Activated;
         public string GetPrompt() => $"[F] Thắp sáng Trụ Ấn Phong #{_index}";
+
+        public void ActivateFromNetwork()
+        {
+            if (Activated) return;
+            TriggeredRemotely = true;
+            Interact(null);
+        }
 
         public void Interact(ActorUnit user)
         {

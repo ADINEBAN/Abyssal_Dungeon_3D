@@ -1,0 +1,154 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4003685574821344519
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7207282175571387239}
+  - component: {fileID: 2755812722078279708}
+  m_Layer: 0
+  m_Name: VFXPoolManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7207282175571387239
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4003685574821344519}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2755812722078279708
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4003685574821344519}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e7dd3abd238c984c8e060dac6f61d3f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  poolEntries:
+  - key: VFX_Cleric_Smite
+    prefab: {fileID: 4173514899726323992, guid: 4d1892040ee4f244bb41ac4e53cc205d,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Cleric_GroupHeal
+    prefab: {fileID: 2985301010262194211, guid: 2caee74312328c0448448dc1bbb2a3a6,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Cleric_Purify
+    prefab: {fileID: 3383736296845653107, guid: 4793833eb3b9869468ceb57e2f5ff361,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Cleric_Resurrection
+    prefab: {fileID: 4776982330568684955, guid: 646aeed6813c4fa4aac94c238b46086d,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Knight_ShieldBash
+    prefab: {fileID: 3654821718884504179, guid: 4e02980e4d791ae4d8633652c829ce7b,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Knight_IronGuard
+    prefab: {fileID: 9090444774974716728, guid: 422a72a606a5ff54ab087cb9e397a650,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Knight_Taunt
+    prefab: {fileID: 6917589071788385465, guid: 2606c1caca8bfe74ea079a874db0d230,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Knight_Judgement
+    prefab: {fileID: 281235520138813532, guid: 4edb82d9bc414a14db9327985635b580, type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Mage_Fireball
+    prefab: {fileID: 3892689617730331306, guid: 8a088d1fb0ce6f04ea1c0bf401d4da4e,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Mage_FrostNova
+    prefab: {fileID: 7478229487149017072, guid: b4e5a664f3bfcb94fb21677822fea13a,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Mage_ArcanePulse
+    prefab: {fileID: 1564640937041513211, guid: 486a1ea52ce559d448f6244695a8bfd8,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Mage_Meteor
+    prefab: {fileID: 6841205827493305564, guid: 7a00451930b00f94588eb5d0370198d3,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Ranger_PiercingShot
+    prefab: {fileID: 1824082944497806419, guid: d15b14c533214d449b61c104f74924e5,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Ranger_FrostTrap
+    prefab: {fileID: 4421291694775244764, guid: f5f144ed0185d4b4482736d0f6f7b013,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Ranger_Volley
+    prefab: {fileID: 2536173636316178954, guid: 892584c2fa4807a468c14c5b654efe6a,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Ranger_ArrowStorm
+    prefab: {fileID: 4624659227386246541, guid: c517e497fbda0a341a1de5bd21c00c85,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Projectile_Cleric
+    prefab: {fileID: 770198134436957383, guid: c60f3ddc24f1a9943ab0a57d64cc63ae, type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Projectile_Knight
+    prefab: {fileID: 4852004267330665950, guid: 7f12a25e3c19de042a689f02c59b5ae1,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Projectile_Mage
+    prefab: {fileID: 34769747661989744, guid: 59d6a5589a7654f46a3e10d51db1a710, type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Projectile_Ranger
+    prefab: {fileID: 8066544197071739487, guid: ae940567935feb6439375a30ff580623,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_GroundTelegraph_Rune
+    prefab: {fileID: 8018040659498464412, guid: 7f2f50ef363e5c04bac70576a67f76a4,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12
+  - key: VFX_Common_SpiralDash
+    prefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+      type: 3}
+    prewarmCount: 2
+    maxCapacity: 12

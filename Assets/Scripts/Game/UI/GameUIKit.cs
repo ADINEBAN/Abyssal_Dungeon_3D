@@ -184,16 +184,119 @@ namespace AbyssGame
             }
         }
 
+        private static Sprite[] _itemSheetSprites;
+
+        public static Sprite GetItemSheetSprite(int index)
+        {
+            index = Mathf.Clamp(index, 0, 15);
+            if (_itemSheetSprites == null || _itemSheetSprites.Length < 16 || _itemSheetSprites[0] == null)
+            {
+                _itemSheetSprites = new Sprite[16];
+                Sprite[] loaded = Resources.LoadAll<Sprite>("UI/Icons/ItemIcons_Sheet");
+                if (loaded != null && loaded.Length >= 16)
+                {
+                    for (int i = 0; i < loaded.Length; i++)
+                    {
+                        if (loaded[i] == null) continue;
+                        string n = loaded[i].name;
+                        if (n.StartsWith("ItemIcon_") && int.TryParse(n.Substring("ItemIcon_".Length), out int parsed) && parsed >= 0 && parsed < 16)
+                            _itemSheetSprites[parsed] = loaded[i];
+                        else if (i < 16 && _itemSheetSprites[i] == null)
+                            _itemSheetSprites[i] = loaded[i];
+                    }
+                }
+
+                // Runtime fallback slice if TextureImporter sub-sprites were not populated yet
+                if (_itemSheetSprites[0] == null)
+                {
+                    Texture2D sheetTex = Resources.Load<Texture2D>("UI/Icons/ItemIcons_Sheet");
+                    if (sheetTex != null)
+                    {
+                        int w = sheetTex.width, h = sheetTex.height;
+                        float marginX = w * 0.031f, marginY = h * 0.031f;
+                        float cellW = (w - marginX * 2f) / 4f;
+                        float cellH = (h - marginY * 2f) / 4f;
+                        float inset = cellW * 0.045f;
+                        int idx = 0;
+                        for (int row = 0; row < 4; row++)
+                        {
+                            int ty = 3 - row;
+                            for (int col = 0; col < 4; col++)
+                            {
+                                Rect r = new Rect(
+                                    Mathf.Round(marginX + col * cellW + inset),
+                                    Mathf.Round(marginY + ty * cellH + inset),
+                                    Mathf.Round(cellW - inset * 2f),
+                                    Mathf.Round(cellH - inset * 2f));
+                                _itemSheetSprites[idx] = Sprite.Create(sheetTex, r, new Vector2(0.5f, 0.5f), 100f);
+                                idx++;
+                            }
+                        }
+                    }
+                }
+            }
+            return _itemSheetSprites[index] ?? GetIcon("sword");
+        }
+
+        public static Sprite GetItemSprite(EquipItem item)
+        {
+            if (item == null) return GetItemSheetSprite(1);
+            string nm = item.name ?? "";
+            switch (item.slot)
+            {
+                case ItemSlot.Weapon:
+                    if (nm.Contains("Cung")) return GetItemSheetSprite(2);
+                    if (nm.Contains("Đoản") || nm.Contains("Quyền") || item.archetype == EquipArchetype.StalkerLeather)
+                        return GetItemSheetSprite(0);
+                    if (nm.Contains("Trượng") || nm.Contains("Chùy") || item.archetype == EquipArchetype.ArcanistCloth || item.archetype == EquipArchetype.SacredRelic)
+                        return GetItemSheetSprite(3);
+                    return GetItemSheetSprite(1);
+
+                case ItemSlot.Helmet:
+                    switch (item.archetype)
+                    {
+                        case EquipArchetype.VanguardPlate:  return GetItemSheetSprite(4);
+                        case EquipArchetype.StalkerLeather: return GetItemSheetSprite(5);
+                        case EquipArchetype.ArcanistCloth:  return GetItemSheetSprite(6);
+                        case EquipArchetype.SacredRelic:    return GetItemSheetSprite(7);
+                        default: return GetItemSheetSprite(4);
+                    }
+
+                case ItemSlot.Armor:
+                    switch (item.archetype)
+                    {
+                        case EquipArchetype.VanguardPlate:  return GetItemSheetSprite(8);
+                        case EquipArchetype.StalkerLeather: return GetItemSheetSprite(9);
+                        case EquipArchetype.ArcanistCloth:  return GetItemSheetSprite(10);
+                        case EquipArchetype.SacredRelic:    return GetItemSheetSprite(11);
+                        default: return GetItemSheetSprite(8);
+                    }
+
+                case ItemSlot.Ring:
+                    return GetItemSheetSprite(12);
+
+                case ItemSlot.Amulet:
+                    return GetItemSheetSprite(13);
+
+                case ItemSlot.Relic:
+                    return GetItemSheetSprite(14);
+
+                default:
+                    return GetItemSheetSprite(1);
+            }
+        }
+
         public static Sprite GetSlotIcon(ItemSlot slot)
         {
             switch (slot)
             {
-                case ItemSlot.Weapon: return GetIcon("sword");
-                case ItemSlot.Armor:  return GetIcon("armor");
-                case ItemSlot.Helmet: return GetIcon("helm");
-                case ItemSlot.Ring:   return GetIcon("ring");
-                case ItemSlot.Amulet: return GetIcon("amulet");
-                default:              return GetIcon("sword");
+                case ItemSlot.Weapon: return GetItemSheetSprite(1);
+                case ItemSlot.Armor:  return GetItemSheetSprite(8);
+                case ItemSlot.Helmet: return GetItemSheetSprite(4);
+                case ItemSlot.Ring:   return GetItemSheetSprite(12);
+                case ItemSlot.Amulet: return GetItemSheetSprite(13);
+                case ItemSlot.Relic:  return GetItemSheetSprite(14);
+                default:              return GetItemSheetSprite(1);
             }
         }
 
@@ -223,13 +326,14 @@ namespace AbyssGame
             go.AddComponent<StandaloneInputModule>();
         }
 
-        public static Canvas CreateCanvas(string name = "GameCanvas", int sortOrder = 10)
+        public static Canvas CreateCanvas(string name = "GameCanvas", int sortOrder = 10, bool interactive = true)
         {
             EnsureEventSystem();
             var go = new GameObject(name);
             var c = go.AddComponent<Canvas>();
             c.renderMode = RenderMode.ScreenSpaceOverlay;
             c.sortingOrder = sortOrder;
+            c.pixelPerfect = false;
 
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -237,8 +341,72 @@ namespace AbyssGame
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 0.5f;
 
-            go.AddComponent<GraphicRaycaster>();
+            if (interactive)
+                go.AddComponent<GraphicRaycaster>();
             return c;
+        }
+
+        public static Canvas GetModalCanvas()
+        {
+            var modalGo = GameObject.Find("DungeonModalsCanvas");
+            if (modalGo != null && modalGo.TryGetComponent<Canvas>(out var modalCanvas))
+                return modalCanvas;
+            var raycaster = UnityEngine.Object.FindObjectOfType<GraphicRaycaster>();
+            if (raycaster != null && raycaster.TryGetComponent<Canvas>(out var rayCanvas))
+                return rayCanvas;
+            return UnityEngine.Object.FindObjectOfType<Canvas>();
+        }
+
+        /// <summary>
+        /// Disables Pixel Perfect and strips redundant raycastTarget flags on all non-interactive
+        /// Images/Texts/RawImages/TMPro labels inside a Canvas hierarchy to eliminate per-frame raycast cost.
+        /// </summary>
+        public static void OptimizeCanvasHierarchy(Canvas rootCanvas)
+        {
+            if (rootCanvas == null) return;
+            rootCanvas.pixelPerfect = false;
+            foreach (var nested in rootCanvas.GetComponentsInChildren<Canvas>(true))
+                nested.pixelPerfect = false;
+
+            var interactiveGraphics = new HashSet<Graphic>();
+            foreach (var sel in rootCanvas.GetComponentsInChildren<Selectable>(true))
+            {
+                if (sel == null) continue;
+                var ownGraphic = sel.GetComponent<Graphic>();
+                if (ownGraphic != null) interactiveGraphics.Add(ownGraphic);
+                if (sel.targetGraphic != null) interactiveGraphics.Add(sel.targetGraphic);
+            }
+            foreach (var sr in rootCanvas.GetComponentsInChildren<ScrollRect>(true))
+            {
+                if (sr == null) continue;
+                var ownG = sr.GetComponent<Graphic>();
+                if (ownG != null) interactiveGraphics.Add(ownG);
+                if (sr.viewport != null)
+                {
+                    var vpG = sr.viewport.GetComponent<Graphic>();
+                    if (vpG != null) interactiveGraphics.Add(vpG);
+                }
+            }
+
+            foreach (var g in rootCanvas.GetComponentsInChildren<Graphic>(true))
+            {
+                if (g == null) continue;
+                bool keepRaycast = interactiveGraphics.Contains(g)
+                    || g.name.EndsWith("Dimmer")
+                    || g.name.EndsWith("Blocker")
+                    || g.name == "PauseModal"
+                    || g.name == "HowToModal"
+                    || g.name == "LoreDialogueModal"
+                    || g.name == "ChoiceAltarModal";
+                if (g.raycastTarget != keepRaycast)
+                    g.raycastTarget = keepRaycast;
+            }
+        }
+
+        public static void OptimizeAllCanvasesInScene()
+        {
+            foreach (var c in UnityEngine.Object.FindObjectsOfType<Canvas>(true))
+                OptimizeCanvasHierarchy(c);
         }
 
         public static RectTransform MakeRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
@@ -309,6 +477,7 @@ namespace AbyssGame
         {
             var rt = MakeRect(name, parent, anchorMin, anchorMax, offsetMin, offsetMax);
             var img = rt.gameObject.AddComponent<Image>();
+            img.raycastTarget = false;
             Sprite sp = GetPanelSprite(style);
             if (sp != null)
             {
@@ -404,6 +573,7 @@ namespace AbyssGame
             {
                 var rt = MakeRect(name, parent, anchorMin, anchorMax, offsetMin, offsetMax);
                 var img = rt.gameObject.AddComponent<Image>();
+                img.raycastTarget = false;
                 img.color = bg;
                 if (borderColor.HasValue)
                 {
@@ -468,6 +638,7 @@ namespace AbyssGame
         {
             var rt = MakeRect(name, parent, anchorMin, anchorMax, offsetMin, offsetMax);
             var t = rt.gameObject.AddComponent<Text>();
+            t.raycastTarget = false;
             bool isTitle = ShouldUseTitleFont(name, size, style);
             t.font = isTitle ? TitleFont : BodyFont;
             t.text = content;
@@ -640,6 +811,7 @@ namespace AbyssGame
         {
             var bgRt = MakeRect(name, parent, anchorMin, anchorMax, offsetMin, offsetMax);
             var bg = bgRt.gameObject.AddComponent<Image>();
+            bg.raycastTarget = false;
             Sprite frameSp = GetDecorSprite("Bar_Frame_Gothic", new Vector4(12, 8, 12, 8));
             if (frameSp != null)
             {
@@ -654,6 +826,7 @@ namespace AbyssGame
 
             var fillRt = MakeRect("Fill", bg.transform, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(4f, 3f), new Vector2(-4f, -3f));
             var fillImg = fillRt.gameObject.AddComponent<Image>();
+            fillImg.raycastTarget = false;
             Sprite fillSp = GetDecorSprite("Bar_Fill_Gothic");
             if (fillSp != null)
             {
@@ -702,13 +875,17 @@ namespace AbyssGame
 
             var bodyRoot = MakeRect("Body", modal.transform, Vector2.zero, Vector2.one, new Vector2(20f, 18f), new Vector2(-20f, -76f));
 
-            int activeBagFilter = -1; // -1 = All, 0 = Weapon, 1 = Armor/Helm, 2 = Ring/Amulet
+            int activeBagFilter = -1; // -1 = All, 0 = Weapon, 1 = Armor/Helm, 2 = Ring/Amulet/Relic
             EquipItem inspectedItem = null;
             bool inspectedFromEquipped = false;
+            float savedBagScrollPos = 1f;
+            ScrollRect currentBagScrollRect = null;
 
             Action rebuild = null;
             rebuild = () =>
             {
+                if (currentBagScrollRect != null)
+                    savedBagScrollPos = currentBagScrollRect.verticalNormalizedPosition;
                 for (int i = bodyRoot.childCount - 1; i >= 0; i--)
                     UnityEngine.Object.Destroy(bodyRoot.GetChild(i).gameObject);
 
@@ -792,43 +969,57 @@ namespace AbyssGame
                 MakeText("AttrRight", attrBox.transform, rightStats, 13, FontStyle.Normal, ColParchment, TextAnchor.UpperLeft,
                     new Vector2(0.52f, 0.06f), new Vector2(0.97f, 0.81f), Vector2.zero, Vector2.zero);
 
-                // Stat Upgrade Allocation
-                MakeText("StatUpHeader", colChar.transform,
-                    $"NÂNG CẤP CHỈ SỐ GỐC — ĐIỂM TIỀM NĂNG: <color=#F8DC85>{p.statPoints}</color>",
-                    14, FontStyle.Bold, ColGold, TextAnchor.MiddleLeft,
-                    new Vector2(0.04f, 0.37f), new Vector2(0.96f, 0.43f), Vector2.zero, Vector2.zero);
+                // Stat Upgrade Allocation (Highlighted with glowing frame when statPoints > 0)
+                bool hasStatPts = p.statPoints > 0;
+                var statSectionBox = MakeStyledPanel("StatUpgradeSection", colChar.transform,
+                    hasStatPts ? UIPanelStyle.Ornate : UIPanelStyle.Standard,
+                    new Vector2(0.03f, 0.28f), new Vector2(0.97f, 0.435f), Vector2.zero, Vector2.zero,
+                    null, hasStatPts ? new Color(1f, 0.86f, 0.28f, 0.98f) : new Color(ColBronze.r, ColBronze.g, ColBronze.b, 0.45f));
+                if (hasStatPts) AttachGlowPulse(statSectionBox.gameObject, new Color(1f, 0.85f, 0.25f, 1f), new Color(1f, 0.58f, 0.12f, 0.55f));
+
+                MakeText("StatUpHeader", statSectionBox.transform,
+                    hasStatPts
+                        ? $"★ NÂNG CẤP CHỈ SỐ GỐC — ĐIỂM TIỀM NĂNG: <color=#78FA88>+{p.statPoints} ĐIỂM!</color>"
+                        : $"NÂNG CẤP CHỈ SỐ GỐC — ĐIỂM TIỀM NĂNG: <color=#F8DC85>{p.statPoints}</color>",
+                    13, FontStyle.Bold, hasStatPts ? ColGoldBright : ColGold, TextAnchor.MiddleLeft,
+                    new Vector2(0.03f, 0.58f), new Vector2(0.97f, 0.95f), Vector2.zero, Vector2.zero);
 
                 string[] stNames = { $"+35 HP ({p.bonusHpPts})", $"+5 ATK ({p.bonusAtkPts})", $"+3.5 DEF ({p.bonusDefPts})", $"+1.5% Crit ({p.bonusHastePts})" };
-                UIButtonStyle stBtnStyle = p.statPoints > 0 ? UIButtonStyle.Primary : UIButtonStyle.Disabled;
+                UIButtonStyle stBtnStyle = hasStatPts ? UIButtonStyle.Primary : UIButtonStyle.Disabled;
                 for (int s = 0; s < 4; s++)
                 {
                     int idx = s;
-                    float x0 = 0.04f + s * 0.232f;
-                    var b = MakeStyledButton("AddStat" + s, colChar.transform, stNames[s], 12, stBtnStyle,
-                        new Vector2(x0, 0.29f), new Vector2(x0 + 0.22f, 0.365f), Vector2.zero, Vector2.zero, () =>
+                    float x0 = 0.025f + s * 0.24f;
+                    var b = MakeStyledButton("AddStat" + s, statSectionBox.transform, stNames[s], 11, stBtnStyle,
+                        new Vector2(x0, 0.10f), new Vector2(x0 + 0.225f, 0.54f), Vector2.zero, Vector2.zero, () =>
                         {
                             GameSession.I.SpendStatPoint(idx);
                             hero?.RecalculateStats(false);
                             onChanged?.Invoke();
                             rebuild();
                         });
-                    b.interactable = p.statPoints > 0;
+                    b.interactable = hasStatPts;
                 }
 
-                // Build Specialization Selector (3 Builds)
-                MakeText("BuildTitle", colChar.transform,
-                    "CHUYÊN MÔN HÓA HƯỚNG BUILD (THAY ĐỔI GIÁP & KỸ NĂNG):",
-                    14, FontStyle.Bold, ColGold, TextAnchor.MiddleLeft,
-                    new Vector2(0.04f, 0.21f), new Vector2(0.96f, 0.27f), Vector2.zero, Vector2.zero);
+                // Build Specialization Selector (3 Builds — Highlighted frame with build accent)
+                var buildSectionBox = MakeStyledPanel("BuildSpecSection", colChar.transform, UIPanelStyle.Ornate,
+                    new Vector2(0.03f, 0.015f), new Vector2(0.97f, 0.268f), Vector2.zero, Vector2.zero,
+                    null, new Color(buildAccent.r, buildAccent.g, buildAccent.b, 0.85f));
+                AttachGlowPulse(buildSectionBox.gameObject, new Color(buildAccent.r, buildAccent.g, buildAccent.b, 0.92f), new Color(ColGold.r, ColGold.g, ColGold.b, 0.45f));
+
+                MakeText("BuildTitle", buildSectionBox.transform,
+                    "✦ CHUYÊN MÔN HÓA HƯỚNG BUILD (THAY ĐỔI GIÁP & KỸ NĂNG):",
+                    13, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleLeft,
+                    new Vector2(0.03f, 0.76f), new Vector2(0.97f, 0.96f), Vector2.zero, Vector2.zero);
 
                 for (int b = 0; b < 3; b++)
                 {
                     int bi = b;
                     bool isSel = (p.selectedBuild == b);
-                    float x0 = 0.04f + b * 0.31f;
-                    MakeStyledButton("BuildTab" + b, colChar.transform, cls.builds[b], 12,
+                    float x0 = 0.025f + b * 0.32f;
+                    MakeStyledButton("BuildTab" + b, buildSectionBox.transform, cls.builds[b], 12,
                         isSel ? UIButtonStyle.Selected : UIButtonStyle.Tab,
-                        new Vector2(x0, 0.13f), new Vector2(x0 + 0.295f, 0.205f), Vector2.zero, Vector2.zero, () =>
+                        new Vector2(x0, 0.43f), new Vector2(x0 + 0.305f, 0.73f), Vector2.zero, Vector2.zero, () =>
                         {
                             p.selectedBuild = bi;
                             GameSession.I.SelectLocalClass(p.selectedClass, bi);
@@ -838,18 +1029,21 @@ namespace AbyssGame
                         });
                 }
 
-                var buildDescBox = MakeStyledPanel("BuildDescBox", colChar.transform, UIPanelStyle.Notification,
-                    new Vector2(0.04f, 0.02f), new Vector2(0.96f, 0.115f), Vector2.zero, Vector2.zero);
+                var buildDescBox = MakeStyledPanel("BuildDescBox", buildSectionBox.transform, UIPanelStyle.Notification,
+                    new Vector2(0.025f, 0.06f), new Vector2(0.975f, 0.39f), Vector2.zero, Vector2.zero);
                 MakeText("BuildDescTxt", buildDescBox.transform,
                     $"• {cls.builds[p.selectedBuild]}: {cls.buildDesc[p.selectedBuild]}",
-                    12, FontStyle.Italic, buildAccent, TextAnchor.MiddleLeft,
-                    Vector2.zero, Vector2.one, new Vector2(12f, 4f), new Vector2(-12f, -4f));
+                    11, FontStyle.Italic, buildAccent, TextAnchor.MiddleLeft,
+                    Vector2.zero, Vector2.one, new Vector2(10f, 2f), new Vector2(-10f, -2f));
 
                 // =================================================================
                 // COLUMN 2 (CENTER): UI_Panel_SkillTree — ANCIENT RUNE SKILL TREE
                 // =================================================================
+                bool hasSkillPts = p.skillPoints > 0;
                 var colSkill = MakeStyledPanel("UI_Panel_SkillTree", bodyRoot, UIPanelStyle.SkillTree,
-                    new Vector2(0.335f, 0f), new Vector2(0.655f, 1f), Vector2.zero, Vector2.zero);
+                    new Vector2(0.335f, 0f), new Vector2(0.655f, 1f), Vector2.zero, Vector2.zero,
+                    null, hasSkillPts ? new Color(1f, 0.88f, 0.30f, 1f) : (Color?)null);
+                if (hasSkillPts) AttachGlowPulse(colSkill.gameObject, new Color(1f, 0.90f, 0.32f, 1f), new Color(0.95f, 0.55f, 0.12f, 0.55f));
 
                 // Background Ancient Rune Compass Rose
                 Sprite crestSp = GetDecorSprite("Pedestal_Crest_Gold");
@@ -865,7 +1059,9 @@ namespace AbyssGame
                     new Vector2(0.04f, 0.92f), new Vector2(0.11f, 0.975f), Vector2.zero, Vector2.zero);
 
                 MakeText("SkillTreeHdr", colSkill.transform,
-                    $"CÂY KỸ NĂNG CỔ NGỮ — ĐIỂM KỸ NĂNG: <color=#F8DC85>{p.skillPoints} SP</color>",
+                    hasSkillPts
+                        ? $"★ CÂY KỸ NĂNG CỔ NGỮ — <color=#78FA88>CÓ {p.skillPoints} ĐIỂM NÂNG CẤP!</color>"
+                        : $"CÂY KỸ NĂNG CỔ NGỮ — ĐIỂM KỸ NĂNG: <color=#F8DC85>{p.skillPoints} SP</color>",
                     15, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleLeft,
                     new Vector2(0.12f, 0.915f), new Vector2(0.96f, 0.98f), Vector2.zero, Vector2.zero);
 
@@ -923,6 +1119,7 @@ namespace AbyssGame
                     SetBarRatio(progBar.fill, rank / 5f);
 
                     bool canUp = p.skillPoints > 0 && rank < 5;
+                    if (canUp) AttachGlowPulse(node.gameObject, new Color(1f, 0.88f, 0.30f, 0.98f), new Color(0.45f, 0.95f, 0.55f, 0.65f));
                     UIButtonStyle upStyle = rank >= 5 ? UIButtonStyle.Selected : (canUp ? UIButtonStyle.Primary : UIButtonStyle.Disabled);
                     string upLbl = rank >= 5 ? "ĐÃ TỐI ĐA" : "NÂNG CẤP\n(+15%)";
                     var upBtn = MakeStyledButton("UpgradeSk" + k, node.transform, upLbl, 12, upStyle,
@@ -939,40 +1136,53 @@ namespace AbyssGame
                 }
 
                 // =================================================================
-                // COLUMN 3 (RIGHT): UI_Panel_Inventory — EQUIPMENT, GRID & TOOLTIP
+                // COLUMN 3 (RIGHT): UI_Panel_Inventory — 6 EQUIPPED SLOTS, SCROLLABLE BAG & TOOLTIP
                 // =================================================================
                 var colInv = MakeStyledPanel("UI_Panel_Inventory", bodyRoot, UIPanelStyle.Inventory,
                     new Vector2(0.67f, 0f), new Vector2(1.00f, 1f), Vector2.zero, Vector2.zero);
 
-                MakeIcon("InvHdrIc", colInv.transform, GetIcon("bag"),
-                    new Vector2(0.03f, 0.925f), new Vector2(0.10f, 0.98f), Vector2.zero, Vector2.zero);
+                MakeIcon("InvHdrIc", colInv.transform, GetItemSheetSprite(14),
+                    new Vector2(0.03f, 0.925f), new Vector2(0.095f, 0.98f), Vector2.zero, Vector2.zero);
 
                 MakeText("InvHdrTxt", colInv.transform,
-                    "TRANG BỊ ĐANG MẶC & TÚI ĐỒ CỔ NGỮ",
+                    $"TRANG BỊ ĐANG MẶC (6 Ô) & TÚI ĐỒ ({p.bag.Count} MÓN)",
                     15, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleLeft,
-                    new Vector2(0.11f, 0.92f), new Vector2(0.96f, 0.98f), Vector2.zero, Vector2.zero);
+                    new Vector2(0.105f, 0.92f), new Vector2(0.96f, 0.98f), Vector2.zero, Vector2.zero);
 
-                // 5 Equipment Slots (Horizontal Relic Row at Top of Inventory)
-                for (int s = 0; s < 5; s++)
+                // 6 Equipment Slots in a clean 3x2 Relic Grid (No Text Overflow!)
+                for (int s = 0; s < 6; s++)
                 {
                     EquipItem eq = GameSession.I.GetEquipped((ItemSlot)s);
-                    float x0 = 0.03f + s * 0.19f;
-                    float x1 = x0 + 0.18f;
+                    int gridCol = s % 3;
+                    int gridRow = s / 3;
+                    float x0 = 0.03f + gridCol * 0.316f;
+                    float x1 = x0 + 0.304f;
+                    float y1 = gridRow == 0 ? 0.912f : 0.818f;
+                    float y0 = y1 - 0.086f;
 
                     Color rimCol = eq != null ? GameDB.RarityColors[(int)eq.rarity] : ColBronze;
                     var eqCard = MakeStyledPanel("EqSlot_" + s, colInv.transform, UIPanelStyle.Ornate,
-                        new Vector2(x0, 0.74f), new Vector2(x1, 0.91f), Vector2.zero, Vector2.zero, null, rimCol);
+                        new Vector2(x0, y0), new Vector2(x1, y1), Vector2.zero, Vector2.zero, null, rimCol);
+                    eqCard.gameObject.AddComponent<RectMask2D>();
 
-                    MakeIcon("SlotIc", eqCard.transform, GetSlotIcon((ItemSlot)s),
-                        new Vector2(0.22f, 0.42f), new Vector2(0.78f, 0.88f), Vector2.zero, Vector2.zero,
-                        eq != null ? Color.white : new Color(1f, 1f, 1f, 0.38f));
+                    var icBox = MakePanel("EqIcFrame", eqCard.transform,
+                        new Vector2(0.04f, 0.12f), new Vector2(0.31f, 0.88f), Vector2.zero, Vector2.zero,
+                        new Color(0.06f, 0.07f, 0.10f, 0.92f), rimCol);
+                    MakeIcon("SlotIc", icBox.transform, eq != null ? GetItemSprite(eq) : GetSlotIcon((ItemSlot)s),
+                        new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.92f), Vector2.zero, Vector2.zero,
+                        eq != null ? Color.white : new Color(1f, 1f, 1f, 0.35f));
 
+                    string slotTitle = s < GameDB.SlotNames.Length ? GameDB.SlotNames[s] : "Cổ vật";
                     string eqLabel = eq != null
-                        ? $"<color=#{ColorUtility.ToHtmlStringRGB(rimCol)}>{GameDB.SlotNames[s]}</color>\n<size=10>{eq.Summary()}</size>"
-                        : $"<color=#BDA685>{GameDB.SlotNames[s]}</color>\n<size=10>(Trống)</size>";
+                        ? $"<color=#{ColorUtility.ToHtmlStringRGB(rimCol)}>{slotTitle}</color>\n<size=10><color=#EDE0BA>{FormatCompactPrimaryStat(eq)}</color></size>"
+                        : $"<color=#BDA685>{slotTitle}</color>\n<size=10><color=#7A7062>(Trống)</color></size>";
 
-                    MakeText("SlotTxt", eqCard.transform, eqLabel, 11, FontStyle.Bold, ColParchment, TextAnchor.LowerCenter,
-                        new Vector2(0.04f, 0.04f), new Vector2(0.96f, 0.46f), Vector2.zero, Vector2.zero);
+                    var slotTxt = MakeText("SlotTxt", eqCard.transform, eqLabel, 11, FontStyle.Bold, ColParchment, TextAnchor.MiddleLeft,
+                        new Vector2(0.35f, 0.08f), new Vector2(0.96f, 0.92f), Vector2.zero, Vector2.zero);
+                    slotTxt.verticalOverflow = VerticalWrapMode.Truncate;
+                    slotTxt.resizeTextForBestFit = true;
+                    slotTxt.resizeTextMinSize = 9;
+                    slotTxt.resizeTextMaxSize = 11;
 
                     var inspectBtn = eqCard.gameObject.AddComponent<Button>();
                     inspectBtn.targetGraphic = eqCard;
@@ -997,9 +1207,10 @@ namespace AbyssGame
                     float tx0 = 0.03f + t * 0.238f;
                     MakeStyledButton("BagTab_" + t, colInv.transform, tabNames[t], 12,
                         activeTab ? UIButtonStyle.Selected : UIButtonStyle.Tab,
-                        new Vector2(tx0, 0.675f), new Vector2(tx0 + 0.228f, 0.73f), Vector2.zero, Vector2.zero, () =>
+                        new Vector2(tx0, 0.672f), new Vector2(tx0 + 0.228f, 0.722f), Vector2.zero, Vector2.zero, () =>
                         {
                             activeBagFilter = tv;
+                            savedBagScrollPos = 1f;
                             rebuild();
                         });
                 }
@@ -1011,12 +1222,12 @@ namespace AbyssGame
                     if (it == null) continue;
                     if (activeBagFilter == 0 && it.slot != ItemSlot.Weapon) continue;
                     if (activeBagFilter == 1 && it.slot != ItemSlot.Armor && it.slot != ItemSlot.Helmet) continue;
-                    if (activeBagFilter == 2 && it.slot != ItemSlot.Ring && it.slot != ItemSlot.Amulet) continue;
+                    if (activeBagFilter == 2 && it.slot != ItemSlot.Ring && it.slot != ItemSlot.Amulet && it.slot != ItemSlot.Relic) continue;
                     filtered.Add(it);
                 }
 
                 var gridBox = MakeStyledPanel("BagGridBox", colInv.transform, UIPanelStyle.Standard,
-                    new Vector2(0.03f, 0.26f), new Vector2(0.97f, 0.665f), Vector2.zero, Vector2.zero);
+                    new Vector2(0.03f, 0.252f), new Vector2(0.97f, 0.662f), Vector2.zero, Vector2.zero);
 
                 if (filtered.Count == 0)
                 {
@@ -1027,8 +1238,60 @@ namespace AbyssGame
                 }
                 else
                 {
-                    int maxRows = Mathf.Min(5, filtered.Count);
-                    for (int i = 0; i < maxRows; i++)
+                    // Full Vertical ScrollRect + Viewport (RectMask2D) + Content (VerticalLayoutGroup + ContentSizeFitter) + Right Scrollbar
+                    var scrollRt = MakeRect("BagScrollRect", gridBox.transform, Vector2.zero, Vector2.one, new Vector2(6f, 6f), new Vector2(-6f, -6f));
+                    var scrollRect = scrollRt.gameObject.AddComponent<ScrollRect>();
+                    scrollRect.horizontal = false;
+                    scrollRect.vertical = true;
+                    scrollRect.movementType = ScrollRect.MovementType.Clamped;
+                    scrollRect.inertia = true;
+                    scrollRect.decelerationRate = 0.12f;
+                    scrollRect.scrollSensitivity = 32f;
+                    currentBagScrollRect = scrollRect;
+
+                    var viewportRt = MakeRect("Viewport", scrollRt, new Vector2(0f, 0f), new Vector2(0.962f, 1f), Vector2.zero, Vector2.zero);
+                    var vpImg = viewportRt.gameObject.AddComponent<Image>();
+                    vpImg.color = new Color(0f, 0f, 0f, 0.01f);
+                    vpImg.raycastTarget = true;
+                    viewportRt.gameObject.AddComponent<RectMask2D>();
+                    scrollRect.viewport = viewportRt;
+
+                    var contentRt = MakeRect("Content", viewportRt, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
+                    contentRt.pivot = new Vector2(0.5f, 1f);
+                    var vlg = contentRt.gameObject.AddComponent<VerticalLayoutGroup>();
+                    vlg.padding = new RectOffset(4, 4, 4, 6);
+                    vlg.spacing = 7f;
+                    vlg.childAlignment = TextAnchor.UpperCenter;
+                    vlg.childControlWidth = true;
+                    vlg.childControlHeight = true;
+                    vlg.childForceExpandWidth = true;
+                    vlg.childForceExpandHeight = false;
+
+                    var csf = contentRt.gameObject.AddComponent<ContentSizeFitter>();
+                    csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+                    csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                    scrollRect.content = contentRt;
+
+                    // Vertical Scrollbar on Right
+                    var sbRt = MakeRect("ScrollbarVertical", scrollRt, new Vector2(0.968f, 0.02f), new Vector2(0.996f, 0.98f), Vector2.zero, Vector2.zero);
+                    var sbBg = sbRt.gameObject.AddComponent<Image>();
+                    sbBg.color = new Color(0.06f, 0.08f, 0.12f, 0.92f);
+                    var sbOutline = sbRt.gameObject.AddComponent<Outline>();
+                    sbOutline.effectColor = new Color(ColBronze.r, ColBronze.g, ColBronze.b, 0.55f);
+
+                    var slideArea = MakeRect("SlidingArea", sbRt, Vector2.zero, Vector2.one, new Vector2(2f, 2f), new Vector2(-2f, -2f));
+                    var handleRt = MakeRect("Handle", slideArea, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                    var handleImg = handleRt.gameObject.AddComponent<Image>();
+                    handleImg.color = ColGold;
+
+                    var scrollbar = sbRt.gameObject.AddComponent<Scrollbar>();
+                    scrollbar.handleRect = handleRt;
+                    scrollbar.targetGraphic = handleImg;
+                    scrollbar.direction = Scrollbar.Direction.BottomToTop;
+                    scrollRect.verticalScrollbar = scrollbar;
+                    scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+
+                    for (int i = 0; i < filtered.Count; i++)
                     {
                         EquipItem item = filtered[i];
                         if (inspectedItem == null && i == 0)
@@ -1037,33 +1300,94 @@ namespace AbyssGame
                             inspectedFromEquipped = false;
                         }
 
-                        float rTop = 0.97f - i * 0.19f;
-                        float rBot = rTop - 0.175f;
                         Color rCol = GameDB.RarityColors[(int)item.rarity];
                         bool isInspected = (inspectedItem == item);
+                        EquipItem curEq = GameSession.I.GetEquipped(item.slot);
 
-                        var row = MakeStyledPanel("BagItem_" + i, gridBox.transform,
-                            isInspected ? UIPanelStyle.Ornate : UIPanelStyle.Standard,
-                            new Vector2(0.02f, rBot), new Vector2(0.98f, rTop), Vector2.zero, Vector2.zero, null, rCol);
+                        var rowRt = MakeRect("BagItem_" + i, contentRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                        var rowLe = rowRt.gameObject.AddComponent<LayoutElement>();
+                        rowLe.minHeight = 76f;
+                        rowLe.preferredHeight = 76f;
 
-                        MakeIcon("ItIc", row.transform, GetSlotIcon(item.slot),
-                            new Vector2(0.015f, 0.12f), new Vector2(0.11f, 0.88f), Vector2.zero, Vector2.zero);
+                        var rowImg = rowRt.gameObject.AddComponent<Image>();
+                        rowImg.raycastTarget = false;
+                        rowImg.color = isInspected
+                            ? new Color(0.13f, 0.16f, 0.23f, 0.98f)
+                            : new Color(0.08f, 0.10f, 0.15f, 0.96f);
 
-                        MakeText("ItTxt", row.transform,
-                            $"[{GameDB.RarityNames[(int)item.rarity]}] {item.name} <size=11>({GameDB.SlotNames[(int)item.slot]})</size>\n<size=11><color=#EDE0BA>{item.Summary()}</color></size>",
+                        var rowOutline = rowRt.gameObject.AddComponent<Outline>();
+                        rowOutline.effectColor = isInspected ? Color.Lerp(rCol, Color.white, 0.35f) : new Color(rCol.r, rCol.g, rCol.b, 0.88f);
+                        rowOutline.effectDistance = isInspected ? new Vector2(2f, -2f) : new Vector2(1.5f, -1.5f);
+
+                        // Left Rarity-Framed Crisp Sliced Item Icon
+                        var icFrame = MakePanel("IcFrame", rowRt,
+                            new Vector2(0.014f, 0.11f), new Vector2(0.122f, 0.89f), Vector2.zero, Vector2.zero,
+                            new Color(0.05f, 0.06f, 0.09f, 0.98f), rCol);
+                        MakeIcon("ItIc", icFrame.transform, GetItemSprite(item),
+                            new Vector2(0.06f, 0.06f), new Vector2(0.94f, 0.94f), Vector2.zero, Vector2.zero);
+
+                        // Top Title Row: [Rarity] Name (Slot) + Class Compatibility Pill Badge
+                        var topLineRt = MakeRect("TopLine", rowRt,
+                            new Vector2(0.136f, 0.52f), new Vector2(0.648f, 0.92f), Vector2.zero, Vector2.zero);
+                        var topHlg = topLineRt.gameObject.AddComponent<HorizontalLayoutGroup>();
+                        topHlg.spacing = 6f;
+                        topHlg.childAlignment = TextAnchor.MiddleLeft;
+                        topHlg.childControlWidth = true;
+                        topHlg.childControlHeight = true;
+                        topHlg.childForceExpandWidth = false;
+                        topHlg.childForceExpandHeight = false;
+
+                        string slotLbl = (int)item.slot < GameDB.SlotNames.Length ? GameDB.SlotNames[(int)item.slot] : "Cổ vật";
+                        var titleTxt = MakeText("ItTitle", topLineRt,
+                            $"[{GameDB.RarityNames[(int)item.rarity]}] {item.name} ({slotLbl})",
                             12, FontStyle.Bold, rCol, TextAnchor.MiddleLeft,
-                            new Vector2(0.125f, 0.06f), new Vector2(0.62f, 0.94f), Vector2.zero, Vector2.zero);
+                            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                        titleTxt.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        titleTxt.verticalOverflow = VerticalWrapMode.Truncate;
 
-                        MakeStyledButton("Inspect_" + i, row.transform, "Chi Tiết", 11, UIButtonStyle.Secondary,
-                            new Vector2(0.63f, 0.14f), new Vector2(0.76f, 0.86f), Vector2.zero, Vector2.zero, () =>
+                        // Class Compatibility Badge (e.g. "Hợp Assassin", "Hợp Knight", "Hợp Mage", "Hợp Cleric")
+                        string compatBadgeText = GetClassAffinityBadgeText(p.selectedClass, item, out bool isCompat);
+                        CreatePillBadge(topLineRt, compatBadgeText,
+                            isCompat ? new Color(0.08f, 0.24f, 0.16f, 0.96f) : new Color(0.26f, 0.12f, 0.12f, 0.96f),
+                            isCompat ? new Color(0.24f, 0.72f, 0.42f, 0.85f) : new Color(0.75f, 0.30f, 0.30f, 0.85f),
+                            isCompat ? new Color(0.38f, 0.95f, 0.58f, 1f) : new Color(0.96f, 0.52f, 0.52f, 1f),
+                            10);
+
+                        // Bottom Pill Row: [Archetype] + Individual Stat Comparison Pills (▲+11 Green / ▼-3 Red)
+                        var botLineRt = MakeRect("BotLine", rowRt,
+                            new Vector2(0.136f, 0.08f), new Vector2(0.648f, 0.48f), Vector2.zero, Vector2.zero);
+                        var botHlg = botLineRt.gameObject.AddComponent<HorizontalLayoutGroup>();
+                        botHlg.spacing = 5f;
+                        botHlg.childAlignment = TextAnchor.MiddleLeft;
+                        botHlg.childControlWidth = true;
+                        botHlg.childControlHeight = true;
+                        botHlg.childForceExpandWidth = false;
+                        botHlg.childForceExpandHeight = false;
+
+                        string archShort = (item.slot == ItemSlot.Ring || item.slot == ItemSlot.Amulet || item.slot == ItemSlot.Relic)
+                            ? "[Trang Sức]"
+                            : $"[{ClassSpecializationSystem.GetArchetypeShortTag(item.archetype)}]";
+                        CreatePillBadge(botLineRt, archShort,
+                            new Color(0.13f, 0.16f, 0.22f, 0.95f),
+                            new Color(0.32f, 0.38f, 0.48f, 0.75f),
+                            new Color(0.78f, 0.82f, 0.90f, 1f),
+                            10);
+
+                        PopulateStatComparisonPills(botLineRt, item, curEq);
+
+                        // Right 3 Action Buttons: Chi Tiết | Mặc | Bán +XXG
+                        CreateRowActionButton("Inspect_" + i, rowRt, "Chi Tiết", 11,
+                            new Color(0.14f, 0.18f, 0.25f, 0.98f), new Color(0.36f, 0.44f, 0.56f, 0.85f), ColParchment,
+                            new Vector2(0.654f, 0.16f), new Vector2(0.764f, 0.84f), () =>
                             {
                                 inspectedItem = item;
                                 inspectedFromEquipped = false;
                                 rebuild();
                             });
 
-                        MakeStyledButton("Equip_" + i, row.transform, "Mặc", 11, UIButtonStyle.Primary,
-                            new Vector2(0.77f, 0.14f), new Vector2(0.88f, 0.86f), Vector2.zero, Vector2.zero, () =>
+                        CreateRowActionButton("Equip_" + i, rowRt, "Mặc", 11,
+                            new Color(0.34f, 0.25f, 0.11f, 0.98f), new Color(0.85f, 0.68f, 0.30f, 0.92f), ColGoldBright,
+                            new Vector2(0.772f, 0.16f), new Vector2(0.872f, 0.84f), () =>
                             {
                                 GameSession.I.Equip(item);
                                 inspectedItem = item;
@@ -1074,8 +1398,9 @@ namespace AbyssGame
                             });
 
                         int sellGold = Mathf.Max(5, item.value > 0 ? item.value : 12 * ((int)item.rarity + 1));
-                        MakeStyledButton("Sell_" + i, row.transform, $"Bán\n+{sellGold}G", 10, UIButtonStyle.Danger,
-                            new Vector2(0.89f, 0.14f), new Vector2(0.985f, 0.86f), Vector2.zero, Vector2.zero, () =>
+                        CreateRowActionButton("Sell_" + i, rowRt, $"Bán\n<color=#F8DC85>+{sellGold}G</color>", 10,
+                            new Color(0.36f, 0.11f, 0.15f, 0.98f), new Color(0.82f, 0.26f, 0.32f, 0.92f), Color.white,
+                            new Vector2(0.880f, 0.12f), new Vector2(0.986f, 0.88f), () =>
                             {
                                 if (inspectedItem == item) inspectedItem = null;
                                 GameSession.I.SellBagItem(item);
@@ -1083,6 +1408,9 @@ namespace AbyssGame
                                 rebuild();
                             });
                     }
+
+                    Canvas.ForceUpdateCanvases();
+                    scrollRect.verticalNormalizedPosition = Mathf.Clamp01(savedBagScrollPos);
                 }
 
                 // Bottom Item Tooltip & Comparison Panel (UI_Panel_Dialog)
@@ -1107,8 +1435,8 @@ namespace AbyssGame
                     Color rc = GameDB.RarityColors[(int)inspectedItem.rarity];
                     EquipItem curEq = GameSession.I.GetEquipped(inspectedItem.slot);
 
-                    MakeIcon("TtIc", tooltipBox.transform, GetSlotIcon(inspectedItem.slot),
-                        new Vector2(0.02f, 0.18f), new Vector2(0.15f, 0.82f), Vector2.zero, Vector2.zero);
+                    MakeIcon("TtIc", tooltipBox.transform, GetItemSprite(inspectedItem),
+                        new Vector2(0.02f, 0.16f), new Vector2(0.15f, 0.84f), Vector2.zero, Vector2.zero);
 
                     string cmpLine = "";
                     if (!inspectedFromEquipped && curEq != null && curEq != inspectedItem)
@@ -1116,9 +1444,9 @@ namespace AbyssGame
                         float dAtk = inspectedItem.atk - curEq.atk;
                         float dHp  = inspectedItem.hp - curEq.hp;
                         float dDef = inspectedItem.def - curEq.def;
-                        string cAtk = dAtk >= 0 ? $"<color=#68E878>+{dAtk:0} ATK</color>" : $"<color=#F06868>{dAtk:0} ATK</color>";
-                        string cHp  = dHp >= 0  ? $"<color=#68E878>+{dHp:0} HP</color>"  : $"<color=#F06868>{dHp:0} HP</color>";
-                        string cDef = dDef >= 0 ? $"<color=#68E878>+{dDef:0} DEF</color>" : $"<color=#F06868>{dDef:0} DEF</color>";
+                        string cAtk = dAtk >= 0 ? $"<color=#4CE878>▲+{dAtk:0} ATK</color>" : $"<color=#F85858>▼{dAtk:0} ATK</color>";
+                        string cHp  = dHp >= 0  ? $"<color=#4CE878>▲+{dHp:0} HP</color>"  : $"<color=#F85858>▼{dHp:0} HP</color>";
+                        string cDef = dDef >= 0 ? $"<color=#4CE878>▲+{dDef:0} DEF</color>" : $"<color=#F85858>▼{dDef:0} DEF</color>";
                         cmpLine = $"\nSo với đồ đang mặc ({curEq.name}): {cAtk}  |  {cHp}  |  {cDef}";
                     }
                     else if (inspectedFromEquipped)
@@ -1126,8 +1454,9 @@ namespace AbyssGame
                         cmpLine = "\n<color=#F8DC85>• Trang bị này đang được mặc trên người.</color>";
                     }
 
+                    int slIdx = Mathf.Clamp((int)inspectedItem.slot, 0, GameDB.SlotNames.Length - 1);
                     MakeText("TtBody", tooltipBox.transform,
-                        $"[{GameDB.RarityNames[(int)inspectedItem.rarity].ToUpper()}] {inspectedItem.name} — Vị trí: {GameDB.SlotNames[(int)inspectedItem.slot]}\n" +
+                        $"[{GameDB.RarityNames[(int)inspectedItem.rarity].ToUpper()}] {inspectedItem.name} — Vị trí: {GameDB.SlotNames[slIdx]}\n" +
                         $"<size=12><color=#EDE0BA>Chỉ số: {inspectedItem.Summary()}</color>{cmpLine}</size>",
                         13, FontStyle.Bold, rc, TextAnchor.MiddleLeft,
                         new Vector2(0.17f, 0.08f), new Vector2(0.98f, 0.92f), Vector2.zero, Vector2.zero);
@@ -1137,6 +1466,181 @@ namespace AbyssGame
             rebuild();
             modal.gameObject.SetActive(false);
             return modal.gameObject;
+        }
+
+        private static string FormatCompactPrimaryStat(EquipItem eq)
+        {
+            if (eq == null) return "(Trống)";
+            var p = new List<string>(2);
+            if (eq.atk > 0.1f) p.Add($"+{eq.atk:0} ATK");
+            if (eq.def > 0.1f) p.Add($"+{eq.def:0} DEF");
+            if (eq.hp > 0.5f && p.Count < 2) p.Add($"+{eq.hp:0} HP");
+            if (eq.crit > 0.001f && p.Count < 2) p.Add($"+{eq.crit * 100:0.#}% Crit");
+            if (eq.cdr > 0.001f && p.Count < 2) p.Add($"+{eq.cdr * 100:0.#}% CDR");
+            return p.Count > 0 ? string.Join(" • ", p) : eq.name;
+        }
+
+        private static string GetClassAffinityBadgeText(int selectedClassId, EquipItem item, out bool isCompat)
+        {
+            isCompat = true;
+            if (item == null) return "Hợp Mọi Hệ";
+            if (item.slot == ItemSlot.Ring || item.slot == ItemSlot.Amulet || item.slot == ItemSlot.Relic || item.archetype == EquipArchetype.Universal)
+                return "Hợp Mọi Hệ";
+
+            string nm = item.name ?? "";
+            string targetClassLabel;
+            switch (item.archetype)
+            {
+                case EquipArchetype.VanguardPlate:
+                    targetClassLabel = nm.Contains("Đại Đao") || nm.Contains("Trọng Kiếm") ? "Hợp Berserker/Knight" : "Hợp Knight/Guardian";
+                    break;
+                case EquipArchetype.StalkerLeather:
+                    if (nm.Contains("Cung")) targetClassLabel = "Hợp Ranger";
+                    else if (nm.Contains("Quyền") || nm.Contains("Thiền")) targetClassLabel = "Hợp Monk/Assassin";
+                    else targetClassLabel = "Hợp Assassin";
+                    break;
+                case EquipArchetype.ArcanistCloth:
+                    targetClassLabel = nm.Contains("Hắc") || nm.Contains("Nguyền") ? "Hợp Warlock/Mage" : "Hợp Mage";
+                    break;
+                case EquipArchetype.SacredRelic:
+                    targetClassLabel = nm.Contains("Rừng") || nm.Contains("Lộc") ? "Hợp Druid/Cleric" : "Hợp Cleric";
+                    break;
+                default:
+                    targetClassLabel = "Hợp Mọi Hệ";
+                    break;
+            }
+
+            EquipArchetype heroArch = ClassSpecializationSystem.GetClassArchetype(selectedClassId);
+            isCompat = (item.archetype == heroArch) || (item.slot != ItemSlot.Weapon);
+            return targetClassLabel;
+        }
+
+        private static void CreatePillBadge(Transform parent, string text, Color bgCol, Color borderCol, Color textCol, int fontSize = 10)
+        {
+            var pillGo = new GameObject("PillBadge");
+            pillGo.transform.SetParent(parent, false);
+            var rt = pillGo.AddComponent<RectTransform>();
+            var img = pillGo.AddComponent<Image>();
+            img.color = bgCol;
+            var ol = pillGo.AddComponent<Outline>();
+            ol.effectColor = borderCol;
+            ol.effectDistance = new Vector2(1f, -1f);
+
+            var hlg = pillGo.AddComponent<HorizontalLayoutGroup>();
+            hlg.padding = new RectOffset(7, 7, 2, 2);
+            hlg.childAlignment = TextAnchor.MiddleCenter;
+            hlg.childControlWidth = true;
+            hlg.childControlHeight = true;
+            hlg.childForceExpandWidth = false;
+            hlg.childForceExpandHeight = false;
+
+            var csf = pillGo.AddComponent<ContentSizeFitter>();
+            csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var txtGo = new GameObject("Txt");
+            txtGo.transform.SetParent(pillGo.transform, false);
+            txtGo.AddComponent<RectTransform>();
+            var t = txtGo.AddComponent<Text>();
+            t.font = BodyFont;
+            t.text = text;
+            t.fontSize = fontSize;
+            t.fontStyle = FontStyle.Bold;
+            t.color = textCol;
+            t.alignment = TextAnchor.MiddleCenter;
+            t.supportRichText = true;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.raycastTarget = false;
+        }
+
+        private static void PopulateStatComparisonPills(Transform parent, EquipItem item, EquipItem curEq)
+        {
+            if (item == null) return;
+            bool hasCmp = curEq != null && curEq != item;
+
+            void AddStatPill(float val, float eqVal, string label, bool isPercent)
+            {
+                if (val <= (isPercent ? 0.001f : 0.1f)) return;
+                float dispVal = isPercent ? val * 100f : val;
+                float dispEq  = isPercent ? eqVal * 100f : eqVal;
+                float delta   = hasCmp ? (dispVal - dispEq) : dispVal;
+                string suffix = isPercent ? "%" : "";
+                string fmt    = isPercent ? "0.#" : "0";
+
+                string deltaStr;
+                if (Mathf.Abs(delta) < (isPercent ? 0.05f : 0.4f))
+                    deltaStr = "";
+                else if (delta > 0f)
+                    deltaStr = $" <color=#3CE878>▲+{delta.ToString(fmt)}{suffix}</color>";
+                else
+                    deltaStr = $" <color=#F85858>▼{delta.ToString(fmt)}{suffix}</color>";
+
+                string fullText = $"+{dispVal.ToString(fmt)}{suffix} {label}{deltaStr}";
+                CreatePillBadge(parent, fullText,
+                    new Color(0.10f, 0.13f, 0.19f, 0.96f),
+                    new Color(0.24f, 0.30f, 0.40f, 0.80f),
+                    new Color(0.92f, 0.94f, 0.98f, 1f),
+                    10);
+            }
+
+            AddStatPill(item.atk,       curEq != null ? curEq.atk : 0f,       "ATK",            false);
+            AddStatPill(item.def,       curEq != null ? curEq.def : 0f,       "DEF",            false);
+            AddStatPill(item.hp,        curEq != null ? curEq.hp : 0f,        "HP",             false);
+            AddStatPill(item.mana,      curEq != null ? curEq.mana : 0f,      "MP",             false);
+            AddStatPill(item.crit,      curEq != null ? curEq.crit : 0f,      "Crit",           true);
+            AddStatPill(item.atkSpeed,  curEq != null ? curEq.atkSpeed : 0f,  "ASPD",           true);
+            AddStatPill(item.cdr,       curEq != null ? curEq.cdr : 0f,       "Giảm hồi chiêu", true);
+            AddStatPill(item.lifesteal, curEq != null ? curEq.lifesteal : 0f, "Hút máu",        true);
+        }
+
+        private static Button CreateRowActionButton(string name, Transform parent, string label, int fontSize,
+            Color bgCol, Color borderCol, Color textCol, Vector2 anchorMin, Vector2 anchorMax, Action onClick)
+        {
+            var rt = MakeRect(name, parent, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
+            var img = rt.gameObject.AddComponent<Image>();
+            img.color = bgCol;
+            var ol = rt.gameObject.AddComponent<Outline>();
+            ol.effectColor = borderCol;
+            ol.effectDistance = new Vector2(1.2f, -1.2f);
+
+            var btn = rt.gameObject.AddComponent<Button>();
+            btn.targetGraphic = img;
+            var lbl = MakeText("Lbl", rt, label, fontSize, FontStyle.Bold, textCol, TextAnchor.MiddleCenter,
+                Vector2.zero, Vector2.one, new Vector2(2f, 2f), new Vector2(-2f, -2f));
+            lbl.raycastTarget = false;
+
+            btn.onClick.AddListener(() =>
+            {
+                GameAudio.I?.PlaySfx(GameSfx.Click, 0.6f);
+                onClick?.Invoke();
+            });
+            return btn;
+        }
+
+        private static void AttachGlowPulse(GameObject go, Color c1, Color c2)
+        {
+            if (go == null) return;
+            var pulse = go.GetComponent<UIGlowPulseBehaviour>() ?? go.AddComponent<UIGlowPulseBehaviour>();
+            pulse.OutlineTarget = go.GetComponent<Outline>();
+            pulse.ColorA = c1;
+            pulse.ColorB = c2;
+        }
+
+        private class UIGlowPulseBehaviour : MonoBehaviour
+        {
+            public Outline OutlineTarget;
+            public Color ColorA = new Color(1f, 0.88f, 0.30f, 1f);
+            public Color ColorB = new Color(1f, 0.55f, 0.15f, 0.5f);
+
+            private void Update()
+            {
+                if (OutlineTarget == null) return;
+                float s = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4.2f);
+                OutlineTarget.effectColor = Color.Lerp(ColorB, ColorA, s);
+                float d = Mathf.Lerp(1.5f, 2.6f, s);
+                OutlineTarget.effectDistance = new Vector2(d, -d);
+            }
         }
 
         public static GameObject BuildSettingsModal(Transform canvasRoot, bool includeResetSave = false)

@@ -114,15 +114,20 @@ namespace AbyssGame
     public static class EnemyTacticalBrain
     {
         private static readonly Dictionary<ActorUnit, int> _slotAssignments = new Dictionary<ActorUnit, int>();
+        private static int _nextSurroundSlot;
 
         public static EliteAffixKind RollEliteAffix(EnemyDef def, bool isElite)
         {
             if (!isElite || def == null) return EliteAffixKind.None;
-            if (def.id == "DarkKnight") return EliteAffixKind.Vampiric;
-            if (def.id == "Demon") return EliteAffixKind.Molten;
-            if (def.id == "CrystalGolem") return EliteAffixKind.FrozenPulse;
-            if (def.id == "SkeletonMage") return EliteAffixKind.Stormcaller;
+            // Randomize across the 4 Elite Affixes (Vampiric, Thorns, MoltenDeath, ArcaneShielded) while giving iconic Elites a strong weighted preference
             int r = UnityEngine.Random.Range(1, 5);
+            if (UnityEngine.Random.value < 0.45f)
+            {
+                if (def.id == "DarkKnight") return EliteAffixKind.Vampiric;
+                if (def.id == "Demon") return EliteAffixKind.MoltenDeath;
+                if (def.id == "CrystalGolem" || def.id == "SkeletonMage") return EliteAffixKind.ArcaneShielded;
+                if (def.id == "SkeletonWarrior") return EliteAffixKind.Thorns;
+            }
             return (EliteAffixKind)r;
         }
 
@@ -130,10 +135,10 @@ namespace AbyssGame
         {
             switch (affix)
             {
-                case EliteAffixKind.Vampiric: return "Huyết Thực (Hút Máu)";
-                case EliteAffixKind.Molten: return "Dung Nham (Nổ Lửa)";
-                case EliteAffixKind.Stormcaller: return "Lôi Đình (Giật Sét)";
-                case EliteAffixKind.FrozenPulse: return "Hàn Băng (Đóng Băng)";
+                case EliteAffixKind.Vampiric: return "Hút Máu / Vampiric";
+                case EliteAffixKind.Thorns: return "Phản Đòn / Thorns";
+                case EliteAffixKind.MoltenDeath: return "Bùng Nổ Khi Chết / Molten Death";
+                case EliteAffixKind.ArcaneShielded: return "Khiên Kháng Phép / Arcane Shielded";
                 default: return "";
             }
         }
@@ -143,9 +148,9 @@ namespace AbyssGame
             switch (affix)
             {
                 case EliteAffixKind.Vampiric: return new Color(1.0f, 0.16f, 0.28f);
-                case EliteAffixKind.Molten: return new Color(1.0f, 0.48f, 0.12f);
-                case EliteAffixKind.Stormcaller: return new Color(0.32f, 0.78f, 1.0f);
-                case EliteAffixKind.FrozenPulse: return new Color(0.45f, 0.95f, 1.0f);
+                case EliteAffixKind.Thorns: return new Color(1.0f, 0.62f, 0.18f);
+                case EliteAffixKind.MoltenDeath: return new Color(1.0f, 0.42f, 0.10f);
+                case EliteAffixKind.ArcaneShielded: return new Color(0.35f, 0.90f, 1.0f);
                 default: return fallback;
             }
         }
@@ -315,9 +320,11 @@ namespace AbyssGame
         {
             if (unit == null) return 0;
             if (_slotAssignments.TryGetValue(unit, out int s)) return s;
-            int hash = Mathf.Abs(unit.GetInstanceID()) % 8;
-            _slotAssignments[unit] = hash;
-            return hash;
+            if (_slotAssignments.Count > 64) _slotAssignments.Clear();
+            int assigned = _nextSurroundSlot;
+            _nextSurroundSlot = (_nextSurroundSlot + 1) % 8;
+            _slotAssignments[unit] = assigned;
+            return assigned;
         }
 
         /// <summary>
@@ -339,54 +346,51 @@ namespace AbyssGame
             }
 
             // Elite Affix periodic pulse
-            if (bb.EliteAffix == EliteAffixKind.None || !self.IsElite) return;
+            if (bb.EliteAffix == EliteAffixKind.None || (!self.IsElite && !self.IsMiniBoss)) return;
 
             bb.AffixPulseTimer -= dt;
             if (bb.AffixPulseTimer > 0f) return;
-            bb.AffixPulseTimer = 5.2f;
+            bb.AffixPulseTimer = 5.4f;
 
             switch (bb.EliteAffix)
             {
                 case EliteAffixKind.Vampiric:
-                    // Heals self if a hero is in melee range
-                    if (bb.Target != null && Vector3.Distance(self.transform.position, bb.Target.transform.position) <= 4.0f)
+                    // Blood siphon pulse if a hero is in melee range
+                    if (bb.Target != null && Vector3.Distance(self.transform.position, bb.Target.transform.position) <= 4.2f)
                     {
-                        self.ReceiveHeal(self.MaxHp * 0.06f, self);
+                        self.ReceiveHeal(self.MaxHp * 0.05f, self);
                         CharacterVisualFactory.SpawnBurst(self.transform.position + Vector3.up, new Color(1f, 0.15f, 0.3f), 1.8f, 0.4f);
                     }
                     break;
 
-                case EliteAffixKind.Molten:
+                case EliteAffixKind.MoltenDeath:
                     {
                         Vector3 p = self.transform.position;
-                        CharacterVisualFactory.SpawnGroundTelegraph(p, 3.0f, 0.85f, new Color(1f, 0.42f, 0.1f), () =>
+                        CharacterVisualFactory.SpawnGroundTelegraph(p, 3.2f, 0.88f, new Color(1f, 0.42f, 0.1f), () =>
                         {
                             if (self != null && !self.IsDead)
-                                self.DealCircleDamage(p, 3.0f, self.EffectiveAttack() * 1.15f, StatusType.Burn, 3f, self.EffectiveAttack() * 0.18f, new Color(1f, 0.45f, 0.1f));
+                                self.DealCircleDamage(p, 3.2f, self.EffectiveAttack() * 1.15f, StatusType.Burn, 3f, self.EffectiveAttack() * 0.18f, new Color(1f, 0.45f, 0.1f));
                         });
                         break;
                     }
 
-                case EliteAffixKind.Stormcaller:
-                    if (bb.Target != null && Vector3.Distance(self.transform.position, bb.Target.transform.position) <= 10f)
+                case EliteAffixKind.Thorns:
                     {
-                        Vector3 strikePos = bb.Target.transform.position;
-                        CharacterVisualFactory.SpawnGroundTelegraph(strikePos, 2.4f, 0.75f, new Color(0.3f, 0.8f, 1f), () =>
-                        {
-                            if (self != null && !self.IsDead)
-                                self.DealCircleDamage(strikePos, 2.4f, self.EffectiveAttack() * 1.1f, StatusType.Slow, 2.5f, 0f, new Color(0.3f, 0.85f, 1f));
-                        });
+                        // Spiked iron aura pulse + brief defense buff
+                        self.ApplyStatus(StatusType.DefUp, 3.5f, 0f, self);
+                        CharacterVisualFactory.SpawnBurst(self.transform.position + Vector3.up * 0.9f, new Color(1f, 0.58f, 0.16f), 1.7f, 0.35f);
+                        break;
                     }
-                    break;
 
-                case EliteAffixKind.FrozenPulse:
+                case EliteAffixKind.ArcaneShielded:
                     {
-                        Vector3 p = self.transform.position;
-                        CharacterVisualFactory.SpawnGroundTelegraph(p, 3.4f, 0.85f, new Color(0.45f, 0.95f, 1f), () =>
+                        // Regenerate Arcane Shield unless guard-broken (Staggered)!
+                        if (!self.IsStaggered && self.Shield < self.MaxHp * 0.25f)
                         {
-                            if (self != null && !self.IsDead)
-                                self.DealCircleDamage(p, 3.4f, self.EffectiveAttack() * 1.05f, StatusType.Slow, 3.2f, 0f, new Color(0.45f, 0.95f, 1f));
-                        });
+                            self.AddShield(self.MaxHp * 0.18f);
+                            AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn(
+                                "VFX_Knight_HolyShield", self.transform.position, Quaternion.identity, self.transform, 0.85f, 1.5f);
+                        }
                         break;
                     }
             }

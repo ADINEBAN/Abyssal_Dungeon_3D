@@ -28,6 +28,9 @@ namespace AbyssGame
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureBootstrapOnAnyScene()
         {
+            Application.runInBackground = true;
+            if (Application.targetFrameRate <= 0 || Application.targetFrameRate > 60)
+                Application.targetFrameRate = 60;
             if (FindObjectOfType<SceneBootstrap>() == null)
             {
                 var go = new GameObject("[AbyssSceneBootstrap]");
@@ -131,6 +134,8 @@ namespace AbyssGame
 
             if (GraphicsManager.Instance != null)
                 GraphicsManager.Instance.ApplyActivePresetToCurrentScene();
+
+            GameUIKit.OptimizeAllCanvasesInScene();
         }
 
         private static void EnsureCameraAndLight()

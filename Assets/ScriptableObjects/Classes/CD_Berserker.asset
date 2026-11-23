@@ -61,6 +61,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 0.95, g: 0.15, b: 0.15, a: 1}
+    vfxPoolKey: VFX_Cleric_Smite
+    vfxPrefab: {fileID: 4173514899726323992, guid: 4d1892040ee4f244bb41ac4e53cc205d,
+      type: 3}
   - skillName: Bloodlust
     description: "Cu\u1ED3ng huy\u1EBFt: +40% t\u1EA5n c\xF4ng, h\xFAt m\xE1u 15%."
     kind: 9
@@ -71,6 +74,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 0.95, g: 0.15, b: 0.15, a: 1}
+    vfxPoolKey: VFX_Cleric_GroupHeal
+    vfxPrefab: {fileID: 2985301010262194211, guid: 2caee74312328c0448448dc1bbb2a3a6,
+      type: 3}
   - skillName: War Cry
     description: "T\u0103ng t\u1EA5n c\xF4ng c\u1EA3 \u0111\u1ED9i."
     kind: 10
@@ -81,6 +87,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 1, g: 0.65, b: 0.2, a: 1}
+    vfxPoolKey: VFX_Cleric_Purify
+    vfxPrefab: {fileID: 3383736296845653107, guid: 4793833eb3b9869468ceb57e2f5ff361,
+      type: 3}
   - skillName: Ragnarok
     description: "Xo\xE1y ki\u1EBFm h\u1EE7y di\u1EC7t xung quanh."
     kind: 3
@@ -91,3 +100,10 @@ MonoBehaviour:
     range: 10
     isUltimate: 1
     vfxColor: {r: 0.95, g: 0.15, b: 0.15, a: 1}
+    vfxPoolKey: VFX_Cleric_Resurrection
+    vfxPrefab: {fileID: 4776982330568684955, guid: 646aeed6813c4fa4aac94c238b46086d,
+      type: 3}
+  projectileVfxPrefab: {fileID: 770198134436957383, guid: c60f3ddc24f1a9943ab0a57d64cc63ae,
+    type: 3}
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}

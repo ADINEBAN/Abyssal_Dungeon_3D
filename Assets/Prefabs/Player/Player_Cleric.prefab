@@ -76,7 +76,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: -0, z: -0}
 --- !u!95 &5490078520883819706
 Animator:
-  serializedVersion: 4
+  serializedVersion: 5
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -93,7 +93,8 @@ Animator:
   m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorControllerStateOnDisable: 0
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &346636458297490815
 GameObject:
   m_ObjectHideFlags: 0
@@ -1125,6 +1126,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2586702695219061299}
+  - component: {fileID: 6071387170514777693}
   m_Layer: 0
   m_Name: Player_Cleric
   m_TagString: Untagged
@@ -1148,6 +1150,56 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6071387170514777693
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3281701480242514182}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301b28c5066132742bc503ce64530947, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heroDisplayName: Arthur
+  className: Cleric
+  classId: 9
+  skillSlots:
+  - slotLabel: Skill Q
+    skillName: Smite
+    vfxPoolKey: VFX_Cleric_Smite
+    vfxPrefab: {fileID: 4173514899726323992, guid: 4d1892040ee4f244bb41ac4e53cc205d,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill W
+    skillName: Group Heal
+    vfxPoolKey: VFX_Cleric_GroupHeal
+    vfxPrefab: {fileID: 2985301010262194211, guid: 2caee74312328c0448448dc1bbb2a3a6,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill E
+    skillName: Purify
+    vfxPoolKey: VFX_Cleric_Purify
+    vfxPrefab: {fileID: 3383736296845653107, guid: 4793833eb3b9869468ceb57e2f5ff361,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill R (Ultimate)
+    skillName: Resurrection
+    vfxPoolKey: VFX_Cleric_Resurrection
+    vfxPrefab: {fileID: 4776982330568684955, guid: 646aeed6813c4fa4aac94c238b46086d,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.65
+  projectileVfxPrefab: {fileID: 770198134436957383, guid: c60f3ddc24f1a9943ab0a57d64cc63ae,
+    type: 3}
+  projectileVfxKey: VFX_Projectile_Cleric
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}
+  dashVfxKey: VFX_Common_SpiralDash
 --- !u!1 &3537989963331162981
 GameObject:
   m_ObjectHideFlags: 0

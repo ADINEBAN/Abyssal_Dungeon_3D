@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 041fcb1fd22e7be42baff1e63bfabb1f, type: 3}
+  m_Name: SD_Knight_Skill2
+  m_EditorClassIdentifier: 
+  skillName: Iron Guard
+  description: "T\u1EA1o khi\xEAn b\u1EB1ng 30% HP v\xE0 t\u0103ng ph\xF2ng th\u1EE7."
+  icon: {fileID: 0}
+  skillType: 0
+  damageType: 0
+  isUltimate: 0
+  manaCost: 20
+  cooldown: 12
+  castTime: 0
+  damageMultiplier: 0.3
+  range: 10
+  radius: 0
+  duration: 0
+  statusEffect: 0
+  statusDuration: 0
+  vfxPrefab: {fileID: 9090444774974716728, guid: 422a72a606a5ff54ab087cb9e397a650,
+    type: 3}

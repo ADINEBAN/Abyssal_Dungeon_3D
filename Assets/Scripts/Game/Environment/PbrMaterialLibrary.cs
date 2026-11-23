@@ -147,21 +147,12 @@ namespace AbyssGame
             if (_cache.TryGetValue(key, out var m) && m != null) return m;
 
             Texture2D tex = LoadPbrTex(battleScorch ? "T_DecalBattleScorch" : "T_DecalCracksMoss");
-            Shader sh = Shader.Find("Universal Render Pipeline/Particles/Unlit")
-                        ?? Shader.Find("Particles/Standard Unlit")
+            Shader sh = Shader.Find("Sprites/Default")
                         ?? Shader.Find("Universal Render Pipeline/Unlit");
             m = new Material(sh) { name = "M_" + key, enableInstancing = true };
+            m.renderQueue = 2465;
 
-            m.SetOverrideTag("RenderType", "Transparent");
-            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            if (m.HasProperty("_Surface")) m.SetFloat("_Surface", 1f);
-            if (m.HasProperty("_Blend")) m.SetFloat("_Blend", 0f);
-            if (m.HasProperty("_SrcBlend")) m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            if (m.HasProperty("_DstBlend")) m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            if (m.HasProperty("_ZWrite")) m.SetFloat("_ZWrite", 0f);
-            m.renderQueue = 2465; // Just over opaque floor geometry, below transparent mist & VFX
-
-            Color tint = battleScorch ? new Color(0.10f, 0.08f, 0.08f, 0.52f) : new Color(0.45f, 0.50f, 0.42f, 0.42f);
+            Color tint = battleScorch ? new Color(0.18f, 0.14f, 0.14f, 0.42f) : new Color(0.45f, 0.50f, 0.42f, 0.36f);
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", tint);
             m.color = tint;
             if (tex != null)

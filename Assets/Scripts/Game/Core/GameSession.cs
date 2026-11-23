@@ -32,7 +32,7 @@ namespace AbyssGame
         public string Summary()
         {
             var parts = new List<string>();
-            if (archetype != EquipArchetype.Universal && slot != ItemSlot.Ring && slot != ItemSlot.Amulet)
+            if (archetype != EquipArchetype.Universal && slot != ItemSlot.Ring && slot != ItemSlot.Amulet && slot != ItemSlot.Relic)
                 parts.Add($"[{ClassSpecializationSystem.GetArchetypeShortTag(archetype)}]");
             if (atk > 0.1f) parts.Add($"+{atk:0} ATK");
             if (def > 0.1f) parts.Add($"+{def:0} DEF");
@@ -114,7 +114,8 @@ namespace AbyssGame
         private static readonly string[][] RingAmuletNames =
         {
             new[] { "Nhẫn Sức Mạnh", "Nhẫn Hút Hồn", "Nhẫn Tốc Chiến", "Nhẫn Băng Giá", "Nhẫn Vĩnh Hằng" },
-            new[] { "Dây Chuyền Aether", "Bùa Hộ Mệnh Cổ", "Ấn Thánh Quang", "Trái Tim Vực Thẳm", "Huyết Ngọc" }
+            new[] { "Dây Chuyền Aether", "Bùa Hộ Mệnh Cổ", "Ấn Thánh Quang", "Trái Tim Vực Thẳm", "Huyết Ngọc" },
+            new[] { "Thánh Tích Aether", "Tinh Thể Hư Không", "Ấn Ký Cổ Ngữ", "Lõi Linh Hồn Cổ Đại", "Mắt Vực Thẳm" }
         };
 
         private static string PickArchetypeGearName(ItemSlot slot, EquipArchetype arch)
@@ -170,15 +171,15 @@ namespace AbyssGame
 
             if ((int)rar < minRarity) rar = (Rarity)Mathf.Clamp(minRarity, 0, 5);
 
-            ItemSlot slot = (ItemSlot)UnityEngine.Random.Range(0, 5);
+            ItemSlot slot = (ItemSlot)UnityEngine.Random.Range(0, 6);
             int ri = (int)rar;
             float mult = (1f + ri * 0.55f) * (1f + (floor - 1) * 0.25f);
 
             EquipArchetype arch = EquipArchetype.Universal;
             string baseName;
-            if (slot == ItemSlot.Ring || slot == ItemSlot.Amulet)
+            if (slot == ItemSlot.Ring || slot == ItemSlot.Amulet || slot == ItemSlot.Relic)
             {
-                int idx = slot == ItemSlot.Ring ? 0 : 1;
+                int idx = slot == ItemSlot.Ring ? 0 : (slot == ItemSlot.Amulet ? 1 : 2);
                 baseName = RingAmuletNames[idx][UnityEngine.Random.Range(0, RingAmuletNames[idx].Length)];
             }
             else
@@ -231,6 +232,13 @@ namespace AbyssGame
                     it.mana = Mathf.Round(50f * mult);
                     it.atk = Mathf.Round(6f * mult);
                     it.cdr = 0.04f + ri * 0.025f;
+                    break;
+                case ItemSlot.Relic:
+                    it.atk = Mathf.Round(10f * mult);
+                    it.def = Mathf.Round(5f * mult);
+                    it.hp = Mathf.Round(45f * mult);
+                    it.crit = 0.025f + ri * 0.015f;
+                    if (ri >= 2) it.lifesteal = 0.02f + ri * 0.012f;
                     break;
             }
             return it;
@@ -302,15 +310,20 @@ namespace AbyssGame
                 classId = Profile.selectedClass, buildId = Profile.selectedBuild,
                 level = Profile.level, ready = true
             };
-            // Default balanced 4-hunter party: Knight/Selected + Mage + Ranger + Cleric
+            // Default balanced 4-hunter party: Knight (Lyra) + Mage (Kael) + Ranger (Seraphina) + Cleric (Arthur)
             int[] aiClasses = PickComplementaryClasses(Profile.selectedClass);
-            string[] aiNames = { "Lyra (AI)", "Kael (AI)", "Seraphina (AI)" };
             for (int i = 0; i < 3; i++)
             {
+                int cid = aiClasses[i];
                 Party[i + 1] = new PartySlotInfo
                 {
-                    active = true, isHuman = false, playerName = aiNames[i],
-                    classId = aiClasses[i], buildId = 0, level = Mathf.Max(1, Profile.level), ready = true
+                    active = true,
+                    isHuman = false,
+                    playerName = GameModeManager.GetDefaultAICompanionName(cid, i + 1),
+                    classId = cid,
+                    buildId = 0,
+                    level = Mathf.Max(1, Profile.level),
+                    ready = true
                 };
             }
             NotifyPartyChanged();
@@ -338,7 +351,6 @@ namespace AbyssGame
                 new[] { 1, 5, 6, 4 }
             };
             int[] p = presets[Mathf.Clamp(presetIndex, 0, presets.Length - 1)];
-            string[] aiNames = { "Hunter", "Lyra (AI)", "Kael (AI)", "Seraphina (AI)" };
 
             Profile.selectedClass = p[0];
             for (int i = 0; i < 4; i++)
@@ -347,7 +359,7 @@ namespace AbyssGame
                 {
                     active = true,
                     isHuman = (i == 0),
-                    playerName = i == 0 ? Profile.heroName : aiNames[i],
+                    playerName = i == 0 ? Profile.heroName : GameModeManager.GetDefaultAICompanionName(p[i], i),
                     classId = p[i],
                     buildId = 0,
                     level = Mathf.Max(1, Profile.level),

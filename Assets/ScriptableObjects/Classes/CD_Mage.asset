@@ -61,6 +61,9 @@ MonoBehaviour:
     range: 20
     isUltimate: 0
     vfxColor: {r: 1, g: 0.45, b: 0.1, a: 1}
+    vfxPoolKey: VFX_Mage_Fireball
+    vfxPrefab: {fileID: 3892689617730331306, guid: 8a088d1fb0ce6f04ea1c0bf401d4da4e,
+      type: 3}
   - skillName: Frost Nova
     description: "\u0110\xF3ng b\u0103ng k\u1EBB \u0111\u1ECBch xung quanh."
     kind: 3
@@ -71,6 +74,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 0.45, g: 0.85, b: 1, a: 1}
+    vfxPoolKey: VFX_Mage_FrostNova
+    vfxPrefab: {fileID: 7478229487149017072, guid: b4e5a664f3bfcb94fb21677822fea13a,
+      type: 3}
   - skillName: Arcane Pulse
     description: "Xung n\u0103ng l\u01B0\u1EE3ng b\xED thu\u1EADt t\u1ED1c \u0111\u1ED9
       cao."
@@ -82,6 +88,9 @@ MonoBehaviour:
     range: 22
     isUltimate: 0
     vfxColor: {r: 0.75, g: 0.45, b: 1, a: 1}
+    vfxPoolKey: VFX_Mage_ArcanePulse
+    vfxPrefab: {fileID: 1564640937041513211, guid: 486a1ea52ce559d448f6244695a8bfd8,
+      type: 3}
   - skillName: Meteor
     description: "Tri\u1EC7u h\u1ED3i thi\xEAn th\u1EA1ch h\u1EE7y di\u1EC7t."
     kind: 2
@@ -92,3 +101,10 @@ MonoBehaviour:
     range: 18
     isUltimate: 1
     vfxColor: {r: 1, g: 0.45, b: 0.1, a: 1}
+    vfxPoolKey: VFX_Mage_Meteor
+    vfxPrefab: {fileID: 6841205827493305564, guid: 7a00451930b00f94588eb5d0370198d3,
+      type: 3}
+  projectileVfxPrefab: {fileID: 34769747661989744, guid: 59d6a5589a7654f46a3e10d51db1a710,
+    type: 3}
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}

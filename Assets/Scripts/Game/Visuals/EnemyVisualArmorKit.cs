@@ -38,6 +38,7 @@ namespace AbyssGame
                 case ItemSlot.Helmet: return "Equip_Helmet_Gothic";
                 case ItemSlot.Ring: return "Equip_Ring_Signet";
                 case ItemSlot.Amulet: return "Equip_Amulet_Talisman";
+                case ItemSlot.Relic: return "AbyssalCrystalCluster";
                 default: return "Equip_Armor_Cuirass";
             }
         }

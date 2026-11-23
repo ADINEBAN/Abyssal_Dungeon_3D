@@ -61,6 +61,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 1, g: 0.8, b: 0.25, a: 1}
+    vfxPoolKey: VFX_Knight_ShieldBash
+    vfxPrefab: {fileID: 3654821718884504179, guid: 4e02980e4d791ae4d8633652c829ce7b,
+      type: 3}
   - skillName: Sanctuary
     description: "T\u1EA1o khi\xEAn 18% HP cho c\u1EA3 \u0111\u1ED9i."
     kind: 7
@@ -71,6 +74,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 1, g: 0.8, b: 0.25, a: 1}
+    vfxPoolKey: VFX_Knight_IronGuard
+    vfxPrefab: {fileID: 9090444774974716728, guid: 422a72a606a5ff54ab087cb9e397a650,
+      type: 3}
   - skillName: Aegis
     description: "T\u0103ng m\u1EA1nh ph\xF2ng th\u1EE7 cho c\u1EA3 \u0111\u1ED9i."
     kind: 10
@@ -81,6 +87,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 0.75, g: 0.85, b: 1, a: 1}
+    vfxPoolKey: VFX_Knight_Taunt
+    vfxPrefab: {fileID: 6917589071788385465, guid: 2606c1caca8bfe74ea079a874db0d230,
+      type: 3}
   - skillName: Citadel
     description: "Khi\xEAu kh\xEDch + khi\xEAn 50% HP."
     kind: 11
@@ -91,3 +100,10 @@ MonoBehaviour:
     range: 10
     isUltimate: 1
     vfxColor: {r: 1, g: 0.92, b: 0.55, a: 1}
+    vfxPoolKey: VFX_Knight_Judgement
+    vfxPrefab: {fileID: 281235520138813532, guid: 4edb82d9bc414a14db9327985635b580,
+      type: 3}
+  projectileVfxPrefab: {fileID: 4852004267330665950, guid: 7f12a25e3c19de042a689f02c59b5ae1,
+    type: 3}
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}

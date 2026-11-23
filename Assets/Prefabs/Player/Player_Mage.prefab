@@ -326,6 +326,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3839237444244560194}
+  - component: {fileID: 3354757392311757449}
   m_Layer: 0
   m_Name: Player_Mage
   m_TagString: Untagged
@@ -349,6 +350,56 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3354757392311757449
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1486356523289072156}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301b28c5066132742bc503ce64530947, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heroDisplayName: Kael
+  className: Mage
+  classId: 5
+  skillSlots:
+  - slotLabel: Skill Q
+    skillName: Fireball
+    vfxPoolKey: VFX_Mage_Fireball
+    vfxPrefab: {fileID: 3892689617730331306, guid: 8a088d1fb0ce6f04ea1c0bf401d4da4e,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill W
+    skillName: Frost Nova
+    vfxPoolKey: VFX_Mage_FrostNova
+    vfxPrefab: {fileID: 7478229487149017072, guid: b4e5a664f3bfcb94fb21677822fea13a,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill E
+    skillName: Arcane Pulse
+    vfxPoolKey: VFX_Mage_ArcanePulse
+    vfxPrefab: {fileID: 1564640937041513211, guid: 486a1ea52ce559d448f6244695a8bfd8,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill R (Ultimate)
+    skillName: Meteor
+    vfxPoolKey: VFX_Mage_Meteor
+    vfxPrefab: {fileID: 6841205827493305564, guid: 7a00451930b00f94588eb5d0370198d3,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.65
+  projectileVfxPrefab: {fileID: 34769747661989744, guid: 59d6a5589a7654f46a3e10d51db1a710,
+    type: 3}
+  projectileVfxKey: VFX_Projectile_Mage
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}
+  dashVfxKey: VFX_Common_SpiralDash
 --- !u!1 &1496424595002846676
 GameObject:
   m_ObjectHideFlags: 0
@@ -2553,7 +2604,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: -0, z: -0}
 --- !u!95 &5549705857003118683
 Animator:
-  serializedVersion: 4
+  serializedVersion: 5
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -2570,7 +2621,8 @@ Animator:
   m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorControllerStateOnDisable: 0
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &6441407518384989697
 GameObject:
   m_ObjectHideFlags: 0

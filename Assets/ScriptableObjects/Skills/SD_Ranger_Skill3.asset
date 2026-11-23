@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 041fcb1fd22e7be42baff1e63bfabb1f, type: 3}
+  m_Name: SD_Ranger_Skill3
+  m_EditorClassIdentifier: 
+  skillName: Volley
+  description: "B\u1EAFn 5 m\u0169i t\xEAn h\xECnh qu\u1EA1t."
+  icon: {fileID: 0}
+  skillType: 0
+  damageType: 0
+  isUltimate: 0
+  manaCost: 20
+  cooldown: 8
+  castTime: 0
+  damageMultiplier: 0.95
+  range: 18
+  radius: 0
+  duration: 0
+  statusEffect: 0
+  statusDuration: 0
+  vfxPrefab: {fileID: 2536173636316178954, guid: 892584c2fa4807a468c14c5b654efe6a,
+    type: 3}

@@ -61,6 +61,9 @@ MonoBehaviour:
     range: 22
     isUltimate: 0
     vfxColor: {r: 0.35, g: 0.95, b: 0.4, a: 1}
+    vfxPoolKey: VFX_Ranger_PiercingShot
+    vfxPrefab: {fileID: 1824082944497806419, guid: d15b14c533214d449b61c104f74924e5,
+      type: 3}
   - skillName: Frost Trap
     description: "\u0110\u1EB7t b\u1EABy b\u0103ng \u0111\xF3ng b\u0103ng k\u1EBB
       \u0111\u1ECBch."
@@ -72,6 +75,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 0.45, g: 0.85, b: 1, a: 1}
+    vfxPoolKey: VFX_Ranger_FrostTrap
+    vfxPrefab: {fileID: 4421291694775244764, guid: f5f144ed0185d4b4482736d0f6f7b013,
+      type: 3}
   - skillName: Volley
     description: "B\u1EAFn 5 m\u0169i t\xEAn h\xECnh qu\u1EA1t."
     kind: 1
@@ -82,6 +88,9 @@ MonoBehaviour:
     range: 18
     isUltimate: 0
     vfxColor: {r: 0.35, g: 0.95, b: 0.4, a: 1}
+    vfxPoolKey: VFX_Ranger_Volley
+    vfxPrefab: {fileID: 2536173636316178954, guid: 892584c2fa4807a468c14c5b654efe6a,
+      type: 3}
   - skillName: Arrow Storm
     description: "M\u01B0a t\xEAn l\xE0m ch\u1EADm c\u1EA3 khu v\u1EF1c."
     kind: 2
@@ -92,3 +101,10 @@ MonoBehaviour:
     range: 16
     isUltimate: 1
     vfxColor: {r: 0.35, g: 0.95, b: 0.4, a: 1}
+    vfxPoolKey: VFX_Ranger_ArrowStorm
+    vfxPrefab: {fileID: 4624659227386246541, guid: c517e497fbda0a341a1de5bd21c00c85,
+      type: 3}
+  projectileVfxPrefab: {fileID: 8066544197071739487, guid: ae940567935feb6439375a30ff580623,
+    type: 3}
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}

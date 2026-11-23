@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 041fcb1fd22e7be42baff1e63bfabb1f, type: 3}
+  m_Name: SD_Assassin_Skill2
+  m_EditorClassIdentifier: 
+  skillName: Shadow Step
+  description: "L\u01B0\u1EDBt xuy\xEAn k\u1EBB \u0111\u1ECBch, b\u1EA5t t\u1EED
+    ng\u1EAFn."
+  icon: {fileID: 0}
+  skillType: 0
+  damageType: 0
+  isUltimate: 0
+  manaCost: 15
+  cooldown: 7
+  castTime: 0
+  damageMultiplier: 1.3
+  range: 9
+  radius: 0
+  duration: 0
+  statusEffect: 0
+  statusDuration: 0
+  vfxPrefab: {fileID: 4421291694775244764, guid: f5f144ed0185d4b4482736d0f6f7b013,
+    type: 3}

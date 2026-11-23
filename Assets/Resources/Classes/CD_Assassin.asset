@@ -63,6 +63,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 0.6, g: 0.2, b: 0.95, a: 1}
+    vfxPoolKey: VFX_Ranger_PiercingShot
+    vfxPrefab: {fileID: 1824082944497806419, guid: d15b14c533214d449b61c104f74924e5,
+      type: 3}
   - skillName: Shadow Step
     description: "L\u01B0\u1EDBt xuy\xEAn k\u1EBB \u0111\u1ECBch, b\u1EA5t t\u1EED
       ng\u1EAFn."
@@ -74,6 +77,9 @@ MonoBehaviour:
     range: 9
     isUltimate: 0
     vfxColor: {r: 0.6, g: 0.2, b: 0.95, a: 1}
+    vfxPoolKey: VFX_Ranger_FrostTrap
+    vfxPrefab: {fileID: 4421291694775244764, guid: f5f144ed0185d4b4482736d0f6f7b013,
+      type: 3}
   - skillName: Venom
     description: "T\u1EA9m \u0111\u1ED9c g\xE2y s\xE1t th\u01B0\u01A1ng theo th\u1EDDi
       gian."
@@ -85,6 +91,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 0.35, g: 0.95, b: 0.4, a: 1}
+    vfxPoolKey: VFX_Ranger_Volley
+    vfxPrefab: {fileID: 2536173636316178954, guid: 892584c2fa4807a468c14c5b654efe6a,
+      type: 3}
   - skillName: Death Blossom
     description: "V\u0169 \u0111i\u1EC7u t\u1EED th\u1EA7n quanh b\u1EA3n th\xE2n."
     kind: 3
@@ -95,3 +104,10 @@ MonoBehaviour:
     range: 10
     isUltimate: 1
     vfxColor: {r: 0.6, g: 0.2, b: 0.95, a: 1}
+    vfxPoolKey: VFX_Ranger_ArrowStorm
+    vfxPrefab: {fileID: 4624659227386246541, guid: c517e497fbda0a341a1de5bd21c00c85,
+      type: 3}
+  projectileVfxPrefab: {fileID: 8066544197071739487, guid: ae940567935feb6439375a30ff580623,
+    type: 3}
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}

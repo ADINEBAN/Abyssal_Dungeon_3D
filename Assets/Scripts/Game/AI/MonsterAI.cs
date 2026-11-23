@@ -52,13 +52,14 @@ namespace AbyssGame
         {
             if (SpawnHome == Vector3.zero) SpawnHome = transform.position;
             _procAnim = GetComponentInChildren<EnemyProceduralAnimator>();
-            Blackboard.EliteAffix = EnemyTacticalBrain.RollEliteAffix(_self.MonsterDef, _self.IsElite);
-            if (Blackboard.EliteAffix != EliteAffixKind.None)
+            if (_self.ActiveEliteAffix == EliteAffixKind.None && (_self.IsElite || _self.IsMiniBoss))
             {
-                string afx = EnemyTacticalBrain.GetAffixLabel(Blackboard.EliteAffix);
-                if (!string.IsNullOrEmpty(afx))
+                _self.ActiveEliteAffix = EnemyTacticalBrain.RollEliteAffix(_self.MonsterDef, true);
+                string afx = EnemyTacticalBrain.GetAffixLabel(_self.ActiveEliteAffix);
+                if (!string.IsNullOrEmpty(afx) && !_self.DisplayName.Contains("["))
                     _self.DisplayName = $"{_self.DisplayName} [{afx}]";
             }
+            Blackboard.EliteAffix = _self.ActiveEliteAffix;
 
             PickNewPatrolPoint();
             State = MonsterFlowState.Idle;
@@ -78,7 +79,7 @@ namespace AbyssGame
 
             float dt = Time.deltaTime;
             _stateTimer -= dt;
-            _specialCd -= dt;
+            _specialCd -= dt * (_self.IsEnraged ? 1.38f : 1.0f);
             if (Blackboard.BackstabBonusReadyTimer > 0f)
                 Blackboard.BackstabBonusReadyTimer -= dt;
 
@@ -220,15 +221,37 @@ namespace AbyssGame
                 if (_self.MonsterDef != null && _self.MonsterDef.id == "CrystalGolem" && distToHero <= 4.8f)
                 {
                     Vector3 slamPos = transform.position;
-                    CharacterVisualFactory.SpawnGroundTelegraph(slamPos, 4.2f, 0.85f, new Color(0.45f, 0.75f, 1f), () =>
+                    GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.55f);
+                    CharacterVisualFactory.SpawnGroundTelegraph(slamPos, 4.4f, 1.15f, new Color(1f, 0.18f, 0.14f), () =>
                     {
-                        if (_self != null && !_self.IsDead)
+                        if (_self != null && !_self.IsDead && !_self.IsStaggered)
                         {
                             GameAudio.I.PlaySfx(GameSfx.Explosion, 0.85f);
-                            _self.DealCircleDamage(slamPos, 4.2f, _self.EffectiveAttack() * 1.7f, StatusType.Stun, 1.1f, 0f, new Color(0.45f, 0.8f, 1f));
+                            _self.DealCircleDamage(slamPos, 4.4f, _self.EffectiveAttack() * 1.75f, StatusType.Stun, 1.1f, 0f, new Color(1f, 0.25f, 0.2f));
                         }
                     });
                 }
+            }
+
+            // Elite Linear Dash Charge Telegraph (1.15s) when Hero is mid-range (3.8m .. 9.5m)
+            if ((_self.IsElite || _self.IsMiniBoss) && arch != Archetype.Ranged && arch != Archetype.Mage &&
+                _specialCd <= 0f && distToHero > 3.8f && distToHero <= 9.5f)
+            {
+                _specialCd = 6.2f;
+                Vector3 chargeDir = toTarget.normalized;
+                _self.FaceDirection(chargeDir, 30f);
+                CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.3f, "XUNG KÍCH NGUY HIỂM!", new Color(1f, 0.28f, 0.18f), 1.0f);
+                GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.6f);
+                Vector3 boxSize = new Vector3(2.2f, 0.1f, Mathf.Clamp(distToHero + 2.2f, 5.5f, 10f));
+                CharacterVisualFactory.SpawnGroundTelegraph(transform.position, 2.2f, 1.15f, new Color(1f, 0.16f, 0.12f), () =>
+                {
+                    if (_self == null || _self.IsDead || _self.IsStaggered) return;
+                    GameAudio.I.PlaySfx(GameSfx.Dodge, 0.9f);
+                    Vector3 impactPos = transform.position + chargeDir * (boxSize.z * 0.72f);
+                    _self.MoveWorld(chargeDir * (boxSize.z * 0.65f));
+                    _self.DealCircleDamage(impactPos, 2.6f, _self.EffectiveAttack() * 1.75f, StatusType.Stun, 0.8f, 0f, new Color(1f, 0.22f, 0.15f));
+                }, boxSize, Quaternion.LookRotation(chargeDir));
+                return;
             }
 
             if (distToHero <= _self.AttackRange)
@@ -266,7 +289,7 @@ namespace AbyssGame
             Archetype arch = _self.MonsterDef != null ? _self.MonsterDef.archetype : Archetype.Melee;
 
             // Archer / Mage keeps distance if hero rushes them (Section 5: "Giữ khoảng cách, Di chuyển tránh người chơi")
-            if ((arch == Archetype.Ranged || arch == Archetype.Mage) && dist < 5.4f)
+            if ((arch == Archetype.Ranged || arch == Archetype.Mage) && dist < 5.8f)
             {
                 State = MonsterFlowState.Retreat;
                 _stateTimer = 1.45f;
@@ -303,33 +326,54 @@ namespace AbyssGame
             }
             else
             {
-                _self.StopMovingAnim();
+                // Melee & Tank monsters smoothly slide into their flanking surround slot instead of standing static
+                Vector3 flankPt = EnemyTacticalBrain.ComputeTacticalEngagePoint(_self, CurrentTarget, Blackboard.ProtectedVipAlly, out _);
+                Vector3 toFlank = flankPt - transform.position;
+                toFlank.y = 0f;
+                if (toFlank.magnitude > 0.65f)
+                {
+                    _self.MoveWorld(toFlank.normalized * (_self.EffectiveMoveSpeed() * 0.45f * Time.deltaTime));
+                }
+                else
+                {
+                    _self.StopMovingAnim();
+                }
             }
 
-            // Special species attacks across the 10 Enemy types
+            // Special species attacks across the 10 Enemy types (with GroundTelegraphFx warnings for Dodge [Space] & Heavy Guard-Break [RMB/X])
             if (_specialCd <= 0f && _self.MonsterDef != null)
             {
                 string id = _self.MonsterDef.id;
-                if (id == "DarkKnight" && dist <= 4.2f)
+                if (id == "DarkKnight" && dist <= 4.5f)
                 {
                     _specialCd = 6.5f;
                     _procAnim?.TriggerAttackPulse();
-                    Vector3 p = transform.position + transform.forward * 2f;
-                    CharacterVisualFactory.SpawnGroundTelegraph(p, 3.2f, 0.75f, new Color(0.75f, 0.15f, 0.9f), () =>
+                    Vector3 p = transform.position + transform.forward * 2.1f;
+                    CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.3f, "TRẢM KÍCH HẮC ÁM! [Né / Phá Giáp]", new Color(1f, 0.25f, 0.22f), 1.0f);
+                    GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.65f);
+                    CharacterVisualFactory.SpawnGroundTelegraph(p, 3.6f, 1.25f, new Color(1f, 0.16f, 0.18f), () =>
                     {
-                        if (_self != null && !_self.IsDead)
-                            _self.DealCircleDamage(p, 3.2f, _self.EffectiveAttack() * 1.85f, StatusType.Slow, 2.5f, 0f, new Color(0.7f, 0.15f, 0.95f));
+                        if (_self != null && !_self.IsDead && !_self.IsStaggered)
+                            _self.DealCircleDamage(p, 3.6f, _self.EffectiveAttack() * 1.9f, StatusType.Slow, 2.5f, 0f, new Color(0.85f, 0.18f, 0.95f));
                     });
                     return;
                 }
-                if (id == "Demon" && dist <= 3.8f)
+                if (id == "Demon" && dist <= 4.0f)
                 {
                     _specialCd = 5.8f;
                     _procAnim?.TriggerAttackPulse();
                     float backMult = Blackboard.BackstabBonusReadyTimer > 0f ? 1.25f : 1.0f;
-                    if (backMult > 1.05f)
-                        CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.1f, "ĐÁNH LÉN SAU LƯNG!", new Color(1f, 0.32f, 0.25f), 0.95f);
-                    _self.DealConeDamage(_self.EffectiveAttack() * 1.55f * backMult, 3.2f, 110f, StatusType.Burn, 3.5f, _self.EffectiveAttack() * 0.22f, new Color(1f, 0.28f, 0.15f));
+                    Vector3 p = CurrentTarget.transform.position;
+                    GameAudio.I.PlaySfx(GameSfx.Magic, 0.7f);
+                    CharacterVisualFactory.SpawnGroundTelegraph(p, 3.0f, 1.10f, new Color(1f, 0.18f, 0.12f), () =>
+                    {
+                        if (_self != null && !_self.IsDead && !_self.IsStaggered)
+                        {
+                            if (backMult > 1.05f)
+                                CharacterVisualFactory.SpawnFloatingText(_self.transform.position + Vector3.up * 2.1f, "ĐÁNH LÉN SAU LƯNG!", new Color(1f, 0.32f, 0.25f), 0.95f);
+                            _self.DealCircleDamage(p, 3.0f, _self.EffectiveAttack() * 1.65f * backMult, StatusType.Burn, 3.5f, _self.EffectiveAttack() * 0.22f, new Color(1f, 0.28f, 0.15f));
+                        }
+                    });
                     return;
                 }
                 if (id == "Goblin" && dist <= 2.4f && Blackboard.BackstabBonusReadyTimer > 0f)
@@ -345,24 +389,49 @@ namespace AbyssGame
                 {
                     _specialCd = 5.2f;
                     _procAnim?.TriggerAttackPulse();
-                    SkillProjectile.Spawn(_self, transform.position + Vector3.up * 1.25f, to.normalized, 13.5f, 18f,
-                        _self.EffectiveAttack() * 1.2f, false, StatusType.Poison, 3.5f, _self.EffectiveAttack() * 0.15f, 0f, new Color(0.48f, 0.92f, 0.28f));
+                    if (_self.IsElite)
+                    {
+                        Vector3 volleyTarget = CurrentTarget.transform.position;
+                        GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.5f);
+                        CharacterVisualFactory.SpawnGroundTelegraph(volleyTarget, 3.2f, 1.10f, new Color(1f, 0.22f, 0.14f), () =>
+                        {
+                            if (_self == null || _self.IsDead || _self.IsStaggered) return;
+                            GameAudio.I.PlaySfx(GameSfx.Attack, 0.85f);
+                            _self.DealCircleDamage(volleyTarget, 3.2f, _self.EffectiveAttack() * 1.45f, StatusType.Poison, 3.5f, _self.EffectiveAttack() * 0.18f, new Color(0.48f, 0.92f, 0.28f));
+                        });
+                    }
+                    else
+                    {
+                        SkillProjectile.Spawn(_self, transform.position + Vector3.up * 1.25f, to.normalized, 13.5f, 18f,
+                            _self.EffectiveAttack() * 1.2f, false, StatusType.Poison, 3.5f, _self.EffectiveAttack() * 0.15f, 0f, new Color(0.48f, 0.92f, 0.28f));
+                    }
                     return;
                 }
-                if (id == "SkeletonWarrior" && dist <= 3.0f)
+                if (id == "SkeletonWarrior" && dist <= 3.4f)
                 {
                     _specialCd = 6.0f;
                     _procAnim?.TriggerAttackPulse();
                     _self.AddShield(_self.MaxHp * 0.16f);
-                    _self.DealConeDamage(_self.EffectiveAttack() * 1.3f, 2.8f, 100f, StatusType.Slow, 2.0f, 0f, new Color(0.75f, 0.82f, 0.95f));
+                    Vector3 slamPt = transform.position + transform.forward * 1.5f;
+                    GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.5f);
+                    CharacterVisualFactory.SpawnGroundTelegraph(slamPt, 3.0f, 1.15f, new Color(1f, 0.22f, 0.15f), () =>
+                    {
+                        if (_self != null && !_self.IsDead && !_self.IsStaggered)
+                            _self.DealCircleDamage(slamPt, 3.0f, _self.EffectiveAttack() * 1.45f, StatusType.Slow, 2.2f, 0f, new Color(0.95f, 0.35f, 0.25f));
+                    });
                     return;
                 }
                 if (id == "SkeletonMage")
                 {
                     _specialCd = 5.5f;
                     _procAnim?.TriggerAttackPulse();
-                    SkillProjectile.Spawn(_self, transform.position + Vector3.up * 1.3f, to.normalized, 14f, 16f,
-                        _self.EffectiveAttack() * 1.25f, false, StatusType.Curse, 4f, 0f, 2.2f, new Color(0.65f, 0.25f, 1f));
+                    Vector3 targetGround = CurrentTarget.transform.position;
+                    GameAudio.I.PlaySfx(GameSfx.Magic, 0.65f);
+                    CharacterVisualFactory.SpawnGroundTelegraph(targetGround, 2.8f, 1.20f, new Color(1f, 0.18f, 0.25f), () =>
+                    {
+                        if (_self != null && !_self.IsDead && !_self.IsStaggered)
+                            _self.DealCircleDamage(targetGround, 2.8f, _self.EffectiveAttack() * 1.45f, StatusType.Curse, 4.5f, 0f, new Color(0.75f, 0.22f, 1f));
+                    });
                     return;
                 }
                 if (id == "Zombie" && dist <= 2.5f)
@@ -372,11 +441,17 @@ namespace AbyssGame
                     _self.DealConeDamage(_self.EffectiveAttack(), 2.5f, 120f, StatusType.Poison, 4f, _self.EffectiveAttack() * 0.2f, new Color(0.4f, 0.8f, 0.3f));
                     return;
                 }
-                if (id == "ForestMonster" && dist <= 3.8f)
+                if (id == "ForestMonster" && dist <= 4.0f)
                 {
                     _specialCd = 5.5f;
                     _procAnim?.TriggerAttackPulse();
-                    _self.DealCircleDamage(transform.position, 3.6f, _self.EffectiveAttack() * 1.25f, StatusType.Slow, 3.2f, 0f, new Color(0.35f, 0.85f, 0.3f));
+                    Vector3 rootCenter = transform.position;
+                    GameAudio.I.PlaySfx(GameSfx.Magic, 0.6f);
+                    CharacterVisualFactory.SpawnGroundTelegraph(rootCenter, 3.6f, 1.15f, new Color(1f, 0.25f, 0.18f), () =>
+                    {
+                        if (_self != null && !_self.IsDead && !_self.IsStaggered)
+                            _self.DealCircleDamage(rootCenter, 3.6f, _self.EffectiveAttack() * 1.45f, StatusType.Slow, 3.2f, 0f, new Color(0.35f, 0.85f, 0.3f));
+                    });
                     return;
                 }
             }

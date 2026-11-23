@@ -459,6 +459,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8395703204766032029}
+  - component: {fileID: 1159555360754672991}
   m_Layer: 0
   m_Name: Hero_Berserker
   m_TagString: Untagged
@@ -482,6 +483,56 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1159555360754672991
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1407946148123015854}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301b28c5066132742bc503ce64530947, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heroDisplayName: Lyra (Berserker)
+  className: Berserker
+  classId: 1
+  skillSlots:
+  - slotLabel: Skill Q
+    skillName: Shield Wave
+    vfxPoolKey: VFX_Knight_ShieldBash
+    vfxPrefab: {fileID: 3654821718884504179, guid: 4e02980e4d791ae4d8633652c829ce7b,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill W
+    skillName: Sanctuary
+    vfxPoolKey: VFX_Knight_IronGuard
+    vfxPrefab: {fileID: 9090444774974716728, guid: 422a72a606a5ff54ab087cb9e397a650,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill E
+    skillName: Aegis
+    vfxPoolKey: VFX_Knight_Taunt
+    vfxPrefab: {fileID: 6917589071788385465, guid: 2606c1caca8bfe74ea079a874db0d230,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill R (Ultimate)
+    skillName: Citadel
+    vfxPoolKey: VFX_Knight_Judgement
+    vfxPrefab: {fileID: 281235520138813532, guid: 4edb82d9bc414a14db9327985635b580,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.65
+  projectileVfxPrefab: {fileID: 4852004267330665950, guid: 7f12a25e3c19de042a689f02c59b5ae1,
+    type: 3}
+  projectileVfxKey: VFX_Projectile_Knight
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}
+  dashVfxKey: VFX_Common_SpiralDash
 --- !u!1 &1419326758760956329
 GameObject:
   m_ObjectHideFlags: 0
@@ -4044,7 +4095,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: -0, z: -0}
 --- !u!95 &3972663476264321015
 Animator:
-  serializedVersion: 4
+  serializedVersion: 5
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -4061,7 +4112,8 @@ Animator:
   m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorControllerStateOnDisable: 0
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &6354083143103868749
 GameObject:
   m_ObjectHideFlags: 0

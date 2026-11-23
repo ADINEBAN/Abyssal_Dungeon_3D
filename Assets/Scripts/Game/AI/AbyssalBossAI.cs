@@ -76,7 +76,7 @@ namespace AbyssGame
             SelectTarget();
             if (_target == null) { _self.StopMovingAnim(); return; }
 
-            _skillTimer -= Time.deltaTime;
+            _skillTimer -= Time.deltaTime * (_self.IsEnraged ? 1.38f : 1.0f);
             Vector3 to = _target.transform.position - transform.position;
             to.y = 0f;
             float dist = to.magnitude;
@@ -190,37 +190,40 @@ namespace AbyssGame
         private IEnumerator SkillHeavySlash()
         {
             _busy = true;
-            CurrentSkillAnnouncement = "Abyssal Knight: Chém Kiếm Hắc Ám!";
+            CurrentSkillAnnouncement = "Abyssal Knight: CHÉM KIẾM HẮC ÁM! [Né / Phá Giáp!]";
+            GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.7f);
             if (_target != null) _self.FaceDirection(_target.transform.position - transform.position, 40f);
             Vector3 p = transform.position + transform.forward * 2.4f;
-            CharacterVisualFactory.SpawnGroundTelegraph(p, 3.8f, 0.7f, new Color(1f, 0.35f, 0.2f), () =>
+            CharacterVisualFactory.SpawnGroundTelegraph(p, 4.0f, 1.05f, new Color(1f, 0.18f, 0.14f), () =>
             {
-                if (_self == null || _self.IsDead) return;
+                if (_self == null || _self.IsDead || _self.IsStaggered) return;
                 GameAudio.I.PlaySfx(GameSfx.Attack, 1f);
-                _self.DealCircleDamage(p, 3.8f, _self.EffectiveAttack() * 1.65f, StatusType.None, 0f, 0f, new Color(1f, 0.3f, 0.2f));
+                _self.DealCircleDamage(p, 4.0f, _self.EffectiveAttack() * 1.75f, StatusType.None, 0f, 0f, new Color(1f, 0.25f, 0.18f));
             });
-            yield return new WaitForSeconds(0.8f);
+            yield return new WaitForSeconds(1.1f);
             _busy = false;
         }
 
         private IEnumerator SkillShieldBash()
         {
             _busy = true;
-            CurrentSkillAnnouncement = "Abyssal Knight: Shield Bash (Choáng)!";
-            CharacterVisualFactory.SpawnGroundTelegraph(transform.position, 4.2f, 0.75f, new Color(1f, 0.75f, 0.2f), () =>
+            CurrentSkillAnnouncement = "Abyssal Knight: ĐẬP KHIÊN CHOÁNG! [Né Space!]";
+            GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.7f);
+            CharacterVisualFactory.SpawnGroundTelegraph(transform.position, 4.4f, 1.15f, new Color(1f, 0.22f, 0.12f), () =>
             {
-                if (_self == null || _self.IsDead) return;
+                if (_self == null || _self.IsDead || _self.IsStaggered) return;
                 GameAudio.I.PlaySfx(GameSfx.Explosion, 0.9f);
-                _self.DealCircleDamage(transform.position, 4.2f, _self.EffectiveAttack() * 1.4f, StatusType.Stun, 1.4f, 0f, new Color(1f, 0.8f, 0.2f));
+                _self.DealCircleDamage(transform.position, 4.4f, _self.EffectiveAttack() * 1.55f, StatusType.Stun, 1.4f, 0f, new Color(1f, 0.35f, 0.18f));
             });
-            yield return new WaitForSeconds(0.85f);
+            yield return new WaitForSeconds(1.2f);
             _busy = false;
         }
 
         private IEnumerator SkillCharge()
         {
             _busy = true;
-            CurrentSkillAnnouncement = "Abyssal Knight: Xung Kích Vực Thẳm!";
+            CurrentSkillAnnouncement = "Abyssal Knight: XUNG KÍCH VỰC THẲM! [Tránh đường đỏ!]";
+            GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.85f);
             Vector3 dir = _target != null ? (_target.transform.position - transform.position) : transform.forward;
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.01f) dir = transform.forward;
@@ -228,15 +231,15 @@ namespace AbyssGame
             transform.rotation = Quaternion.LookRotation(dir);
 
             float chargeLen = 12f;
-            CharacterVisualFactory.SpawnGroundTelegraph(transform.position, 2.2f, 0.85f, new Color(1f, 0.2f, 0.2f), null, new Vector3(2.8f, 0.1f, chargeLen), Quaternion.LookRotation(dir));
-            yield return new WaitForSeconds(0.85f);
+            CharacterVisualFactory.SpawnGroundTelegraph(transform.position, 2.2f, 1.20f, new Color(1f, 0.14f, 0.14f), null, new Vector3(2.8f, 0.1f, chargeLen), Quaternion.LookRotation(dir));
+            yield return new WaitForSeconds(1.20f);
 
-            if (_self != null && !_self.IsDead)
+            if (_self != null && !_self.IsDead && !_self.IsStaggered)
             {
                 GameAudio.I.PlaySfx(GameSfx.Dodge, 1f);
                 float dur = 0.32f, t = 0f;
                 var hitSet = new System.Collections.Generic.HashSet<ActorUnit>();
-                while (t < dur && !_self.IsDead)
+                while (t < dur && !_self.IsDead && !_self.IsStaggered)
                 {
                     Vector3 stepDir = HeroPartyAI.ObstacleAvoidDir(transform.position, dir);
                     if (_self.Controller != null && _self.Controller.enabled)
@@ -263,41 +266,44 @@ namespace AbyssGame
         private IEnumerator SkillDarkSlashWave()
         {
             _busy = true;
-            CurrentSkillAnnouncement = "Abyssal Knight: Dark Slash!";
+            CurrentSkillAnnouncement = "Abyssal Knight: SÓNG TRẢM HẮC ÁM! [Né / Cắt chiêu!]";
+            GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.75f);
             Vector3 dir = _target != null ? (_target.transform.position - transform.position) : transform.forward;
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.01f) dir = transform.forward;
             dir.Normalize();
             transform.rotation = Quaternion.LookRotation(dir);
 
-            yield return new WaitForSeconds(0.35f);
-            if (_self != null && !_self.IsDead)
+            CharacterVisualFactory.SpawnGroundTelegraph(transform.position + dir * 2.5f, 3.6f, 1.05f, new Color(1f, 0.16f, 0.22f), null);
+            yield return new WaitForSeconds(1.05f);
+            if (_self != null && !_self.IsDead && !_self.IsStaggered)
             {
                 GameAudio.I.PlaySfx(GameSfx.Magic, 1f);
                 for (int i = -2; i <= 2; i++)
                 {
                     Vector3 shotDir = Quaternion.Euler(0f, i * 16f, 0f) * dir;
                     SkillProjectile.Spawn(_self, transform.position + Vector3.up * 1.4f + shotDir * 0.8f, shotDir,
-                        16f, 22f, _self.EffectiveAttack() * 1.35f, true, StatusType.Curse, 5f, 0f, 0f, new Color(0.7f, 0.15f, 1f));
+                        16f, 22f, _self.EffectiveAttack() * 1.35f, true, StatusType.Curse, 5f, 0f, 0f, new Color(0.85f, 0.15f, 1f));
                 }
             }
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.35f);
             _busy = false;
         }
 
         private IEnumerator SkillAbyssShockwave()
         {
             _busy = true;
-            CurrentSkillAnnouncement = "Abyssal Knight: Bùng Nổ Vực Thẳm!";
+            CurrentSkillAnnouncement = "Abyssal Knight: BÙNG NỔ VỰC THẲM! [Né / Phá Giáp!]";
+            GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.85f);
             Vector3 c = transform.position;
-            CharacterVisualFactory.SpawnGroundTelegraph(c, 6.8f, 1.15f, new Color(0.75f, 0.15f, 1f), () =>
+            CharacterVisualFactory.SpawnGroundTelegraph(c, 7.0f, 1.35f, new Color(1f, 0.15f, 0.18f), () =>
             {
-                if (_self == null || _self.IsDead) return;
+                if (_self == null || _self.IsDead || _self.IsStaggered) return;
                 GameAudio.I.PlaySfx(GameSfx.Explosion, 1f);
                 if (OrbitCamera3D.Instance != null) OrbitCamera3D.Instance.Shake(0.35f, 0.35f);
-                _self.DealCircleDamage(c, 6.8f, _self.EffectiveAttack() * 2.1f, StatusType.Slow, 3f, 0f, new Color(0.75f, 0.15f, 1f));
+                _self.DealCircleDamage(c, 7.0f, _self.EffectiveAttack() * 2.15f, StatusType.Slow, 3f, 0f, new Color(0.95f, 0.18f, 0.35f));
             });
-            yield return new WaitForSeconds(1.25f);
+            yield return new WaitForSeconds(1.40f);
             _busy = false;
         }
 
@@ -338,22 +344,22 @@ namespace AbyssGame
         private IEnumerator SkillMeteorStorm()
         {
             _busy = true;
-            CurrentSkillAnnouncement = "Abyssal Knight: MƯA THIÊN THẠCH VỰC THẲM!";
+            CurrentSkillAnnouncement = "Abyssal Knight: MƯA THIÊN THẠCH VỰC THẲM! [Né vòng đỏ!]";
             GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.9f);
 
             for (int i = 0; i < 5; i++)
             {
-                if (_self == null || _self.IsDead) break;
+                if (_self == null || _self.IsDead || _self.IsStaggered) break;
                 Vector3 impact = ArenaCenter + new Vector3(UnityEngine.Random.Range(-10f, 10f), 0f, UnityEngine.Random.Range(-10f, 10f));
                 // Aim 2 of the meteors directly on hero positions!
                 if (i < 2 && _target != null) impact = _target.transform.position;
 
-                CharacterVisualFactory.SpawnGroundTelegraph(impact, 3.6f, 1.05f, new Color(1f, 0.25f, 0.1f), () =>
+                CharacterVisualFactory.SpawnGroundTelegraph(impact, 3.8f, 1.25f, new Color(1f, 0.16f, 0.12f), () =>
                 {
-                    if (_self == null || _self.IsDead) return;
+                    if (_self == null || _self.IsDead || _self.IsStaggered) return;
                     GameAudio.I.PlaySfx(GameSfx.Explosion, 0.85f);
                     if (OrbitCamera3D.Instance != null) OrbitCamera3D.Instance.Shake(0.25f, 0.22f);
-                    _self.DealCircleDamage(impact, 3.6f, _self.EffectiveAttack() * 1.95f, StatusType.Burn, 4f, _self.EffectiveAttack() * 0.25f, new Color(1f, 0.35f, 0.1f));
+                    _self.DealCircleDamage(impact, 3.8f, _self.EffectiveAttack() * 1.95f, StatusType.Burn, 4f, _self.EffectiveAttack() * 0.25f, new Color(1f, 0.35f, 0.1f));
                 });
                 yield return new WaitForSeconds(0.26f);
             }

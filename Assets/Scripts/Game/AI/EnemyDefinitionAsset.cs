@@ -6,10 +6,15 @@ namespace AbyssGame
     public enum EliteAffixKind
     {
         None = 0,
-        Vampiric = 1,     // Hút máu + hào quang huyết ngọc
-        Molten = 2,       // Nổ dung nham xung quanh định kỳ
-        Stormcaller = 3,  // Giật sét làm chậm mục tiêu ở gần
-        FrozenPulse = 4   // Phát xung băng giá giảm tốc độ đánh
+        Vampiric = 1,       // Hút máu / Vampiric
+        Thorns = 2,         // Phản đòn / Thorns
+        MoltenDeath = 3,    // Bùng nổ khi chết / Molten Death
+        ArcaneShielded = 4, // Khiên kháng phép / Arcane Shielded
+
+        // Legacy aliases for backwards compatibility
+        Molten = MoltenDeath,
+        Stormcaller = Thorns,
+        FrozenPulse = ArcaneShielded
     }
 
     /// <summary>

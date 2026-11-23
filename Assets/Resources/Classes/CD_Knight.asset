@@ -62,6 +62,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 0.75, g: 0.85, b: 1, a: 1}
+    vfxPoolKey: VFX_Knight_ShieldBash
+    vfxPrefab: {fileID: 3654821718884504179, guid: 4e02980e4d791ae4d8633652c829ce7b,
+      type: 3}
   - skillName: Iron Guard
     description: "T\u1EA1o khi\xEAn b\u1EB1ng 30% HP v\xE0 t\u0103ng ph\xF2ng th\u1EE7."
     kind: 8
@@ -72,6 +75,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 0.75, g: 0.85, b: 1, a: 1}
+    vfxPoolKey: VFX_Knight_IronGuard
+    vfxPrefab: {fileID: 9090444774974716728, guid: 422a72a606a5ff54ab087cb9e397a650,
+      type: 3}
   - skillName: Taunt
     description: "Khi\xEAu kh\xEDch qu\xE1i xung quanh t\u1EA5n c\xF4ng m\xECnh."
     kind: 11
@@ -82,6 +88,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 1, g: 0.8, b: 0.25, a: 1}
+    vfxPoolKey: VFX_Knight_Taunt
+    vfxPrefab: {fileID: 6917589071788385465, guid: 2606c1caca8bfe74ea079a874db0d230,
+      type: 3}
   - skillName: Judgement
     description: "B\u1ED5 xu\u1ED1ng m\u1EB7t \u0111\u1EA5t g\xE2y s\xE1t th\u01B0\u01A1ng
       l\u1EDBn v\xE0 cho\xE1ng."
@@ -93,3 +102,10 @@ MonoBehaviour:
     range: 10
     isUltimate: 1
     vfxColor: {r: 1, g: 0.92, b: 0.55, a: 1}
+    vfxPoolKey: VFX_Knight_Judgement
+    vfxPrefab: {fileID: 281235520138813532, guid: 4edb82d9bc414a14db9327985635b580,
+      type: 3}
+  projectileVfxPrefab: {fileID: 4852004267330665950, guid: 7f12a25e3c19de042a689f02c59b5ae1,
+    type: 3}
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}

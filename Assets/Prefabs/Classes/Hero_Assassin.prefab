@@ -932,6 +932,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2069724772791643563}
+  - component: {fileID: 1685147627957568214}
   m_Layer: 0
   m_Name: Hero_Assassin
   m_TagString: Untagged
@@ -955,6 +956,56 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1685147627957568214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2557195457786471342}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301b28c5066132742bc503ce64530947, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heroDisplayName: Seraphina (Assassin)
+  className: Assassin
+  classId: 3
+  skillSlots:
+  - slotLabel: Skill Q
+    skillName: Backstab
+    vfxPoolKey: VFX_Ranger_PiercingShot
+    vfxPrefab: {fileID: 1824082944497806419, guid: d15b14c533214d449b61c104f74924e5,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill W
+    skillName: Shadow Step
+    vfxPoolKey: VFX_Ranger_FrostTrap
+    vfxPrefab: {fileID: 4421291694775244764, guid: f5f144ed0185d4b4482736d0f6f7b013,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill E
+    skillName: Venom
+    vfxPoolKey: VFX_Ranger_Volley
+    vfxPrefab: {fileID: 2536173636316178954, guid: 892584c2fa4807a468c14c5b654efe6a,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.25
+  - slotLabel: Skill R (Ultimate)
+    skillName: Death Blossom
+    vfxPoolKey: VFX_Ranger_ArrowStorm
+    vfxPrefab: {fileID: 4624659227386246541, guid: c517e497fbda0a341a1de5bd21c00c85,
+      type: 3}
+    defaultScale: 1
+    defaultDuration: 1.65
+  projectileVfxPrefab: {fileID: 8066544197071739487, guid: ae940567935feb6439375a30ff580623,
+    type: 3}
+  projectileVfxKey: VFX_Projectile_Ranger
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}
+  dashVfxKey: VFX_Common_SpiralDash
 --- !u!1 &2599808764507148184
 GameObject:
   m_ObjectHideFlags: 0
@@ -1865,7 +1916,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: -0, z: -0}
 --- !u!95 &5000248836668150101
 Animator:
-  serializedVersion: 4
+  serializedVersion: 5
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -1882,7 +1933,8 @@ Animator:
   m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorControllerStateOnDisable: 0
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &5707971691552512534
 GameObject:
   m_ObjectHideFlags: 0

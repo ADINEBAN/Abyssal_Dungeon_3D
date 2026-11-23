@@ -147,17 +147,11 @@ namespace AbyssGame
                 ? _unit.HeroClass.color
                 : new Color(0.45f, 0.85f, 1f);
 
-            var ghost = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            ghost.name = "DodgeAfterimage";
-            Destroy(ghost.GetComponent<Collider>());
-            ghost.transform.position = transform.position + Vector3.up * 0.92f;
-            ghost.transform.rotation = transform.rotation;
-            ghost.transform.localScale = new Vector3(0.62f, 0.92f, 0.48f);
-
-            var mr = ghost.GetComponent<MeshRenderer>();
-            mr.sharedMaterial = CharacterVisualFactory.MakeTransparentMat(new Color(col.r, col.g, col.b, 0.34f), col * 1.6f);
-            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            ghost.AddComponent<FadeAndDestroyBehaviour>().Init(0.22f);
+            FadeAndDestroyBehaviour.SpawnFromPool(
+                _unit != null ? _unit.InterpolatedPosition + Vector3.up * 0.92f : transform.position + Vector3.up * 0.92f,
+                transform.rotation,
+                col,
+                0.22f);
         }
 
         private void LateUpdate()
@@ -168,9 +162,10 @@ namespace AbyssGame
             float dt = Time.deltaTime;
             if (dt <= 0.0001f) return;
 
-            // 1. Measure real planar displacement to eliminate skating / foot sliding
-            Vector3 delta = transform.position - _prevPos;
-            _prevPos = transform.position;
+            // 1. Measure real planar displacement from interpolated physics position to eliminate skating / foot sliding
+            Vector3 interpPos = _unit.InterpolatedPosition;
+            Vector3 delta = interpPos - _prevPos;
+            _prevPos = interpPos;
             Vector3 planarDelta = new Vector3(delta.x, 0f, delta.z);
             float actualPlanarSpeed = planarDelta.magnitude / dt;
 
@@ -321,11 +316,12 @@ namespace AbyssGame
                     flinchOff = _flinchLocalOffset * (_flinchTimer / 0.16f);
                 }
 
-                // Preserve base scale magnitude while applying subtle squash/stretch
+                // Preserve base scale magnitude while applying subtle squash/stretch + sub-frame physics interpolation
                 if (_cachedAnim != null)
                 {
+                    Vector3 interpLocalOff = transform.InverseTransformVector(interpPos - transform.position);
                     _unit.MainVisual.transform.localRotation = Quaternion.Euler(_currentPitchX, 0f, _currentBankZ);
-                    _unit.MainVisual.transform.localPosition = flinchOff;
+                    _unit.MainVisual.transform.localPosition = interpLocalOff + flinchOff;
                     float invXz = 1f / Mathf.Sqrt(Mathf.Max(0.7f, _squashY));
                     float baseScale = Mathf.Max(0.1f, _unit.VisualBaseScale);
                     _unit.MainVisual.transform.localScale = new Vector3(baseScale * invXz, baseScale * _squashY, baseScale * invXz);
@@ -450,34 +446,87 @@ namespace AbyssGame
     /// </summary>
     public class FootstepSurfaceVFX : MonoBehaviour
     {
+        private static readonly Queue<FootstepSurfaceVFX> Pool = new Queue<FootstepSurfaceVFX>();
+        private static Material _sharedRingMat;
+        private static Material _sharedSpecMat;
+
         private Transform _ring;
-        private Material _ringMat;
+        private MeshRenderer _ringMr;
         private readonly Transform[] _specs = new Transform[5];
+        private readonly MeshRenderer[] _specRenderers = new MeshRenderer[5];
         private readonly Vector3[] _specVels = new Vector3[5];
-        private Material _specMat;
+        private MaterialPropertyBlock _mpb;
         private Color _ringCol;
         private Color _specCol;
         private float _dur;
         private float _t;
         private float _maxRingSize;
         private bool _gravitySpecs;
+        private bool _allocated;
 
         public static void Spawn(Vector3 pos, FootstepSurface surface, bool isSprint, bool isLanding, Vector3 moveDelta, float scaleMult = 1f)
         {
-            var go = new GameObject("FootstepVFX_" + surface);
-            go.transform.position = pos;
-            var fx = go.AddComponent<FootstepSurfaceVFX>();
+            FootstepSurfaceVFX fx = null;
+            while (Pool.Count > 0 && fx == null)
+            {
+                fx = Pool.Dequeue();
+            }
+            if (fx == null)
+            {
+                var go = new GameObject("FootstepVFX_Pooled");
+                fx = go.AddComponent<FootstepSurfaceVFX>();
+                fx.EnsureAllocated();
+            }
+            fx.transform.position = pos;
+            fx.gameObject.SetActive(true);
             fx.Init(surface, isSprint, isLanding, moveDelta, scaleMult);
+        }
+
+        private void EnsureAllocated()
+        {
+            if (_allocated) return;
+            _allocated = true;
+            _mpb = new MaterialPropertyBlock();
+
+            if (_sharedRingMat == null)
+                _sharedRingMat = CharacterVisualFactory.MakeTransparentMat(new Color(1f, 1f, 1f, 0.55f));
+            if (_sharedSpecMat == null)
+                _sharedSpecMat = CharacterVisualFactory.MakeTransparentMat(new Color(1f, 1f, 1f, 0.9f), Color.white);
+
+            var ringGo = new GameObject("StepRing");
+            ringGo.transform.SetParent(transform, false);
+            ringGo.transform.localPosition = Vector3.zero;
+            ringGo.AddComponent<MeshFilter>().sharedMesh = ObjMeshLoader.GetHorizontalQuadMesh();
+            _ringMr = ringGo.AddComponent<MeshRenderer>();
+            _ringMr.sharedMaterial = _sharedRingMat;
+            _ringMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _ringMr.receiveShadows = false;
+            _ring = ringGo.transform;
+
+            for (int i = 0; i < _specs.Length; i++)
+            {
+                var sp = CharacterVisualFactory.Prim(PrimitiveType.Cube, "Spec_" + i, transform,
+                    Vector3.zero, Vector3.one * 0.036f, _sharedSpecMat);
+                var r = sp.GetComponent<MeshRenderer>();
+                if (r != null)
+                {
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    r.receiveShadows = false;
+                }
+                _specs[i] = sp.transform;
+                _specRenderers[i] = r;
+            }
         }
 
         private void Init(FootstepSurface surface, bool isSprint, bool isLanding, Vector3 moveDelta, float scaleMult)
         {
+            EnsureAllocated();
             float intensity = (isLanding ? 1.45f : (isSprint ? 1.18f : 0.85f)) * scaleMult;
             _dur = isLanding ? 0.34f : (isSprint ? 0.26f : 0.22f);
             _maxRingSize = (isLanding ? 0.72f : (isSprint ? 0.48f : 0.34f)) * scaleMult;
+            _t = 0f;
             _gravitySpecs = true;
 
-            PrimitiveType specPrim = PrimitiveType.Cube;
             Vector3 specBaseScale = Vector3.one * 0.036f * intensity;
 
             switch (surface)
@@ -485,71 +534,45 @@ namespace AbyssGame
                 case FootstepSurface.Wood:
                     _ringCol = new Color(0.84f, 0.62f, 0.36f, 0.52f);
                     _specCol = new Color(0.76f, 0.52f, 0.26f, 0.92f);
-                    specBaseScale = new Vector3(0.055f, 0.018f, 0.022f) * intensity; // Wood splinters / sawdust chips
+                    specBaseScale = new Vector3(0.055f, 0.018f, 0.022f) * intensity;
                     break;
 
                 case FootstepSurface.Metal:
                     _ringCol = new Color(1.00f, 0.74f, 0.32f, 0.58f);
                     _specCol = new Color(1.00f, 0.82f, 0.35f, 1.00f);
-                    specBaseScale = new Vector3(0.024f, 0.024f, 0.065f) * intensity; // Bright friction sparks
+                    specBaseScale = new Vector3(0.024f, 0.024f, 0.065f) * intensity;
                     break;
 
                 case FootstepSurface.DirtMoss:
                     _ringCol = new Color(0.42f, 0.56f, 0.34f, 0.50f);
                     _specCol = new Color(0.48f, 0.78f, 0.38f, 0.90f);
-                    specPrim = PrimitiveType.Sphere;
-                    specBaseScale = Vector3.one * 0.042f * intensity; // Moss spores & earth clods
+                    specBaseScale = Vector3.one * 0.042f * intensity;
                     break;
 
                 case FootstepSurface.CrystalWater:
                     _ringCol = new Color(0.36f, 0.92f, 1.00f, 0.62f);
                     _specCol = new Color(0.55f, 0.96f, 1.00f, 0.95f);
-                    specPrim = PrimitiveType.Sphere;
                     specBaseScale = Vector3.one * 0.034f * intensity;
                     _maxRingSize *= 1.25f;
-                    _gravitySpecs = false; // Floating crystal/water motes
+                    _gravitySpecs = false;
                     break;
 
                 default: // Stone
                     _ringCol = new Color(0.74f, 0.70f, 0.65f, 0.46f);
                     _specCol = new Color(0.68f, 0.64f, 0.59f, 0.88f);
-                    specPrim = PrimitiveType.Sphere;
-                    specBaseScale = Vector3.one * 0.036f * intensity; // Stone dust puff & pebbles
+                    specBaseScale = Vector3.one * 0.036f * intensity;
                     break;
             }
 
-            // Ground impact ripple/dust quad
-            var ringGo = new GameObject("StepRing");
-            ringGo.transform.SetParent(transform, false);
-            ringGo.transform.localPosition = Vector3.zero;
-            ringGo.AddComponent<MeshFilter>().sharedMesh = ObjMeshLoader.GetHorizontalQuadMesh();
-            var ringMr = ringGo.AddComponent<MeshRenderer>();
-            _ringMat = CharacterVisualFactory.MakeTransparentMat(_ringCol, surface == FootstepSurface.Metal || surface == FootstepSurface.CrystalWater ? _ringCol : default);
-            ringMr.sharedMaterial = _ringMat;
-            ringMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            ringMr.receiveShadows = false;
-            _ring = ringGo.transform;
             _ring.localScale = new Vector3(0.12f, 1f, 0.12f);
-
-            // 5 flying surface particles (wood splinters, stone dust pebbles, metal sparks, moss spores, crystal motes)
-            _specMat = CharacterVisualFactory.MakeTransparentMat(_specCol, surface == FootstepSurface.Metal || surface == FootstepSurface.CrystalWater ? _specCol * 1.8f : default);
             Vector3 backDir = moveDelta.sqrMagnitude > 0.0001f ? -moveDelta.normalized : Vector3.zero;
 
             for (int i = 0; i < _specs.Length; i++)
             {
-                var sp = CharacterVisualFactory.Prim(specPrim, "Spec_" + i, transform,
-                    new Vector3(Random.Range(-0.08f, 0.08f), 0.03f, Random.Range(-0.08f, 0.08f)),
-                    specBaseScale * Random.Range(0.75f, 1.25f),
-                    _specMat,
-                    Quaternion.Euler(Random.Range(0f, 180f), Random.Range(0f, 360f), 0f));
-
-                var r = sp.GetComponent<Renderer>();
-                if (r != null)
-                {
-                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    r.receiveShadows = false;
-                }
-                _specs[i] = sp.transform;
+                if (_specs[i] == null) continue;
+                _specs[i].localPosition = new Vector3(Random.Range(-0.08f, 0.08f), 0.03f, Random.Range(-0.08f, 0.08f));
+                _specs[i].localScale = specBaseScale * Random.Range(0.75f, 1.25f);
+                _specs[i].localRotation = Quaternion.Euler(Random.Range(0f, 180f), Random.Range(0f, 360f), 0f);
 
                 float ang = (i * 72f + Random.Range(-22f, 22f)) * Mathf.Deg2Rad;
                 Vector3 radial = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * Random.Range(0.45f, 1.05f);
@@ -570,23 +593,26 @@ namespace AbyssGame
                 _ring.localScale = new Vector3(sz, 1f, sz);
             }
 
-            if (_ringMat != null)
+            if (_ringMr != null)
             {
                 Color rc = new Color(_ringCol.r, _ringCol.g, _ringCol.b, _ringCol.a * (1f - u));
-                _ringMat.color = rc;
-                if (_ringMat.HasProperty("_BaseColor")) _ringMat.SetColor("_BaseColor", rc);
+                _mpb.Clear();
+                _mpb.SetColor("_BaseColor", rc);
+                _mpb.SetColor("_Color", rc);
+                _ringMr.SetPropertyBlock(_mpb);
             }
 
-            if (_specMat != null)
-            {
-                Color sc = new Color(_specCol.r, _specCol.g, _specCol.b, _specCol.a * (1f - u * u));
-                _specMat.color = sc;
-                if (_specMat.HasProperty("_BaseColor")) _specMat.SetColor("_BaseColor", sc);
-            }
+            Color sc = new Color(_specCol.r, _specCol.g, _specCol.b, _specCol.a * (1f - u * u));
+            _mpb.Clear();
+            _mpb.SetColor("_BaseColor", sc);
+            _mpb.SetColor("_Color", sc);
 
             for (int i = 0; i < _specs.Length; i++)
             {
                 if (_specs[i] == null) continue;
+                if (_specRenderers[i] != null)
+                    _specRenderers[i].SetPropertyBlock(_mpb);
+
                 if (_gravitySpecs)
                     _specVels[i].y -= 4.8f * dt;
                 else
@@ -606,22 +632,58 @@ namespace AbyssGame
 
             if (_t >= _dur)
             {
-                if (_ringMat != null) Destroy(_ringMat);
-                if (_specMat != null) Destroy(_specMat);
-                Destroy(gameObject);
+                gameObject.SetActive(false);
+                Pool.Enqueue(this);
             }
         }
     }
 
     public class FadeAndDestroyBehaviour : MonoBehaviour
     {
+        private static readonly Queue<FadeAndDestroyBehaviour> Pool = new Queue<FadeAndDestroyBehaviour>();
+        private static Material _sharedGhostMat;
+
         private float _dur = 0.22f;
         private float _t;
         private Vector3 _initScale;
+        private Color _col;
+        private MeshRenderer _mr;
+        private MaterialPropertyBlock _mpb;
+
+        public static void SpawnFromPool(Vector3 pos, Quaternion rot, Color col, float duration)
+        {
+            FadeAndDestroyBehaviour inst = null;
+            while (Pool.Count > 0 && inst == null)
+            {
+                inst = Pool.Dequeue();
+            }
+            if (inst == null)
+            {
+                if (_sharedGhostMat == null)
+                    _sharedGhostMat = CharacterVisualFactory.MakeTransparentMat(new Color(0.5f, 0.85f, 1f, 0.34f), Color.white * 1.5f);
+
+                var ghost = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                ghost.name = "DodgeAfterimage_Pooled";
+                Destroy(ghost.GetComponent<Collider>());
+                var mr = ghost.GetComponent<MeshRenderer>();
+                mr.sharedMaterial = _sharedGhostMat;
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                mr.receiveShadows = false;
+                inst = ghost.AddComponent<FadeAndDestroyBehaviour>();
+                inst._mr = mr;
+                inst._mpb = new MaterialPropertyBlock();
+            }
+            inst.transform.SetPositionAndRotation(pos, rot);
+            inst.transform.localScale = new Vector3(0.62f, 0.92f, 0.48f);
+            inst._col = col;
+            inst.gameObject.SetActive(true);
+            inst.Init(duration);
+        }
 
         public void Init(float duration)
         {
             _dur = Mathf.Max(0.05f, duration);
+            _t = 0f;
             _initScale = transform.localScale;
         }
 
@@ -630,7 +692,19 @@ namespace AbyssGame
             _t += Time.deltaTime;
             float u = Mathf.Clamp01(_t / _dur);
             transform.localScale = _initScale * Mathf.Lerp(1f, 0.72f, u);
-            if (_t >= _dur) Destroy(gameObject);
+            if (_mr != null && _mpb != null)
+            {
+                Color c = new Color(_col.r, _col.g, _col.b, 0.36f * (1f - u));
+                _mpb.Clear();
+                _mpb.SetColor("_BaseColor", c);
+                _mpb.SetColor("_Color", c);
+                _mr.SetPropertyBlock(_mpb);
+            }
+            if (_t >= _dur)
+            {
+                gameObject.SetActive(false);
+                Pool.Enqueue(this);
+            }
         }
     }
 }

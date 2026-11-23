@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 041fcb1fd22e7be42baff1e63bfabb1f, type: 3}
+  m_Name: SD_Guardian_Skill2
+  m_EditorClassIdentifier: 
+  skillName: Group Heal
+  description: "H\u1ED3i m\xE1u c\u1EA3 \u0111\u1ED9i."
+  icon: {fileID: 0}
+  skillType: 0
+  damageType: 0
+  isUltimate: 0
+  manaCost: 35
+  cooldown: 9
+  castTime: 0
+  damageMultiplier: 2.2
+  range: 10
+  radius: 0
+  duration: 0
+  statusEffect: 0
+  statusDuration: 0
+  vfxPrefab: {fileID: 2985301010262194211, guid: 2caee74312328c0448448dc1bbb2a3a6,
+    type: 3}

@@ -11,8 +11,10 @@ namespace AbyssGame
     public static class CharacterVisualFactory
     {
         private static Shader _urpLit;
+        private static Shader _urpRimLit;
         private static Shader _urpParticles;
         private static readonly Dictionary<string, Texture2D> _texCache = new Dictionary<string, Texture2D>();
+        private static readonly Dictionary<int, Material> _matCache = new Dictionary<int, Material>();
 
         public static Shader UrpLit
         {
@@ -22,6 +24,17 @@ namespace AbyssGame
                 if (_urpLit == null) _urpLit = Shader.Find("Standard");
                 return _urpLit;
             }
+        }
+
+        public static Shader CharacterRimLitShader => UrpLit;
+
+        public static void SetLayerRecursively(GameObject go, int layer)
+        {
+            if (go == null) return;
+            go.layer = layer;
+            Transform t = go.transform;
+            for (int i = 0; i < t.childCount; i++)
+                SetLayerRecursively(t.GetChild(i).gameObject, layer);
         }
 
         public static Shader UrpUnlit
@@ -56,6 +69,11 @@ namespace AbyssGame
 
         public static Material MakeMat(Color color, float smoothness = 0.35f, float metallic = 0.1f, Color emission = default, Texture mainTex = null, Vector2 tiling = default)
         {
+            int texHash = mainTex != null ? mainTex.GetInstanceID() : 0;
+            int key = ((Color32)color).GetHashCode() ^ (((Color32)emission).GetHashCode() << 7) ^ (Mathf.RoundToInt(smoothness * 100f) << 15) ^ (Mathf.RoundToInt(metallic * 100f) << 21) ^ texHash;
+            if (tiling == Vector2.zero && _matCache.TryGetValue(key, out var cached) && cached != null)
+                return cached;
+
             var m = new Material(UrpLit);
             m.color = color;
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
@@ -77,6 +95,7 @@ namespace AbyssGame
                 if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", emission);
             }
             m.enableInstancing = true;
+            if (tiling == Vector2.zero) _matCache[key] = m;
             return m;
         }
 
@@ -280,9 +299,27 @@ namespace AbyssGame
             root.transform.SetParent(parent, false);
             root.transform.localPosition = Vector3.zero;
             root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+            SetLayerRecursively(root, 0);
 
-            // Dress Dark Fantasy 3D Class Silhouette & Weapon Trails, then enforce real 3D Human Cast Shadows
+            if (animator != null)
+            {
+                animator.enabled = true;
+                animator.applyRootMotion = false;
+                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                if (animator.runtimeAnimatorController == null)
+                {
+                    var ctrl = Resources.Load<RuntimeAnimatorController>("Animators/HeroAnimator_" + cls.name)
+                            ?? Resources.Load<RuntimeAnimatorController>("Animators/HeroAnimator");
+                    if (ctrl != null) animator.runtimeAnimatorController = ctrl;
+                }
+            }
+
+            // Dress Dark Fantasy 3D Class Silhouette & Weapon Trails, repair URP Lit materials + real 3D Human Cast Shadows
             ClassVisualArmorKit.DressHeroClassRegalia(cls, buildIndex, root, animator, rHand, lHand, head);
+            root.transform.localScale = Vector3.one;
+            Color heroRim = Color.Lerp(new Color(0.55f, 0.88f, 1.0f), buildAccent, 0.42f);
+            ApplySilhouetteRimLight(root, heroRim, 1.32f, 2.5f, 0.28f);
             EnsureCharacterShadowCasters(root, animator, 1.0f);
             return root;
         }
@@ -334,10 +371,192 @@ namespace AbyssGame
                     AttachMonsterAccessory(def.accessory, def.tint, head, root.transform);
             }
 
-            // Dress Elite/Boss trails, floating Elite Crown Banner & hit-recoil polish
+            // Dress Elite/Boss trails, floating Elite Crown Banner & hit-recoil polish + high-visibility Fresnel Rim Light
             EnemyVisualArmorKit.DressEnemyRegalia(def, forceEliteAura || def.archetype == Archetype.Elite, def.archetype == Archetype.Boss, root, animator, rHand, lHand, head);
+            bool isBoss = def.archetype == Archetype.Boss || def.id == "AbyssalKnight";
+            bool isElite = forceEliteAura || def.archetype == Archetype.Elite;
+            Color monsterRim = isBoss
+                ? new Color(0.28f, 0.88f, 1.0f) // Abyssal Cyan-Blue Rim Light matching reference image
+                : (isElite
+                    ? Color.Lerp(def.tint, new Color(1.0f, 0.72f, 0.24f), 0.55f)
+                    : Color.Lerp(def.tint, new Color(0.62f, 0.86f, 1.0f), 0.48f));
+            ApplySilhouetteRimLight(root, monsterRim, isBoss ? 1.95f : (isElite ? 1.65f : 1.42f), isBoss ? 2.1f : 2.35f, 0.34f);
             EnsureCharacterShadowCasters(root, animator, Mathf.Clamp(def.scale, 0.85f, 1.85f));
             return root;
+        }
+
+        /// <summary>
+        /// Ensures every SkinnedMeshRenderer & MeshRenderer on a Hero/Monster uses stable Universal Render Pipeline/Lit
+        /// (preventing invisibility or missing-shader pink/black artifacts on low-end GPUs like NVIDIA MX350)
+        /// with a crisp dark-dungeon silhouette visibility lift.
+        /// </summary>
+        public static void ApplySilhouetteRimLight(GameObject root, Color rimColor, float rimIntensity = 1.4f, float rimPower = 2.4f, float topFill = 0.28f)
+        {
+            if (root == null) return;
+            Shader urpLit = UrpLit;
+            if (urpLit == null) return;
+
+            var renderers = root.GetComponentsInChildren<Renderer>(true);
+            for (int rIdx = 0; rIdx < renderers.Length; rIdx++)
+            {
+                Renderer r = renderers[rIdx];
+                if (r == null || r is TrailRenderer || r is ParticleSystemRenderer || r.GetComponent<TextMesh>() != null)
+                    continue;
+                r.gameObject.layer = 0;
+
+                var mats = r.sharedMaterials;
+                bool changed = false;
+                bool isFaceOrHair = r.name.IndexOf("Face", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    r.name.IndexOf("Hair", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                    r.name.IndexOf("Skn", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    Material src = mats[i];
+                    if (src == null)
+                    {
+                        mats[i] = MakeMat(Color.white, 0.42f, 0.18f);
+                        changed = true;
+                        continue;
+                    }
+
+                    // Skip transparent/crystal/particle effects that have their own valid URP shaders
+                    if (src.renderQueue >= 2900 ||
+                        (src.shader != null && src.shader.name.IndexOf("Crystal", System.StringComparison.OrdinalIgnoreCase) >= 0))
+                        continue;
+
+                    string shName = src.shader != null ? src.shader.name : string.Empty;
+                    bool needsUrpLitUpgrade =
+                        src.shader == null ||
+                        !src.shader.isSupported ||
+                        shName.IndexOf("Error", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        shName.IndexOf("CharacterRimLit", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        shName == "Standard" ||
+                        shName.StartsWith("Legacy", System.StringComparison.OrdinalIgnoreCase);
+
+                    if (!needsUrpLitUpgrade && shName == "Universal Render Pipeline/Lit")
+                    {
+                        // Keep clean original URP Lit material intact! Only give subtle contrast lift on non-face armor via runtime clone if dark
+                        continue;
+                    }
+
+                    Texture baseMap = src.HasProperty("_BaseMap") ? src.GetTexture("_BaseMap") : null;
+                    if (baseMap == null && src.HasProperty("_MainTex")) baseMap = src.GetTexture("_MainTex");
+                    Texture bumpMap = src.HasProperty("_BumpMap") ? src.GetTexture("_BumpMap") : null;
+                    Texture emiMap = src.HasProperty("_EmissionMap") ? src.GetTexture("_EmissionMap") : null;
+                    Color baseCol = src.HasProperty("_BaseColor") ? src.GetColor("_BaseColor") : (src.HasProperty("_Color") ? src.GetColor("_Color") : Color.white);
+                    baseCol.a = 1f;
+                    Color emiCol = src.HasProperty("_EmissionColor") ? src.GetColor("_EmissionColor") : Color.black;
+                    if (!isFaceOrHair && emiCol.maxColorComponent < 0.04f)
+                        emiCol = rimColor * 0.08f;
+                    float smooth = src.HasProperty("_Smoothness") ? src.GetFloat("_Smoothness") : 0.42f;
+                    float metal = src.HasProperty("_Metallic") ? src.GetFloat("_Metallic") : 0.22f;
+
+                    int cacheKey = src.GetInstanceID() ^ ((Color32)rimColor).GetHashCode() ^ 0x4F2A1;
+                    if (!_matCache.TryGetValue(cacheKey, out Material urpMat) || urpMat == null)
+                    {
+                        urpMat = new Material(urpLit)
+                        {
+                            name = src.name + "_URPLit",
+                            enableInstancing = true
+                        };
+                        urpMat.SetColor("_BaseColor", baseCol);
+                        urpMat.color = baseCol;
+                        if (baseMap != null)
+                        {
+                            urpMat.SetTexture("_BaseMap", baseMap);
+                            urpMat.mainTexture = baseMap;
+                        }
+                        if (bumpMap != null && urpMat.HasProperty("_BumpMap"))
+                        {
+                            urpMat.SetTexture("_BumpMap", bumpMap);
+                            urpMat.EnableKeyword("_NORMALMAP");
+                        }
+                        if (emiMap != null && urpMat.HasProperty("_EmissionMap"))
+                            urpMat.SetTexture("_EmissionMap", emiMap);
+                        if (emiCol.maxColorComponent > 0.01f && urpMat.HasProperty("_EmissionColor"))
+                        {
+                            urpMat.SetColor("_EmissionColor", emiCol);
+                            urpMat.EnableKeyword("_EMISSION");
+                        }
+                        if (urpMat.HasProperty("_Smoothness")) urpMat.SetFloat("_Smoothness", smooth);
+                        if (urpMat.HasProperty("_Metallic")) urpMat.SetFloat("_Metallic", metal);
+                        _matCache[cacheKey] = urpMat;
+                    }
+                    mats[i] = urpMat;
+                    changed = true;
+                }
+                if (changed)
+                    r.sharedMaterials = mats;
+            }
+        }
+
+        private static Texture2D _locatorRingTex;
+        private static Material _locatorRingMat;
+
+        private static Texture2D GetLocatorRingTexture()
+        {
+            if (_locatorRingTex != null) return _locatorRingTex;
+            int sz = 128;
+            _locatorRingTex = new Texture2D(sz, sz, TextureFormat.RGBA32, false)
+            {
+                name = "T_HeroLocatorRing",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+            var px = new Color32[sz * sz];
+            float half = (sz - 1) * 0.5f;
+            for (int y = 0; y < sz; y++)
+            {
+                float ny = (y - half) / half;
+                for (int x = 0; x < sz; x++)
+                {
+                    float nx = (x - half) / half;
+                    float r = Mathf.Sqrt(nx * nx + ny * ny);
+                    float ang = Mathf.Atan2(ny, nx);
+                    float outer = Mathf.Exp(-Mathf.Pow((r - 0.86f) / 0.055f, 2f));
+                    float inner = Mathf.Exp(-Mathf.Pow((r - 0.68f) / 0.032f, 2f)) * 0.45f;
+                    float runeTicks = (r > 0.72f && r < 0.84f && Mathf.Cos(ang * 12f) > 0.35f) ? 0.55f : 0f;
+                    float softBase = r < 0.88f ? Mathf.Pow(r / 0.88f, 2f) * 0.14f : 0f;
+                    float a = r <= 0.98f ? Mathf.Clamp01(outer + inner + runeTicks + softBase) : 0f;
+                    px[y * sz + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+                }
+            }
+            _locatorRingTex.SetPixels32(px);
+            _locatorRingTex.Apply(false, false);
+            return _locatorRingTex;
+        }
+
+        public static GameObject SpawnGroundGlowRing(Transform parent, Color color, float radius = 0.62f, string name = "GroundLocatorRing")
+        {
+            if (_locatorRingMat == null)
+            {
+                Shader sh = Shader.Find("Sprites/Default")
+                            ?? Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                            ?? UrpUnlit;
+                _locatorRingMat = new Material(sh) { name = "M_HeroGroundLocatorRing", enableInstancing = true };
+                Texture2D tex = GetLocatorRingTexture();
+                _locatorRingMat.mainTexture = tex;
+                if (_locatorRingMat.HasProperty("_BaseMap")) _locatorRingMat.SetTexture("_BaseMap", tex);
+                _locatorRingMat.renderQueue = 3008;
+            }
+
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0f, 0.035f, 0f);
+            go.transform.localScale = new Vector3(radius * 2f, 1f, radius * 2f);
+            go.AddComponent<MeshFilter>().sharedMesh = ObjMeshLoader.GetHorizontalQuadMesh();
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = _locatorRingMat;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+
+            var mpb = new MaterialPropertyBlock();
+            Color col = new Color(color.r, color.g, color.b, 0.78f);
+            mpb.SetColor("_Color", col);
+            mpb.SetColor("_BaseColor", col);
+            mr.SetPropertyBlock(mpb);
+            return go;
         }
 
         private static GameObject BuildBaseModel(ModelKind kind, Color tint, float tintBlend, Color emission,
@@ -759,16 +978,37 @@ namespace AbyssGame
 
         public static void SpawnBurst(Vector3 pos, Color color, float radius = 1.6f, float duration = 0.45f)
         {
+            string key = PickPooledVfxKeyForColor(color, radius);
+            Vector3 groundPos = new Vector3(pos.x, Mathf.Max(0.02f, pos.y - 0.45f), pos.z);
+            float scale = Mathf.Clamp(radius / 2.0f, 0.55f, 1.85f);
+            GameObject pooled = AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn(key, groundPos, Quaternion.identity, null, scale, Mathf.Max(0.75f, duration * 2.0f));
+            if (pooled != null) return;
+
             var fx = GameObjectPool.GetBurst(pos);
             fx.Init(color, radius, duration);
         }
 
+        private static string PickPooledVfxKeyForColor(Color c, float radius)
+        {
+            // Gold / White -> Cleric Holy VFX
+            if (c.r > 0.82f && c.g > 0.75f && c.b > 0.35f)
+                return radius >= 2.8f ? "VFX_Cleric_GroupHeal" : "VFX_Cleric_Smite";
+            // Emerald / Nature Green -> Ranger VFX
+            if (c.g > c.r * 1.15f && c.g > c.b)
+                return radius >= 2.6f ? "VFX_Ranger_Volley" : "VFX_Ranger_PiercingShot";
+            // Mystic Purple / Arcane -> Mage VFX
+            if (c.b > 0.65f && c.r > 0.45f && c.g < 0.55f)
+                return radius >= 2.8f ? "VFX_Mage_Meteor" : "VFX_Mage_Fireball";
+            // Frost / Cyan Blue -> Knight or Mage Frost
+            if (c.b > 0.72f && c.g > 0.55f)
+                return radius >= 2.4f ? "VFX_Mage_FrostNova" : "VFX_Knight_IronGuard";
+            // Orange-Gold / Heavy Impact -> Knight Shockwave Slam
+            return radius >= 2.6f ? "VFX_Knight_Judgement" : "VFX_Knight_ShieldBash";
+        }
+
         public static void SpawnGroundTelegraph(Vector3 pos, float radius, float delay, Color color, System.Action onDetonate, Vector3 boxSize = default, Quaternion rot = default)
         {
-            var go = new GameObject("GroundTelegraph");
-            go.transform.position = new Vector3(pos.x, 0.05f, pos.z);
-            if (rot != default) go.transform.rotation = rot;
-            var tg = go.AddComponent<GroundTelegraphFx>();
+            GroundTelegraphFx tg = GroundTelegraphFx.GetFromPool(new Vector3(pos.x, 0.05f, pos.z), rot == default ? Quaternion.identity : rot);
             tg.Init(radius, delay, color, onDetonate, boxSize);
         }
 
@@ -829,65 +1069,239 @@ namespace AbyssGame
 
     public class GroundTelegraphFx : MonoBehaviour
     {
-        private Transform _outer;
-        private Transform _inner;
-        private Material _mOuter, _mInner;
+        private static readonly Queue<GroundTelegraphFx> Pool = new Queue<GroundTelegraphFx>();
+        private static Texture2D _telegraphRingTex;
+        private static Texture2D _telegraphFillTex;
+        private static Material _outerRingMat;
+        private static Material _innerFillMat;
+
         private float _radius, _delay, _t;
         private Vector3 _box;
+        private Color _color;
         private System.Action _cb;
+        private GameObject _pooledRuneVfx;
+        private Transform _outerRingQuad;
+        private Transform _innerFillQuad;
+        private MeshRenderer _outerMr;
+        private MeshRenderer _innerMr;
+        private MaterialPropertyBlock _mpb;
 
         public static readonly List<GroundTelegraphFx> ActiveHazards = new List<GroundTelegraphFx>();
         public float HazardRadius => _box != Vector3.zero ? Mathf.Max(_box.x, _box.z) * 0.5f : _radius;
 
+        private static void EnsureTelegraphAssets()
+        {
+            if (_telegraphRingTex == null)
+            {
+                int sz = 128;
+                _telegraphRingTex = new Texture2D(sz, sz, TextureFormat.RGBA32, false)
+                {
+                    name = "T_TelegraphOuterRing_HDR",
+                    wrapMode = TextureWrapMode.Clamp,
+                    filterMode = FilterMode.Bilinear
+                };
+                _telegraphFillTex = new Texture2D(sz, sz, TextureFormat.RGBA32, false)
+                {
+                    name = "T_TelegraphInnerFill_HDR",
+                    wrapMode = TextureWrapMode.Clamp,
+                    filterMode = FilterMode.Bilinear
+                };
+                var ringCols = new Color32[sz * sz];
+                var fillCols = new Color32[sz * sz];
+                for (int y = 0; y < sz; y++)
+                {
+                    float ny = (y / (float)(sz - 1)) * 2f - 1f;
+                    for (int x = 0; x < sz; x++)
+                    {
+                        float nx = (x / (float)(sz - 1)) * 2f - 1f;
+                        float r = Mathf.Sqrt(nx * nx + ny * ny);
+                        float ang = Mathf.Atan2(ny, nx);
+
+                        // Crisp outer danger border + runic tick marks + inner concentric ring
+                        float outerBand = Mathf.Clamp01(1f - Mathf.Abs(r - 0.92f) / 0.055f);
+                        float innerBand = Mathf.Clamp01(1f - Mathf.Abs(r - 0.78f) / 0.025f) * 0.65f;
+                        float runeTicks = (r > 0.80f && r < 0.91f && Mathf.Cos(ang * 16f) > 0.45f) ? 0.85f : 0f;
+                        float softGlow = (r <= 0.96f) ? Mathf.Pow(Mathf.Clamp01(r), 3f) * 0.28f : 0f;
+                        float ringAlpha = Mathf.Clamp01(Mathf.Max(outerBand, Mathf.Max(innerBand, runeTicks)) + softGlow);
+                        if (r > 0.985f) ringAlpha = 0f;
+
+                        // Expanding inner charge disc with bright leading edge
+                        float discMask = r <= 0.95f ? Mathf.Lerp(0.32f, 0.78f, Mathf.Pow(r / 0.95f, 2f)) : 0f;
+
+                        ringCols[y * sz + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(ringAlpha * 255f));
+                        fillCols[y * sz + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(discMask * 255f));
+                    }
+                }
+                _telegraphRingTex.SetPixels32(ringCols);
+                _telegraphRingTex.Apply(false, false);
+                _telegraphFillTex.SetPixels32(fillCols);
+                _telegraphFillTex.Apply(false, false);
+            }
+
+            if (_outerRingMat == null)
+            {
+                Shader sh = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                            ?? Shader.Find("Particles/Standard Unlit")
+                            ?? CharacterVisualFactory.UrpUnlit;
+                _outerRingMat = new Material(sh) { name = "M_TelegraphOuterRing_HDR" };
+                if (_outerRingMat.HasProperty("_Surface")) _outerRingMat.SetFloat("_Surface", 1f);
+                if (_outerRingMat.HasProperty("_Blend")) _outerRingMat.SetFloat("_Blend", 2f); // Additive glow
+                if (_outerRingMat.HasProperty("_SrcBlend")) _outerRingMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                if (_outerRingMat.HasProperty("_DstBlend")) _outerRingMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                if (_outerRingMat.HasProperty("_ZWrite")) _outerRingMat.SetInt("_ZWrite", 0);
+                if (_outerRingMat.HasProperty("_BaseMap")) _outerRingMat.SetTexture("_BaseMap", _telegraphRingTex);
+                _outerRingMat.mainTexture = _telegraphRingTex;
+                _outerRingMat.renderQueue = 3015;
+            }
+
+            if (_innerFillMat == null)
+            {
+                Shader sh = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                            ?? Shader.Find("Particles/Standard Unlit")
+                            ?? CharacterVisualFactory.UrpUnlit;
+                _innerFillMat = new Material(sh) { name = "M_TelegraphInnerFill_HDR" };
+                if (_innerFillMat.HasProperty("_Surface")) _innerFillMat.SetFloat("_Surface", 1f);
+                if (_innerFillMat.HasProperty("_Blend")) _innerFillMat.SetFloat("_Blend", 2f);
+                if (_innerFillMat.HasProperty("_SrcBlend")) _innerFillMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                if (_innerFillMat.HasProperty("_DstBlend")) _innerFillMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                if (_innerFillMat.HasProperty("_ZWrite")) _innerFillMat.SetInt("_ZWrite", 0);
+                if (_innerFillMat.HasProperty("_BaseMap")) _innerFillMat.SetTexture("_BaseMap", _telegraphFillTex);
+                _innerFillMat.mainTexture = _telegraphFillTex;
+                _innerFillMat.renderQueue = 3014;
+            }
+        }
+
+        public static GroundTelegraphFx GetFromPool(Vector3 pos, Quaternion rot)
+        {
+            GroundTelegraphFx inst = null;
+            while (Pool.Count > 0 && inst == null)
+            {
+                inst = Pool.Dequeue();
+            }
+            if (inst == null)
+            {
+                var go = new GameObject("GroundTelegraph_Pooled");
+                inst = go.AddComponent<GroundTelegraphFx>();
+                inst.EnsureVisualQuads();
+            }
+            inst.transform.SetPositionAndRotation(pos, rot);
+            inst.gameObject.SetActive(true);
+            return inst;
+        }
+
+        private void EnsureVisualQuads()
+        {
+            if (_outerRingQuad != null) return;
+            EnsureTelegraphAssets();
+            _mpb = new MaterialPropertyBlock();
+
+            Mesh quad = ObjMeshLoader.GetHorizontalQuadMesh();
+
+            var outerGo = new GameObject("TelegraphOuterBorder");
+            outerGo.transform.SetParent(transform, false);
+            outerGo.AddComponent<MeshFilter>().sharedMesh = quad;
+            _outerMr = outerGo.AddComponent<MeshRenderer>();
+            _outerMr.sharedMaterial = _outerRingMat;
+            _outerMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _outerMr.receiveShadows = false;
+            _outerRingQuad = outerGo.transform;
+
+            var innerGo = new GameObject("TelegraphExpandingFill");
+            innerGo.transform.SetParent(transform, false);
+            innerGo.AddComponent<MeshFilter>().sharedMesh = quad;
+            _innerMr = innerGo.AddComponent<MeshRenderer>();
+            _innerMr.sharedMaterial = _innerFillMat;
+            _innerMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _innerMr.receiveShadows = false;
+            _innerFillQuad = innerGo.transform;
+        }
+
         public void Init(float radius, float delay, Color color, System.Action cb, Vector3 box)
         {
+            EnsureVisualQuads();
             _radius = radius;
             _delay = Mathf.Max(0.15f, delay);
+            _t = 0f;
             _cb = cb;
             _box = box;
-            _mOuter = CharacterVisualFactory.MakeTransparentMat(new Color(color.r, color.g, color.b, 0.25f));
-            _mInner = CharacterVisualFactory.MakeTransparentMat(new Color(color.r, color.g, color.b, 0.58f), color);
+            _color = Color.Lerp(color, new Color(1.0f, 0.26f, 0.14f, 1.0f), 0.45f);
 
-            if (box != Vector3.zero)
-            {
-                _outer = CharacterVisualFactory.Prim(PrimitiveType.Cube, "Outer", transform, new Vector3(0, 0, box.z * 0.5f), new Vector3(box.x, 0.02f, box.z), _mOuter).transform;
-                _inner = CharacterVisualFactory.Prim(PrimitiveType.Cube, "Inner", transform, new Vector3(0, 0.01f, box.z * 0.5f), new Vector3(box.x, 0.025f, 0.1f), _mInner).transform;
-            }
-            else
-            {
-                _outer = CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "Outer", transform, Vector3.zero, new Vector3(radius * 2f, 0.01f, radius * 2f), _mOuter).transform;
-                _inner = CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "Inner", transform, new Vector3(0, 0.01f, 0), new Vector3(0.1f, 0.015f, 0.1f), _mInner).transform;
-            }
-            ActiveHazards.Add(this);
+            Vector3 localCenter = box != Vector3.zero ? new Vector3(0f, 0.03f, box.z * 0.5f) : new Vector3(0f, 0.03f, 0f);
+            Vector2 fullSize = box != Vector3.zero ? new Vector2(box.x, box.z) : new Vector2(radius * 2f, radius * 2f);
+
+            _outerRingQuad.localPosition = localCenter;
+            _outerRingQuad.localScale = new Vector3(fullSize.x, 1f, fullSize.y);
+
+            _innerFillQuad.localPosition = localCenter + new Vector3(0f, -0.005f, 0f);
+            _innerFillQuad.localScale = new Vector3(fullSize.x * 0.12f, 1f, fullSize.y * 0.12f);
+
+            Vector3 runeCenter = box != Vector3.zero
+                ? transform.TransformPoint(new Vector3(0f, 0f, box.z * 0.5f))
+                : transform.position;
+            float effRadius = box != Vector3.zero ? Mathf.Max(box.x, box.z) * 0.5f : radius;
+            _pooledRuneVfx = AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnGroundTelegraph(runeCenter, effRadius, _delay);
+
+            if (!ActiveHazards.Contains(this))
+                ActiveHazards.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            ActiveHazards.Remove(this);
         }
 
         private void OnDestroy()
         {
             ActiveHazards.Remove(this);
-            if (_mOuter != null) Destroy(_mOuter);
-            if (_mInner != null) Destroy(_mInner);
         }
 
         private void Update()
         {
             _t += Time.deltaTime;
             float u = Mathf.Clamp01(_t / _delay);
-            if (_inner != null)
+
+            if (_outerRingQuad != null && _innerFillQuad != null)
             {
-                if (_box != Vector3.zero)
-                    _inner.localScale = new Vector3(_box.x, 0.025f, Mathf.Lerp(0.1f, _box.z, u));
+                Vector2 fullSize = _box != Vector3.zero ? new Vector2(_box.x, _box.z) : new Vector2(_radius * 2f, _radius * 2f);
+                if (_box == Vector3.zero)
+                    _outerRingQuad.Rotate(0f, 38f * Time.deltaTime, 0f, Space.Self);
                 else
-                {
-                    float d = Mathf.Lerp(0.1f, _radius * 2f, u);
-                    _inner.localScale = new Vector3(d, 0.015f, d);
-                }
+                    _outerRingQuad.localRotation = Quaternion.identity;
+
+                float fillRatio = Mathf.Lerp(0.14f, 1.0f, u);
+                _innerFillQuad.localScale = new Vector3(fullSize.x * fillRatio, 1f, fullSize.y * fillRatio);
+
+                // High-contrast warning pulse, flashing white-hot right before detonation
+                bool urgent = u > 0.78f;
+                float pulse = urgent ? (0.85f + 0.35f * Mathf.Sin(_t * 42f)) : (0.85f + 0.15f * Mathf.Sin(_t * 14f));
+                Color borderCol = urgent ? Color.Lerp(_color, new Color(1f, 0.92f, 0.55f), 0.55f) : _color;
+                borderCol.a = Mathf.Clamp01(0.95f * pulse);
+
+                _mpb.Clear();
+                _mpb.SetColor("_BaseColor", borderCol * 1.45f);
+                _mpb.SetColor("_Color", borderCol * 1.45f);
+                _outerMr.SetPropertyBlock(_mpb);
+
+                Color fillCol = new Color(_color.r, _color.g, _color.b, Mathf.Lerp(0.28f, 0.68f, u) * pulse);
+                _mpb.Clear();
+                _mpb.SetColor("_BaseColor", fillCol);
+                _mpb.SetColor("_Color", fillCol);
+                _innerMr.SetPropertyBlock(_mpb);
             }
+
             if (_t >= _delay)
             {
+                if (_pooledRuneVfx != null)
+                {
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.Release(_pooledRuneVfx);
+                    _pooledRuneVfx = null;
+                }
                 var cb = _cb;
                 _cb = null;
                 cb?.Invoke();
-                Destroy(gameObject);
+                ActiveHazards.Remove(this);
+                gameObject.SetActive(false);
+                Pool.Enqueue(this);
             }
         }
     }

@@ -34,6 +34,17 @@ namespace AbyssGame
         private ActorUnit _lastStruckEnemy;
         private float _lastStruckTimer;
 
+        // Dirty-check caches to prevent per-frame UI mesh rebuilds & string allocations
+        private float _cachedDmgAlpha = -1f;
+        private float _cachedSurgeAlpha = -1f;
+        private int _cachedComboCount = -1;
+        private float _cachedComboRatio = -1f;
+        private ActorUnit _cachedPoiseEnemy;
+        private int _cachedPoiseVal = -1;
+        private int _cachedPoiseMax = -1;
+        private bool _cachedPoiseStaggered;
+        private float _cachedPoiseRatio = -1f;
+
         public static ScreenCombatFeedbackUI Attach(Transform canvasRoot)
         {
             if (canvasRoot == null) return null;
@@ -196,33 +207,59 @@ namespace AbyssGame
             if (_damageEdgeOverlay != null)
             {
                 float a = Mathf.Clamp01(Mathf.Max(_damageFlashAlpha, lowHpPulse));
-                _damageEdgeOverlay.color = new Color(0.86f, 0.06f, 0.10f, a);
+                if (Mathf.Abs(a - _cachedDmgAlpha) > 0.002f)
+                {
+                    _cachedDmgAlpha = a;
+                    _damageEdgeOverlay.color = new Color(0.86f, 0.06f, 0.10f, a);
+                }
             }
 
             if (_surgeFlashAlpha > 0f)
                 _surgeFlashAlpha = Mathf.MoveTowards(_surgeFlashAlpha, 0f, 2.2f * dt);
 
             if (_surgeEdgeOverlay != null)
-                _surgeEdgeOverlay.color = new Color(_surgeColor.r, _surgeColor.g, _surgeColor.b, _surgeFlashAlpha);
+            {
+                if (Mathf.Abs(_surgeFlashAlpha - _cachedSurgeAlpha) > 0.002f)
+                {
+                    _cachedSurgeAlpha = _surgeFlashAlpha;
+                    _surgeEdgeOverlay.color = new Color(_surgeColor.r, _surgeColor.g, _surgeColor.b, _surgeFlashAlpha);
+                }
+            }
 
-            // Stylish Combo Counter Widget
+            // Stylish Combo Counter Widget (dirty-checked)
             var feel = CombatFeelManager.I;
             if (_comboPanel != null && feel != null)
             {
                 bool showCombo = feel.ComboCount >= 2 && feel.ComboTimer > 0.05f;
-                _comboPanel.SetActive(showCombo);
+                if (_comboPanel.activeSelf != showCombo)
+                    _comboPanel.SetActive(showCombo);
+
                 if (showCombo)
                 {
-                    string rank = feel.GetComboRankLabel(out Color rc);
-                    _comboCountTxt.text = $"{feel.ComboCount} COMBO!";
-                    _comboCountTxt.color = Color.Lerp(Color.white, rc, 0.45f);
-                    _comboRankTxt.text = rank;
-                    _comboRankTxt.color = rc;
-                    GameUIKit.SetBarRatio(_comboTimerFill, feel.ComboTimer / CombatFeelManager.ComboDecayDuration);
+                    if (feel.ComboCount != _cachedComboCount)
+                    {
+                        _cachedComboCount = feel.ComboCount;
+                        string rank = feel.GetComboRankLabel(out Color rc);
+                        _comboCountTxt.text = $"{feel.ComboCount} COMBO!";
+                        _comboCountTxt.color = Color.Lerp(Color.white, rc, 0.45f);
+                        _comboRankTxt.text = rank;
+                        _comboRankTxt.color = rc;
+                    }
+                    float comboRatio = feel.ComboTimer / CombatFeelManager.ComboDecayDuration;
+                    if (Mathf.Abs(comboRatio - _cachedComboRatio) > 0.008f)
+                    {
+                        _cachedComboRatio = comboRatio;
+                        GameUIKit.SetBarRatio(_comboTimerFill, comboRatio);
+                    }
+                }
+                else
+                {
+                    _cachedComboCount = -1;
+                    _cachedComboRatio = -1f;
                 }
             }
 
-            // Locked / Last-Struck Enemy Poise (Stagger) Meter
+            // Locked / Last-Struck Enemy Poise (Stagger) Meter (dirty-checked)
             if (_lastStruckTimer > 0f) _lastStruckTimer -= Time.deltaTime;
             ActorUnit focusEnemy = null;
             if (CameraTargetLockSystem.Instance != null && CameraTargetLockSystem.Instance.IsLocked)
@@ -233,21 +270,47 @@ namespace AbyssGame
             if (_poisePanel != null)
             {
                 bool showPoise = focusEnemy != null && !focusEnemy.IsDead && focusEnemy.MaxPoise > 1f;
-                _poisePanel.SetActive(showPoise);
+                if (_poisePanel.activeSelf != showPoise)
+                    _poisePanel.SetActive(showPoise);
+
                 if (showPoise)
                 {
-                    if (focusEnemy.IsStaggered)
+                    int poiseInt = Mathf.RoundToInt(focusEnemy.Poise);
+                    int maxPoiseInt = Mathf.RoundToInt(focusEnemy.MaxPoise);
+                    bool staggered = focusEnemy.IsStaggered;
+
+                    if (focusEnemy != _cachedPoiseEnemy || poiseInt != _cachedPoiseVal ||
+                        maxPoiseInt != _cachedPoiseMax || staggered != _cachedPoiseStaggered)
                     {
-                        _poiseTitleTxt.text = $"{focusEnemy.DisplayName} — [PHÁ GIÁP! +25% SÁT THƯƠNG]";
-                        _poiseTitleTxt.color = new Color(1f, 0.42f, 0.35f);
-                        GameUIKit.SetBarRatio(_poiseFill, 1f);
+                        _cachedPoiseEnemy = focusEnemy;
+                        _cachedPoiseVal = poiseInt;
+                        _cachedPoiseMax = maxPoiseInt;
+                        _cachedPoiseStaggered = staggered;
+
+                        if (staggered)
+                        {
+                            _poiseTitleTxt.text = $"{focusEnemy.DisplayName} — [PHÁ GIÁP! 200% SÁT THƯƠNG]";
+                            _poiseTitleTxt.color = new Color(1f, 0.42f, 0.35f);
+                        }
+                        else
+                        {
+                            _poiseTitleTxt.text = $"{focusEnemy.DisplayName} • Giáp Bền Bỉ (Poise): {poiseInt}/{maxPoiseInt}";
+                            _poiseTitleTxt.color = new Color(1f, 0.88f, 0.55f);
+                        }
                     }
-                    else
+
+                    float targetRatio = staggered ? 1f : (focusEnemy.Poise / Mathf.Max(1f, focusEnemy.MaxPoise));
+                    if (Mathf.Abs(targetRatio - _cachedPoiseRatio) > 0.005f)
                     {
-                        _poiseTitleTxt.text = $"{focusEnemy.DisplayName} • Giáp Bền Bỉ (Poise): {focusEnemy.Poise:0}/{focusEnemy.MaxPoise:0}";
-                        _poiseTitleTxt.color = new Color(1f, 0.88f, 0.55f);
-                        GameUIKit.SetBarRatio(_poiseFill, focusEnemy.Poise / Mathf.Max(1f, focusEnemy.MaxPoise));
+                        _cachedPoiseRatio = targetRatio;
+                        GameUIKit.SetBarRatio(_poiseFill, targetRatio);
                     }
+                }
+                else
+                {
+                    _cachedPoiseEnemy = null;
+                    _cachedPoiseVal = -1;
+                    _cachedPoiseRatio = -1f;
                 }
             }
         }

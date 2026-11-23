@@ -29,6 +29,7 @@ namespace AbyssGame
         public bool IsMiniBoss;
         public bool IsBoss;
         public int PartySlotIndex = -1;
+        public EliteAffixKind ActiveEliteAffix = EliteAffixKind.None;
 
         public ClassDef HeroClass;
         public int BuildIndex;
@@ -86,10 +87,40 @@ namespace AbyssGame
         public float MaxPoise = 60f;
         public float Poise = 60f;
         public bool IsStaggered;
+        public bool IsEnraged;
         private float _staggerTimer;
         private float _poiseRegenDelay;
         private Vector3 _knockbackVel;
         private Vector3 _lungeVel;
+        private Vector3 _queuedPlanarVel;
+        private Vector3 _prevPhysicsPos;
+        private Vector3 _currPhysicsPos;
+        private bool _physicsPosInitialized;
+        private string _lastOverheadLabel;
+
+        public Vector3 InterpolatedPosition
+        {
+            get
+            {
+                if (!_physicsPosInitialized || (transform.position - _currPhysicsPos).sqrMagnitude > 0.25f)
+                    return transform.position;
+                float alpha = Time.fixedDeltaTime > 0.0001f
+                    ? Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime)
+                    : 1f;
+                return Vector3.Lerp(_prevPhysicsPos, _currPhysicsPos, alpha);
+            }
+        }
+
+        public void SyncPhysicsPosition(Vector3 worldPos)
+        {
+            bool wasEnabled = Controller != null && Controller.enabled;
+            if (wasEnabled) Controller.enabled = false;
+            transform.position = worldPos;
+            if (wasEnabled) Controller.enabled = true;
+            _prevPhysicsPos = worldPos;
+            _currPhysicsPos = worldPos;
+            _physicsPosInitialized = true;
+        }
 
         private WeaponHitboxSweep3D _hitboxSweep;
         private WeaponBladeTrail3D[] _weaponTrails;
@@ -106,6 +137,8 @@ namespace AbyssGame
         private float _swingAnimTimer;
         private Vector3 _velocity;
         private Transform _hpBarFill;
+        private Transform _staggerBarFill;
+        private Transform _shieldBarFill;
         private Transform _hpBarRoot;
         private TextMesh _nameLabel;
 
@@ -141,8 +174,14 @@ namespace AbyssGame
             gameObject.tag = isLocal ? "Player" : "Untagged";
 
             EnsureController(0.45f, 1.9f);
+            transform.localScale = Vector3.one;
+            gameObject.layer = 0;
             MainVisual = CharacterVisualFactory.BuildHeroVisual(HeroClass, transform, out Anim, BuildIndex);
-            VisualBaseScale = MainVisual != null ? MainVisual.transform.localScale.x : 1f;
+            if (MainVisual != null)
+            {
+                MainVisual.transform.localScale = Vector3.one;
+                VisualBaseScale = 1f;
+            }
             if (HeroClass.id == 8) // Druid has Bear Form mesh ready
             {
                 BearVisual = CharacterVisualFactory.BuildBearFormMesh();
@@ -155,7 +194,13 @@ namespace AbyssGame
             MaxPoise = HeroClass.id <= 2 ? 125f : 85f;
             Poise = MaxPoise;
             RecalculateStats(true);
-            if (!isLocal) BuildOverheadBar(new Color(0.25f, 0.85f, 0.45f), 2.25f);
+
+            // Step 4: Hide giant overhead green bar & huge name text on AI teammates;
+            // keep only a clean small ground locator ring at their feet + left-corner Party HUD.
+            Color locatorCol = isLocal
+                ? new Color(1.0f, 0.84f, 0.30f, 0.85f)
+                : Color.Lerp(new Color(0.28f, 0.92f, 0.55f), HeroClass.color, 0.45f);
+            CharacterVisualFactory.SpawnGroundGlowRing(transform, locatorCol, isLocal ? 0.52f : 0.46f, "GroundLocatorRing");
 
             SetupCombatAttachments(0.45f, 1.9f);
             _motionPolisher = GetComponent<CharacterMotionPolisher>();
@@ -194,14 +239,15 @@ namespace AbyssGame
             VisualBaseScale = MainVisual != null ? MainVisual.transform.localScale.x : 1f;
 
             float floorScale = 1f + (floor - 1) * 0.28f;
-            float tierHp = (IsMiniBoss ? 2.6f : (IsElite && def.archetype != Archetype.Elite ? 1.85f : 1f));
-            float tierAtk = (IsMiniBoss ? 1.35f : (IsElite && def.archetype != Archetype.Elite ? 1.22f : 1f));
+            // Rebalanced difficulty: Normal monsters 2.8x HP & 1.8x ATK; Elites/Bosses 5.2x-5.8x HP with Poise Bar & Affixes
+            float tierHp = IsBoss ? 5.5f : (IsMiniBoss ? 5.8f : (IsElite ? 5.2f : 2.8f));
+            float tierAtk = IsBoss ? 1.85f : (IsMiniBoss ? 2.05f : (IsElite ? 1.92f : 1.80f));
 
             MaxHp = Mathf.Round(def.hp * floorScale * tierHp * hpMult);
             Hp = MaxHp;
             MaxMana = 100f;
             Mana = 100f;
-            MaxPoise = IsBoss ? 360f : (IsMiniBoss ? 210f : (IsElite ? 120f : 56f));
+            MaxPoise = IsBoss ? 360f : (IsMiniBoss ? 220f : (IsElite ? 135f : 65f));
             Poise = MaxPoise;
             Atk = Mathf.Round(def.atk * floorScale * tierAtk * atkMult);
             Def = Mathf.Round(def.def * (1f + (floor - 1) * 0.15f));
@@ -209,7 +255,20 @@ namespace AbyssGame
             AtkSpeed = 1f / Mathf.Max(0.4f, def.attackCd);
             AttackRange = def.attackRange;
             IsRanged = (def.archetype == Archetype.Ranged || def.archetype == Archetype.Mage);
-            CritChance = IsBoss ? 0.15f : 0.05f;
+            CritChance = IsBoss ? 0.15f : (IsElite ? 0.09f : 0.05f);
+
+            // Roll Elite Affix (Vampiric, Thorns, Molten Death, Arcane Shielded)
+            if ((IsElite || IsMiniBoss) && !IsBoss)
+            {
+                ActiveEliteAffix = EnemyTacticalBrain.RollEliteAffix(def, true);
+                string afx = EnemyTacticalBrain.GetAffixLabel(ActiveEliteAffix);
+                if (!string.IsNullOrEmpty(afx))
+                    DisplayName = $"{DisplayName} [{afx}]";
+                if (ActiveEliteAffix == EliteAffixKind.Vampiric)
+                    Lifesteal = Mathf.Max(Lifesteal, 0.35f);
+                else if (ActiveEliteAffix == EliteAffixKind.ArcaneShielded)
+                    Shield = MaxHp * 0.35f;
+            }
 
             if (Anim != null && Mathf.Abs(def.animSpeed - 1f) > 0.02f) Anim.speed = def.animSpeed;
             if (!IsBoss)
@@ -404,26 +463,62 @@ namespace AbyssGame
             root.transform.localPosition = new Vector3(0f, yOffset, 0f);
             _hpBarRoot = root.transform;
 
-            var bgMat = CharacterVisualFactory.MakeTransparentMat(new Color(0.05f, 0.05f, 0.08f, 0.82f));
-            CharacterVisualFactory.Prim(PrimitiveType.Cube, "Bg", root.transform, Vector3.zero, new Vector3(1.35f, 0.13f, 0.02f), bgMat);
+            float barW = (IsElite || IsMiniBoss) ? 1.62f : 1.35f;
+            float fillW = barW - 0.05f;
+            float halfFill = fillW * 0.5f;
 
-            var fMat = CharacterVisualFactory.MakeTransparentMat(fillColor, fillColor * 0.5f);
+            var bgMat = CharacterVisualFactory.MakeTransparentMat(new Color(0.05f, 0.05f, 0.08f, 0.88f));
+            CharacterVisualFactory.Prim(PrimitiveType.Cube, "Bg", root.transform, Vector3.zero, new Vector3(barW, 0.14f, 0.02f), bgMat);
+
+            var fMat = CharacterVisualFactory.MakeTransparentMat(fillColor, fillColor * 0.6f);
             var fillHolder = new GameObject("FillPivot");
             fillHolder.transform.SetParent(root.transform, false);
-            fillHolder.transform.localPosition = new Vector3(-0.65f, 0f, -0.01f);
-            var fillCube = CharacterVisualFactory.Prim(PrimitiveType.Cube, "Fill", fillHolder.transform, new Vector3(0.65f, 0f, 0f), new Vector3(1.3f, 0.1f, 0.025f), fMat);
+            fillHolder.transform.localPosition = new Vector3(-halfFill, 0f, -0.01f);
+            CharacterVisualFactory.Prim(PrimitiveType.Cube, "Fill", fillHolder.transform, new Vector3(halfFill, 0f, 0f), new Vector3(fillW, 0.105f, 0.025f), fMat);
             _hpBarFill = fillHolder.transform;
+
+            // Monster Stagger Bar (Poise / Guard-Break Gauge) + Shield Overlay Bar
+            if (Team == Team.Monster)
+            {
+                // Arcane/Barrier Shield Overlay on top of HP bar
+                var shMat = CharacterVisualFactory.MakeTransparentMat(
+                    new Color(0.32f, 0.88f, 1.0f, 0.88f), new Color(0.28f, 0.82f, 1.0f) * 1.4f);
+                var shHolder = new GameObject("ShieldPivot");
+                shHolder.transform.SetParent(root.transform, false);
+                shHolder.transform.localPosition = new Vector3(-halfFill, 0.085f, -0.012f);
+                CharacterVisualFactory.Prim(PrimitiveType.Cube, "ShieldFill", shHolder.transform,
+                    new Vector3(halfFill, 0f, 0f), new Vector3(fillW, 0.055f, 0.025f), shMat);
+                _shieldBarFill = shHolder.transform;
+                _shieldBarFill.localScale = new Vector3(0f, 1f, 1f);
+
+                // Clear Amber/Gold Stagger Bar directly below HP bar
+                float stagY = -0.105f;
+                CharacterVisualFactory.Prim(PrimitiveType.Cube, "StaggerBg", root.transform,
+                    new Vector3(0f, stagY, 0f), new Vector3(barW, 0.075f, 0.02f), bgMat);
+
+                Color stagCol = new Color(1.0f, 0.84f, 0.20f, 0.96f);
+                var stagMat = CharacterVisualFactory.MakeTransparentMat(stagCol, stagCol * 1.25f);
+                var stagHolder = new GameObject("StaggerPivot");
+                stagHolder.transform.SetParent(root.transform, false);
+                stagHolder.transform.localPosition = new Vector3(-halfFill, stagY, -0.01f);
+                CharacterVisualFactory.Prim(PrimitiveType.Cube, "StaggerFill", stagHolder.transform,
+                    new Vector3(halfFill, 0f, 0f), new Vector3(fillW, 0.055f, 0.025f), stagMat);
+                _staggerBarFill = stagHolder.transform;
+            }
 
             var lblObj = new GameObject("Name");
             lblObj.transform.SetParent(root.transform, false);
-            lblObj.transform.localPosition = new Vector3(0f, 0.24f, 0f);
+            lblObj.transform.localPosition = new Vector3(0f, 0.27f, 0f);
             _nameLabel = lblObj.AddComponent<TextMesh>();
             _nameLabel.text = DisplayName;
             _nameLabel.fontSize = 36;
             _nameLabel.characterSize = 0.055f;
             _nameLabel.anchor = TextAnchor.MiddleCenter;
             _nameLabel.fontStyle = FontStyle.Bold;
-            _nameLabel.color = Team == Team.Hero ? new Color(0.75f, 1f, 0.85f) : new Color(1f, 0.85f, 0.8f);
+            _nameLabel.color = Team == Team.Hero
+                ? new Color(0.75f, 1f, 0.85f)
+                : (IsMiniBoss ? new Color(1f, 0.72f, 0.28f)
+                : (IsElite ? new Color(1f, 0.90f, 0.38f) : new Color(1f, 0.85f, 0.8f)));
         }
 
         private void Update()
@@ -538,48 +633,74 @@ namespace AbyssGame
             }
         }
 
-        private void UpdateGravityAndVisuals(float dt)
+        private void FixedUpdate()
         {
+            float fdt = Time.fixedDeltaTime;
+            if (fdt <= 0.0001f) return;
+
+            if (!_physicsPosInitialized || (transform.position - _currPhysicsPos).sqrMagnitude > 0.25f)
+            {
+                _prevPhysicsPos = transform.position;
+                _currPhysicsPos = transform.position;
+                _physicsPosInitialized = true;
+            }
+            else
+            {
+                _prevPhysicsPos = _currPhysicsPos;
+            }
+
             if (Controller != null && Controller.enabled && !IsDead)
             {
-                bool groundedNow = (Controller.isGrounded || transform.position.y <= 0.03f) && _velocity.y <= 0.05f;
+                bool groundedNow = (Controller.isGrounded || transform.position.y <= 0.04f) && _velocity.y <= 0.05f;
                 if (groundedNow)
                 {
                     _coyoteTimer = 0.12f;
-                    _velocity.y = -1.2f;
+                    _velocity.y = -2.2f; // Steady downward stick so CharacterController.isGrounded never flickers
                 }
                 else
                 {
-                    _coyoteTimer = Mathf.Max(0f, _coyoteTimer - dt);
-                    _velocity.y -= 20f * dt;
+                    _coyoteTimer = Mathf.Max(0f, _coyoteTimer - fdt);
+                    _velocity.y -= 20f * fdt;
                 }
 
                 Vector3 planarImpulse = _knockbackVel + _lungeVel;
                 if (planarImpulse.sqrMagnitude > 0.002f)
                 {
-                    Controller.Move(new Vector3(planarImpulse.x, 0f, planarImpulse.z) * dt);
-                    _knockbackVel = Vector3.Lerp(_knockbackVel, Vector3.zero, 1f - Mathf.Exp(-11f * dt));
-                    _lungeVel = Vector3.Lerp(_lungeVel, Vector3.zero, 1f - Mathf.Exp(-15f * dt));
+                    _knockbackVel = Vector3.Lerp(_knockbackVel, Vector3.zero, 1f - Mathf.Exp(-11f * fdt));
+                    _lungeVel = Vector3.Lerp(_lungeVel, Vector3.zero, 1f - Mathf.Exp(-15f * fdt));
                 }
                 else
                 {
+                    planarImpulse = Vector3.zero;
                     _knockbackVel = Vector3.zero;
                     _lungeVel = Vector3.zero;
                 }
 
-                if (_velocity.y > 0.05f || transform.position.y > 0.02f || !Controller.isGrounded)
+                Vector3 totalPlanarVel = _queuedPlanarVel + new Vector3(planarImpulse.x, 0f, planarImpulse.z);
+                _queuedPlanarVel = Vector3.zero;
+
+                Vector3 stepDisp = new Vector3(totalPlanarVel.x * fdt, _velocity.y * fdt, totalPlanarVel.z * fdt);
+                if (transform.position.y + stepDisp.y < 0f && _velocity.y < 0f)
                 {
-                    Controller.Move(new Vector3(0f, _velocity.y * dt, 0f));
-                    if (transform.position.y < 0f && _velocity.y < 0f)
-                    {
-                        Vector3 p = transform.position;
-                        p.y = 0f;
-                        transform.position = p;
-                        _velocity.y = -1.2f;
-                    }
+                    stepDisp.y = -transform.position.y;
+                    _velocity.y = -2.2f;
+                }
+
+                if (stepDisp.sqrMagnitude > 0.0000001f)
+                {
+                    Controller.Move(stepDisp);
                 }
             }
+            else
+            {
+                _queuedPlanarVel = Vector3.zero;
+            }
 
+            _currPhysicsPos = transform.position;
+        }
+
+        private void UpdateGravityAndVisuals(float dt)
+        {
             if (_swingAnimTimer > 0f)
             {
                 _swingAnimTimer -= dt;
@@ -600,10 +721,27 @@ namespace AbyssGame
                 if (cam != null) _hpBarRoot.rotation = cam.transform.rotation;
                 if (_hpBarFill != null)
                     _hpBarFill.localScale = new Vector3(Mathf.Clamp01(Hp / Mathf.Max(1f, MaxHp)), 1f, 1f);
-                if (_nameLabel != null && IsDowned)
-                    _nameLabel.text = $"{DisplayName} [GỤC - Đứng gần cứu {(int)(ReviveProgress * 100)}%]";
-                else if (_nameLabel != null)
-                    _nameLabel.text = DisplayName;
+                if (_staggerBarFill != null)
+                {
+                    float stagRatio = IsStaggered ? 0f : Mathf.Clamp01(Poise / Mathf.Max(1f, MaxPoise));
+                    _staggerBarFill.localScale = new Vector3(stagRatio, 1f, 1f);
+                }
+                if (_shieldBarFill != null)
+                {
+                    float shRatio = Mathf.Clamp01(Shield / Mathf.Max(1f, MaxHp * 0.5f));
+                    _shieldBarFill.localScale = new Vector3(shRatio, 1f, 1f);
+                }
+                if (_nameLabel != null)
+                {
+                    string desiredLabel = IsDowned
+                        ? $"{DisplayName} [GỤC - Đứng gần cứu {(int)(ReviveProgress * 100)}%]"
+                        : (IsStaggered ? $"{DisplayName} [PHÁ GIÁP!]" : DisplayName);
+                    if (!string.Equals(_lastOverheadLabel, desiredLabel, StringComparison.Ordinal))
+                    {
+                        _lastOverheadLabel = desiredLabel;
+                        _nameLabel.text = desiredLabel;
+                    }
+                }
             }
         }
 
@@ -636,19 +774,27 @@ namespace AbyssGame
             if (Poise > 0.01f) return false;
 
             IsStaggered = true;
-            _staggerTimer = IsBoss ? 1.15f : (IsMiniBoss ? 1.75f : 2.15f);
+            _staggerTimer = 2.5f;
             if (_hitboxSweep != null) _hitboxSweep.CancelAllSweeps();
 
+            // Shatter Arcane Shielded barrier when guard-broken!
+            if (ActiveEliteAffix == EliteAffixKind.ArcaneShielded && Shield > 0f)
+            {
+                Shield = 0f;
+                CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.65f,
+                    "VỠ KHIÊN KHÁNG PHÉP!", new Color(0.42f, 0.95f, 1f), 1.15f);
+            }
+
             GameAudio.I.PlaySfx(GameSfx.GuardBreak, 0.9f);
-            CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 1.1f, new Color(1f, 0.85f, 0.25f), IsBoss ? 3.2f : 2.0f, 0.42f);
-            CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.35f, "PHÁ GIÁP! (STAGGER)", new Color(1f, 0.85f, 0.22f), 1.25f);
+            AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn("VFX_Knight_Judgement", transform.position, Quaternion.identity, null, IsBoss ? 1.35f : 0.95f);
+            CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.35f, "PHÁ GIÁP! (200% SÁT THƯƠNG • 2.5s)", new Color(1f, 0.85f, 0.22f), 1.35f);
 
             if (attacker != null && attacker.IsLocalPlayer)
             {
-                CombatFeelManager.I.TriggerHitStop(0.065f, 0.04f);
-                if (OrbitCamera3D.Instance != null) OrbitCamera3D.Instance.Shake(0.28f, 0.24f);
+                CombatFeelManager.I.TriggerHitStop(0.04f, 0.04f);
+                if (OrbitCamera3D.Instance != null) OrbitCamera3D.Instance.Shake(0.32f, 0.25f);
                 if (ScreenCombatFeedbackUI.Instance != null)
-                    ScreenCombatFeedbackUI.Instance.NotifyCombatSurge(new Color(1f, 0.84f, 0.28f), 0.38f);
+                    ScreenCombatFeedbackUI.Instance.NotifyCombatSurge(new Color(1f, 0.84f, 0.28f), 0.42f);
             }
             return true;
         }
@@ -740,18 +886,28 @@ namespace AbyssGame
             _staminaRegenDelay = 0.45f;
         }
 
+        public void SetFixedMoveVelocity(Vector3 worldVelocity)
+        {
+            if (!CanAct()) return;
+            worldVelocity.y = 0f;
+            _queuedPlanarVel = worldVelocity;
+            if (_motionPolisher == null && Anim != null)
+            {
+                float spdRatio = worldVelocity.magnitude / Mathf.Max(0.01f, EffectiveMoveSpeed());
+                Anim.SetFloat(HashSpeed, Mathf.Clamp01(spdRatio), 0.1f, Time.fixedDeltaTime);
+            }
+        }
+
         public void MoveWorld(Vector3 worldDelta)
         {
             if (!CanAct()) return;
             worldDelta.y = 0f;
-            float mag = worldDelta.magnitude;
-            if (Controller != null && Controller.enabled && mag > 0.0001f)
-            {
-                Controller.Move(worldDelta);
-            }
+            float dt = Time.inFixedTimeStep ? Time.fixedDeltaTime : Mathf.Max(0.0001f, Time.deltaTime);
+            Vector3 vel = worldDelta / dt;
+            _queuedPlanarVel = vel;
             if (_motionPolisher == null && Anim != null)
             {
-                Anim.SetFloat(HashSpeed, Mathf.Clamp01(mag / Mathf.Max(0.01f, EffectiveMoveSpeed() * Time.deltaTime)), 0.1f, Time.deltaTime);
+                Anim.SetFloat(HashSpeed, Mathf.Clamp01(vel.magnitude / Mathf.Max(0.01f, EffectiveMoveSpeed())), 0.1f, dt);
             }
         }
 
@@ -798,16 +954,18 @@ namespace AbyssGame
             if (_motionPolisher != null) _motionPolisher.TriggerAction("Dodge");
             else if (Anim != null) Anim.SetTrigger(HashDodge);
             GameAudio.I.PlaySfx(GameSfx.Dodge, 0.7f);
+            if (IsLocalPlayer && LanRoomBridge.HasInstance)
+                LanRoomBridge.I.BroadcastHeroAction(PartySlotIndex, "dodge", dir, transform.position + dir * 4f);
             if (IsLocalPlayer && OrbitCamera3D.Instance != null)
                 OrbitCamera3D.Instance.PunchFov(3.2f, 0.24f);
-            StartCoroutine(DodgeCoroutine(dir, 5.8f, 0.26f));
+            StartCoroutine(DodgeCoroutine(dir, 6.2f, 0.34f));
             return true;
         }
 
         private IEnumerator DodgeCoroutine(Vector3 dir, float dist, float dur)
         {
             IsInvincible = true;
-            CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 0.8f, new Color(0.6f, 0.85f, 1f), 1.1f, 0.25f);
+            AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn("VFX_Common_SpiralDash", transform.position, transform.rotation, null, 0.9f);
             float t = 0f;
             float spd = dist / dur;
             int ghostsSpawned = 0;
@@ -818,8 +976,7 @@ namespace AbyssGame
                     _motionPolisher.SpawnDodgeGhost();
                     ghostsSpawned++;
                 }
-                if (Controller != null && Controller.enabled)
-                    Controller.Move(dir * (spd * Time.deltaTime));
+                _queuedPlanarVel = dir * spd;
                 t += Time.deltaTime;
                 yield return null;
             }
@@ -854,6 +1011,8 @@ namespace AbyssGame
             if (_motionPolisher != null) _motionPolisher.TriggerAction("Attack");
             else if (Anim != null) Anim.SetTrigger(HashAttack);
             _swingAnimTimer = isFinisher ? 0.34f : 0.24f;
+            if (IsLocalPlayer && LanRoomBridge.HasInstance)
+                LanRoomBridge.I.BroadcastHeroAction(PartySlotIndex, "basic", aimDir, aimPoint);
 
             // Monk passive: +4 mana per basic combo strike
             if (HeroClass != null && HeroClass.id == 7) Mana = Mathf.Min(MaxMana, Mana + 4f);
@@ -979,6 +1138,8 @@ namespace AbyssGame
             if (_motionPolisher != null) _motionPolisher.TriggerAction("Attack");
             else if (Anim != null) Anim.SetTrigger(HashAttack);
             _swingAnimTimer = 0.42f;
+            if (IsLocalPlayer && LanRoomBridge.HasInstance)
+                LanRoomBridge.I.BroadcastHeroAction(PartySlotIndex, "heavy", aimDir, aimPoint);
 
             Color accent = HeroClass != null ? HeroClass.color : new Color(1f, 0.55f, 0.2f);
             Color goldCore = Color.Lerp(accent, new Color(1f, 0.92f, 0.48f), 0.65f);
@@ -1065,6 +1226,8 @@ namespace AbyssGame
             if (_motionPolisher != null) _motionPolisher.TriggerAction(sk.useCastAnim ? "Cast" : "Attack");
             else if (Anim != null) Anim.SetTrigger(sk.useCastAnim ? HashCast : HashAttack);
             _swingAnimTimer = 0.3f;
+            if (IsLocalPlayer && LanRoomBridge.HasInstance)
+                LanRoomBridge.I.BroadcastHeroSkill(PartySlotIndex, slot, aimPoint);
 
             if (sk.selfStatus != StatusType.None)
                 ApplyStatus(sk.selfStatus, sk.selfStatusDur, 0f, this);
@@ -1087,6 +1250,8 @@ namespace AbyssGame
             {
                 case SkillKind.MeleeArc:
                     GameAudio.I.PlaySfx(GameSfx.Attack, 0.85f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position + dir * 0.8f, transform.rotation, Mathf.Clamp(effRadius / 3.0f, 0.75f, 1.4f));
                     int hits = Mathf.Max(1, sk.count);
                     // Monk Windwalker Build: Flurry hits 5 times
                     if (HeroClass.id == 7 && BuildIndex == 0 && slot == 0) hits = 5;
@@ -1095,6 +1260,8 @@ namespace AbyssGame
 
                 case SkillKind.Projectile:
                     GameAudio.I.PlaySfx(GameSfx.Magic, 0.8f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position + dir * 0.5f, transform.rotation, 0.75f);
                     int cnt = Mathf.Max(1, sk.count);
                     bool pierce = sk.pierce || (HeroClass.id == 6 && BuildIndex == 2 && slot == 0);
                     for (int i = 0; i < cnt; i++)
@@ -1102,23 +1269,29 @@ namespace AbyssGame
                         float ang = cnt == 1 ? 0f : Mathf.Lerp(-22f, 22f, (float)i / (cnt - 1));
                         Vector3 shotDir = Quaternion.Euler(0f, ang, 0f) * dir;
                         SkillProjectile.Spawn(this, transform.position + Vector3.up * 1.25f + shotDir * 0.6f, shotDir,
-                            22f, effRange, rawPow, pierce, sk.status, sk.statusDur, EffectiveAttack() * sk.statusPower * rankPow, effRadius > 1.5f && cnt == 1 ? effRadius : 0f, fxCol);
+                            22f, effRange, rawPow, pierce, sk.status, sk.statusDur, EffectiveAttack() * sk.statusPower * rankPow, effRadius > 1.5f && cnt == 1 ? effRadius : 0f, fxCol, 20f, 2.0f, 0f, slot);
                     }
                     break;
 
                 case SkillKind.GroundAoE:
                     GameAudio.I.PlaySfx(GameSfx.Magic, 0.85f);
                     Vector3 clampedAim = ClampRange(transform.position, aimPoint, effRange);
+                    int groundClassId = HeroClass.id;
+                    int groundSlot = slot;
                     CharacterVisualFactory.SpawnGroundTelegraph(clampedAim, effRadius, sk.ultimate ? 0.65f : 0.35f, fxCol, () =>
                     {
                         if (this == null) return;
                         GameAudio.I.PlaySfx(GameSfx.Explosion, 0.85f);
+                        AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                            groundClassId, groundSlot, clampedAim, Quaternion.identity, Mathf.Clamp(effRadius / 4.2f, 0.85f, 1.55f));
                         DealCircleDamage(clampedAim, effRadius, rawPow, sk.status, sk.statusDur, EffectiveAttack() * sk.statusPower * rankPow, fxCol);
                     });
                     break;
 
                 case SkillKind.SelfAoE:
                     GameAudio.I.PlaySfx(GameSfx.Explosion, 0.8f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position, transform.rotation, Mathf.Clamp(effRadius / 4.0f, 0.85f, 1.5f));
                     DealCircleDamage(transform.position, effRadius, rawPow, sk.status, sk.statusDur, EffectiveAttack() * sk.statusPower * rankPow, fxCol);
                     // Knight Radiant Paladin Judgement heals allies; Druid Nature's Wrath heals allies
                     if ((HeroClass.id == 0 && BuildIndex == 1 && sk.ultimate) || (HeroClass.id == 8 && sk.ultimate))
@@ -1127,13 +1300,15 @@ namespace AbyssGame
 
                 case SkillKind.Dash:
                     GameAudio.I.PlaySfx(GameSfx.Dodge, 0.9f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn("VFX_Common_SpiralDash", transform.position, transform.rotation, transform, 1.0f);
                     StartCoroutine(DashAttackRoutine(dir, effRange, rawPow, effRadius, fxCol));
                     break;
 
                 case SkillKind.HealAll:
                     GameAudio.I.PlaySfx(GameSfx.Heal, 0.85f);
                     HealAlliesAround(transform.position, effRadius, rawPow * (1f + HealBonus), sk.status, sk.statusDur);
-                    CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 0.5f, fxCol, 3.2f, 0.5f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position, Quaternion.identity, 1.15f);
                     break;
 
                 case SkillKind.HealTarget:
@@ -1143,14 +1318,16 @@ namespace AbyssGame
                     {
                         weakest.ReceiveHeal(rawPow * (1f + HealBonus), this);
                         if (sk.status != StatusType.None) weakest.ApplyStatus(sk.status, sk.statusDur, 0f, this);
-                        CharacterVisualFactory.SpawnBurst(weakest.transform.position + Vector3.up, fxCol, 1.8f, 0.4f);
+                        AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                            HeroClass.id, slot, weakest.transform.position, Quaternion.identity, 0.95f, -1f, weakest.transform);
                     }
                     break;
 
                 case SkillKind.ShieldSelf:
                     GameAudio.I.PlaySfx(GameSfx.Shield, 0.8f);
                     AddShield(MaxHp * sk.power * rankPow * (1f + HealBonus));
-                    CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up, fxCol, 1.8f, 0.4f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position, Quaternion.identity, 1.0f, -1f, transform);
                     break;
 
                 case SkillKind.ShieldAll:
@@ -1158,13 +1335,15 @@ namespace AbyssGame
                     foreach (var u in AllUnits)
                         if (u.Team == Team && !u.IsDead && !u.IsDowned && Vector3.Distance(transform.position, u.transform.position) <= effRadius)
                             u.AddShield(u.MaxHp * sk.power * rankPow * (1f + HealBonus));
-                    CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 0.5f, fxCol, 3.5f, 0.5f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position, Quaternion.identity, 1.25f, -1f, transform);
                     break;
 
                 case SkillKind.BuffSelf:
                     GameAudio.I.PlaySfx(GameSfx.Shield, 0.8f);
                     ApplyStatus(sk.status, sk.statusDur, 0f, this);
-                    CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up, fxCol, 1.8f, 0.4f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position, Quaternion.identity, 1.0f, -1f, transform);
                     break;
 
                 case SkillKind.BuffAll:
@@ -1172,7 +1351,8 @@ namespace AbyssGame
                     foreach (var u in AllUnits)
                         if (u.Team == Team && !u.IsDead && !u.IsDowned && Vector3.Distance(transform.position, u.transform.position) <= effRadius)
                             u.ApplyStatus(sk.status, sk.statusDur, 0f, this);
-                    CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 0.5f, fxCol, 3.2f, 0.45f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position, Quaternion.identity, 1.2f);
                     break;
 
                 case SkillKind.Taunt:
@@ -1181,7 +1361,8 @@ namespace AbyssGame
                     foreach (var u in AllUnits)
                         if (u.Team != Team && !u.IsDead && Vector3.Distance(transform.position, u.transform.position) <= effRadius)
                             u.ApplyStatus(StatusType.Taunted, sk.statusDur, 0f, this);
-                    CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 0.5f, fxCol, effRadius * 0.6f, 0.45f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position, Quaternion.identity, 1.15f);
                     break;
 
                 case SkillKind.Summon:
@@ -1191,7 +1372,8 @@ namespace AbyssGame
                     var minUnit = minGo.AddComponent<ActorUnit>();
                     minUnit.InitSummon(this, sk.statusDur + (rank - 1) * 2.5f);
                     minGo.AddComponent<HeroPartyAI>().IsMinion = true;
-                    CharacterVisualFactory.SpawnBurst(minGo.transform.position + Vector3.up, fxCol, 1.6f, 0.4f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, minGo.transform.position, Quaternion.identity, 0.95f);
                     break;
 
                 case SkillKind.Revive:
@@ -1204,7 +1386,8 @@ namespace AbyssGame
                             else u.ReceiveHeal(rawPow * (1f + HealBonus), this);
                         }
                     }
-                    CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up, fxCol, 4.5f, 0.6f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position, transform.rotation, 1.25f, -1f, transform);
                     break;
 
                 case SkillKind.Trap:
@@ -1229,7 +1412,8 @@ namespace AbyssGame
                             u.AddShield(u.MaxHp * sk.power * rankPow * (1f + HealBonus));
                         }
                     }
-                    CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 0.6f, fxCol, 3.2f, 0.45f);
+                    AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                        HeroClass.id, slot, transform.position, Quaternion.identity, 1.15f, -1f, transform);
                     break;
             }
 
@@ -1291,7 +1475,7 @@ namespace AbyssGame
             float spd = dist / dur;
             while (t < dur)
             {
-                if (Controller != null && Controller.enabled) Controller.Move(dir * (spd * Time.deltaTime));
+                _queuedPlanarVel = dir * spd;
                 for (int i = AllUnits.Count - 1; i >= 0; i--)
                 {
                     var u = AllUnits[i];
@@ -1452,6 +1636,15 @@ namespace AbyssGame
             // Curse increases damage taken by 25%
             if (HasStatus(StatusType.Curse)) finalDmg *= 1.25f;
 
+            // Staggered monsters take 200% damage; Arcane Shielded Elites take 25% less damage until Staggered!
+            if (Team == Team.Monster)
+            {
+                if (IsStaggered)
+                    finalDmg *= 2.0f;
+                else if (ActiveEliteAffix == EliteAffixKind.ArcaneShielded)
+                    finalDmg *= 0.75f;
+            }
+
             // Knight passive -10% damage taken
             if (HeroClass != null && HeroClass.id == 0) finalDmg *= 0.90f;
 
@@ -1495,6 +1688,16 @@ namespace AbyssGame
                         attacker.ReceiveTrueDot(thorns, this, new Color(1f, 0.56f, 0.18f));
                     }
                 }
+
+                // Elite Affix "Phản đòn / Thorns": reflects 18% of close-range damage back to attacker
+                if (Team == Team.Monster && ActiveEliteAffix == EliteAffixKind.Thorns && attacker.Team != Team)
+                {
+                    if (Vector3.Distance(transform.position, attacker.transform.position) <= 5.2f)
+                    {
+                        float reflectDmg = Mathf.Max(3f, Mathf.Round(incomingRaw * 0.18f));
+                        attacker.ReceiveTrueDot(reflectDmg, this, new Color(1f, 0.45f, 0.18f));
+                    }
+                }
             }
 
             // Record Director stats
@@ -1529,9 +1732,45 @@ namespace AbyssGame
 
             OnDamaged?.Invoke(this, attacker, finalDmg, crit);
 
+            if (Team == Team.Monster && (IsElite || IsMiniBoss || IsBoss) && Hp > 0f && !IsEnraged && (Hp / Mathf.Max(1f, MaxHp)) < 0.40f)
+            {
+                TriggerMonsterEnrage();
+            }
+
             if (Hp <= 0f)
             {
                 HandleZeroHp();
+            }
+        }
+
+        private void TriggerMonsterEnrage()
+        {
+            IsEnraged = true;
+            AtkSpeed *= 1.25f;
+            MoveSpeed *= 1.15f;
+            ApplyStatus(StatusType.Rage, 999f, 0f, this);
+
+            Color enrageCol = new Color(1.0f, 0.16f, 0.28f);
+            GameAudio.I.PlaySfx(GameSfx.BossRoar, IsBoss ? 1f : 0.78f);
+            CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 1.3f, enrageCol, IsBoss ? 6.5f : 3.6f, 0.65f);
+            CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.55f, "CUỒNG NỘ! (+25% TỐC ĐÁNH)", enrageCol, IsBoss ? 1.35f : 1.15f);
+
+            var light = GetComponentInChildren<Light>();
+            if (light != null)
+            {
+                light.color = enrageCol;
+                light.intensity = Mathf.Max(light.intensity, 3.6f);
+            }
+            else if (MainVisual != null)
+            {
+                var auraGo = new GameObject("EnrageAuraLight");
+                auraGo.transform.SetParent(MainVisual.transform, false);
+                auraGo.transform.localPosition = new Vector3(0f, 1.35f, 0f);
+                var pl = auraGo.AddComponent<Light>();
+                pl.type = LightType.Point;
+                pl.color = enrageCol;
+                pl.range = 6.5f;
+                pl.intensity = 3.2f;
             }
         }
 
@@ -1621,6 +1860,33 @@ namespace AbyssGame
             // Assassin "Venom Alchemist" Build (Build 2): poisoned enemies explode in a toxic miasma cloud on death!
             if (Team == Team.Monster)
             {
+                // Elite Affix "Bùng nổ khi chết / Molten Death": spawns a 4.2m GroundTelegraphFx magma detonation!
+                if (ActiveEliteAffix == EliteAffixKind.MoltenDeath)
+                {
+                    Vector3 deathPos = transform.position;
+                    float blastDmg = EffectiveAttack() * 1.65f;
+                    CharacterVisualFactory.SpawnFloatingText(deathPos + Vector3.up * 2.3f,
+                        "BÙNG NỔ KHI CHẾT — NÉ [SPACE]!", new Color(1f, 0.45f, 0.12f), 1.15f);
+                    CharacterVisualFactory.SpawnGroundTelegraph(deathPos, 4.2f, 0.92f, new Color(1f, 0.36f, 0.08f), () =>
+                    {
+                        GameAudio.I.PlaySfx(GameSfx.Explosion, 0.9f);
+                        AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn("VFX_Mage_Meteor", deathPos, Quaternion.identity, null, 1.05f);
+                        for (int k = AllUnits.Count - 1; k >= 0; k--)
+                        {
+                            var u = AllUnits[k];
+                            if (u != null && u.Team == Team.Hero && !u.IsDead && !u.IsDowned)
+                            {
+                                if (Vector3.Distance(deathPos, u.transform.position) <= 4.2f)
+                                {
+                                    u.ReceiveHit(blastDmg, false, null, true);
+                                    u.ApplyStatus(StatusType.Burn, 4f, blastDmg * 0.18f, null);
+                                    u.ApplyKnockback(u.transform.position - deathPos, 7.5f);
+                                }
+                            }
+                        }
+                    });
+                }
+
                 for (int i = 0; i < Statuses.Count; i++)
                 {
                     var st = Statuses[i];
@@ -1683,43 +1949,61 @@ namespace AbyssGame
 
     public class SkillProjectile : MonoBehaviour
     {
+        private static readonly Queue<SkillProjectile> Pool = new Queue<SkillProjectile>();
+
         private ActorUnit _owner;
         private Team _team;
+        private int _ownerClassId = -1;
+        private int _skillSlot = -1;
         private Vector3 _dir;
         private float _speed, _maxDist, _traveled, _rawDmg, _aoeRadius, _statusDur, _statusPow;
         private float _poiseDmg, _kbForce, _bonusCrit;
         private bool _pierce;
         private StatusType _status;
         private Color _color;
+        private TrailRenderer _tr;
         private Material _trailMat;
+        private GameObject _pooledVisual;
         private readonly HashSet<ActorUnit> _hit = new HashSet<ActorUnit>();
 
         public static void Spawn(ActorUnit owner, Vector3 startPos, Vector3 dir, float speed, float range, float rawDmg,
             bool pierce, StatusType status, float statusDur, float statusPow, float aoeRadius, Color color,
-            float poiseDmg = 20f, float kbForce = 2.0f, float bonusCrit = 0f)
+            float poiseDmg = 20f, float kbForce = 2.0f, float bonusCrit = 0f, int skillSlot = -1)
         {
-            var go = new GameObject("SkillProjectile");
-            go.transform.position = startPos;
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.001f) dir = Vector3.forward;
             dir.Normalize();
-            go.transform.rotation = Quaternion.LookRotation(dir);
+            Quaternion rot = Quaternion.LookRotation(dir);
 
-            var mat = CharacterVisualFactory.MakeMat(color, 0.9f, 0f, color * 2.5f);
-            CharacterVisualFactory.Prim(PrimitiveType.Sphere, "Orb", go.transform, Vector3.zero, new Vector3(0.32f, 0.32f, 0.58f), mat);
+            SkillProjectile p = null;
+            while (Pool.Count > 0 && p == null)
+            {
+                p = Pool.Dequeue();
+            }
 
-            var tr = go.AddComponent<TrailRenderer>();
-            tr.time = 0.14f;
-            tr.minVertexDistance = 0.08f;
-            tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            tr.receiveShadows = false;
-            tr.widthCurve = new AnimationCurve(new Keyframe(0f, 0.26f), new Keyframe(1f, 0f));
-            var tMat = CharacterVisualFactory.MakeTransparentMat(new Color(color.r, color.g, color.b, 0.65f), color * 2f);
-            tr.sharedMaterial = tMat;
+            if (p == null)
+            {
+                var go = new GameObject("SkillProjectile_Pooled");
+                p = go.AddComponent<SkillProjectile>();
+                var tr = go.AddComponent<TrailRenderer>();
+                tr.time = 0.14f;
+                tr.minVertexDistance = 0.08f;
+                tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                tr.receiveShadows = false;
+                tr.widthCurve = new AnimationCurve(new Keyframe(0f, 0.26f), new Keyframe(1f, 0f));
+                p._tr = tr;
+                p._trailMat = CharacterVisualFactory.MakeTransparentMat(new Color(color.r, color.g, color.b, 0.65f), color * 2f);
+                tr.sharedMaterial = p._trailMat;
+            }
 
-            var p = go.AddComponent<SkillProjectile>();
+            p.transform.SetPositionAndRotation(startPos, rot);
+            p.gameObject.SetActive(true);
+            p._hit.Clear();
+            p._traveled = 0f;
             p._owner = owner;
-            p._team = owner.Team;
+            p._team = owner != null ? owner.Team : Team.Monster;
+            p._ownerClassId = (owner != null && owner.HeroClass != null) ? owner.HeroClass.id : 5;
+            p._skillSlot = skillSlot;
             p._dir = dir;
             p._speed = speed;
             p._maxDist = range;
@@ -1733,12 +2017,33 @@ namespace AbyssGame
             p._poiseDmg = poiseDmg;
             p._kbForce = kbForce;
             p._bonusCrit = bonusCrit;
-            p._trailMat = tMat;
+
+            if (p._trailMat != null)
+            {
+                p._trailMat.color = new Color(color.r, color.g, color.b, 0.65f);
+                if (p._trailMat.HasProperty("_BaseColor")) p._trailMat.SetColor("_BaseColor", new Color(color.r, color.g, color.b, 0.65f));
+                if (p._trailMat.HasProperty("_EmissionColor")) p._trailMat.SetColor("_EmissionColor", color * 2f);
+            }
+            if (p._tr != null) p._tr.Clear();
+
+            string projKey = AbyssalDungeon.VFX.VFXPoolManager.GetProjectileVfxKey(p._ownerClassId);
+            p._pooledVisual = AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn(projKey, startPos, rot, p.transform, 1.0f, 3.0f);
         }
 
         private void OnDestroy()
         {
             if (_trailMat != null) Destroy(_trailMat);
+        }
+
+        private void ReleaseProjectile()
+        {
+            if (_pooledVisual != null)
+            {
+                AbyssalDungeon.VFX.VFXPoolManager.Instance.Release(_pooledVisual);
+                _pooledVisual = null;
+            }
+            gameObject.SetActive(false);
+            Pool.Enqueue(this);
         }
 
         private void Update()
@@ -1748,7 +2053,7 @@ namespace AbyssGame
             if (Physics.Raycast(transform.position, _dir, step, 1 << 0, QueryTriggerInteraction.Ignore))
             {
                 ExplodeIfNeeded();
-                Destroy(gameObject);
+                ReleaseProjectile();
                 return;
             }
 
@@ -1764,6 +2069,12 @@ namespace AbyssGame
                 if (Vector3.Distance(transform.position, upos) <= hitR)
                 {
                     _hit.Add(u);
+                    if (_skillSlot >= 0)
+                    {
+                        AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnForClassSkill(
+                            _ownerClassId, _skillSlot, u.transform.position, Quaternion.identity, 0.9f);
+                    }
+
                     if (_aoeRadius > 0.5f && _owner != null)
                     {
                         _owner.DealCircleDamage(u.transform.position, _aoeRadius, _rawDmg, _status, _statusDur, _statusPow, _color);
@@ -1779,7 +2090,7 @@ namespace AbyssGame
 
                     if (!_pierce)
                     {
-                        Destroy(gameObject);
+                        ReleaseProjectile();
                         return;
                     }
                 }
@@ -1788,7 +2099,7 @@ namespace AbyssGame
             if (_traveled >= _maxDist)
             {
                 ExplodeIfNeeded();
-                Destroy(gameObject);
+                ReleaseProjectile();
             }
         }
 
@@ -1801,25 +2112,62 @@ namespace AbyssGame
 
     public class PlacedTrap : MonoBehaviour
     {
+        private static readonly Queue<PlacedTrap> Pool = new Queue<PlacedTrap>();
+
         private ActorUnit _owner;
         private float _radius, _dmg, _dur, _life = 14f;
         private StatusType _status;
         private Color _col;
+        private GameObject _pooledTrapVfx;
 
         public static void Spawn(ActorUnit owner, Vector3 pos, float radius, float dmg, StatusType status, float dur, Color col)
         {
-            var go = new GameObject("FrostTrap");
-            go.transform.position = new Vector3(pos.x, 0.04f, pos.z);
-            var mat = CharacterVisualFactory.MakeTransparentMat(new Color(col.r, col.g, col.b, 0.48f), col);
-            CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "Ring", go.transform, Vector3.zero, new Vector3(radius * 1.2f, 0.02f, radius * 1.2f), mat);
-            var t = go.AddComponent<PlacedTrap>();
-            t._owner = owner; t._radius = radius; t._dmg = dmg; t._status = status; t._dur = dur; t._col = col;
+            PlacedTrap t = null;
+            while (Pool.Count > 0 && t == null)
+            {
+                t = Pool.Dequeue();
+            }
+            if (t == null)
+            {
+                var go = new GameObject("FrostTrap_Pooled");
+                t = go.AddComponent<PlacedTrap>();
+            }
+
+            Vector3 groundPos = new Vector3(pos.x, 0.04f, pos.z);
+            t.transform.SetPositionAndRotation(groundPos, Quaternion.identity);
+            t.gameObject.SetActive(true);
+            t._owner = owner;
+            t._radius = radius;
+            t._dmg = dmg;
+            t._status = status;
+            t._dur = dur;
+            t._col = col;
+            t._life = 14f;
+
+            // Spawn the 3D EntangleRoots + GroundCracks + Spores VFX from pool
+            t._pooledTrapVfx = AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn(
+                "VFX_Ranger_FrostTrap", groundPos, Quaternion.identity, t.transform, Mathf.Clamp(radius / 3.2f, 0.85f, 1.35f), 14f);
+        }
+
+        private void ReleaseTrap()
+        {
+            if (_pooledTrapVfx != null)
+            {
+                AbyssalDungeon.VFX.VFXPoolManager.Instance.Release(_pooledTrapVfx);
+                _pooledTrapVfx = null;
+            }
+            gameObject.SetActive(false);
+            Pool.Enqueue(this);
         }
 
         private void Update()
         {
             _life -= Time.deltaTime;
-            if (_life <= 0f) { Destroy(gameObject); return; }
+            if (_life <= 0f)
+            {
+                ReleaseTrap();
+                return;
+            }
             for (int i = ActorUnit.AllUnits.Count - 1; i >= 0; i--)
             {
                 var u = ActorUnit.AllUnits[i];
@@ -1828,8 +2176,10 @@ namespace AbyssGame
                     if (Vector3.Distance(transform.position, u.transform.position) <= _radius * 0.65f)
                     {
                         GameAudio.I.PlaySfx(GameSfx.Explosion, 0.7f);
+                        AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn(
+                            "VFX_Ranger_FrostTrap", u.transform.position, Quaternion.identity, null, 1.15f, 1.35f);
                         _owner.DealCircleDamage(transform.position, _radius, _dmg, _status, _dur, 0f, _col);
-                        Destroy(gameObject);
+                        ReleaseTrap();
                         return;
                     }
                 }

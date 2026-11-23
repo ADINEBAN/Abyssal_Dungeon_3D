@@ -61,6 +61,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 1, g: 0.65, b: 0.2, a: 1}
+    vfxPoolKey: VFX_Mage_Fireball
+    vfxPrefab: {fileID: 3892689617730331306, guid: 8a088d1fb0ce6f04ea1c0bf401d4da4e,
+      type: 3}
   - skillName: Zen Mend
     description: "H\u1ED3i m\xE1u v\xE0 h\u1ED3i ph\u1EE5c cho c\u1EA3 \u0111\u1ED9i."
     kind: 5
@@ -71,6 +74,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 0.35, g: 0.95, b: 0.4, a: 1}
+    vfxPoolKey: VFX_Mage_FrostNova
+    vfxPrefab: {fileID: 7478229487149017072, guid: b4e5a664f3bfcb94fb21677822fea13a,
+      type: 3}
   - skillName: Palm Strike
     description: "Ch\u01B0\u1EDFng l\xE0m cho\xE1ng v\xE0 \u0111\u1EA9y l\xF9i."
     kind: 0
@@ -81,6 +87,9 @@ MonoBehaviour:
     range: 10
     isUltimate: 0
     vfxColor: {r: 1, g: 0.65, b: 0.2, a: 1}
+    vfxPoolKey: VFX_Mage_ArcanePulse
+    vfxPrefab: {fileID: 1564640937041513211, guid: 486a1ea52ce559d448f6244695a8bfd8,
+      type: 3}
   - skillName: Dragon Fist
     description: "Lao t\u1EDBi v\xE0 tung quy\u1EC1n r\u1ED3ng."
     kind: 4
@@ -91,3 +100,10 @@ MonoBehaviour:
     range: 8
     isUltimate: 1
     vfxColor: {r: 1, g: 0.45, b: 0.1, a: 1}
+    vfxPoolKey: VFX_Mage_Meteor
+    vfxPrefab: {fileID: 6841205827493305564, guid: 7a00451930b00f94588eb5d0370198d3,
+      type: 3}
+  projectileVfxPrefab: {fileID: 34769747661989744, guid: 59d6a5589a7654f46a3e10d51db1a710,
+    type: 3}
+  dashVfxPrefab: {fileID: 1489299214625273066, guid: ea02e294ac4248441bc82872a66c2b43,
+    type: 3}

@@ -69,6 +69,16 @@ namespace AbyssalDungeon.Player
                     animController.SetSkillIndex(skillIndex);
                 }
 
+                HeroSkillVfxBinding vfxBinding = GetComponent<HeroSkillVfxBinding>();
+                if (vfxBinding != null)
+                {
+                    vfxBinding.SpawnSkillVfx(skillIndex, transform.position, transform.rotation, 1f);
+                }
+                else
+                {
+                    VFXPoolManager.Instance.SpawnForClassSkill(0, skillIndex, transform.position, transform.rotation, 1f);
+                }
+
                 OnAttack?.Invoke();
                 float skillMultiplier = 1.5f + (skillIndex * 0.5f);
                 StartCoroutine(PerformAttack(0.3f, skillMultiplier));
