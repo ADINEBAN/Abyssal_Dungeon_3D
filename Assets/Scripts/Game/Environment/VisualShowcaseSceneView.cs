@@ -12,24 +12,79 @@ namespace AbyssGame
     /// </summary>
     public class VisualShowcaseSceneView : MonoBehaviour
     {
-        private ActorUnit _hero;
-        private bool _cinematicMode = true;
+        [SerializeField] private bool _isPrebakedInScene;
+        [SerializeField] private ActorUnit _hero;
+        [SerializeField] private bool _cinematicMode = true;
         private float _cineAngle;
-        private Canvas _hudCanvas;
-        private Text _biomeLabel;
-        private Text _modeLabel;
+        [SerializeField] private Canvas _hudCanvas;
+        [SerializeField] private Text _biomeLabel;
+        [SerializeField] private Text _modeLabel;
+        [SerializeField] private Button _btnToggleCam;
+        [SerializeField] private Button _btnBack;
+        [SerializeField] private Button[] _biomeBtns = new Button[7];
+
+        private bool _runtimeInitialized;
+        public bool IsPrebakedInScene => _isPrebakedInScene;
+
+        private void Start()
+        {
+            if (_isPrebakedInScene && !_runtimeInitialized)
+                InitializePrebaked();
+        }
+
+        public void InitializePrebaked()
+        {
+            if (_runtimeInitialized) return;
+            _runtimeInitialized = true;
+
+            if (Application.isPlaying)
+                GameAudio.I.PlayMusic(GameMusic.Dungeon);
+
+            if (_hero != null)
+            {
+                _hero.InitHero(GameSession.I.Profile.selectedClass, GameSession.I.Profile.selectedBuild,
+                    GameSession.I.Profile.level, GameSession.I.Profile.heroName, true, 0);
+                if (_hero.GetComponent<HeroPlayerInput>() == null)
+                    _hero.gameObject.AddComponent<HeroPlayerInput>();
+            }
+
+            BindShowcaseButton(_btnToggleCam, () => ApplyCameraMode(!_cinematicMode));
+            BindShowcaseButton(_btnBack, () => GameSession.GoToScene("MainMenu"));
+
+            for (int i = 0; i < 7 && _biomeBtns != null && i < _biomeBtns.Length; i++)
+            {
+                int idx = i;
+                BindShowcaseButton(_biomeBtns[i], () => SwitchBiome((DungeonBiome)idx));
+            }
+
+            ApplyCameraMode(true);
+        }
+
+        private static void BindShowcaseButton(Button btn, System.Action onClick)
+        {
+            if (btn == null) return;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() =>
+            {
+                GameAudio.I?.PlaySfx(GameSfx.Click, 0.6f);
+                onClick?.Invoke();
+            });
+        }
 
         public void Build()
         {
             AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(transform);
             var atmo = BiomeAtmosphereController.EnsureOnScene(transform);
             atmo.ApplyBiome(DungeonBiome.ForgottenTemple, instant: true);
-            GameAudio.I.PlayMusic(GameMusic.Dungeon);
+            if (Application.isPlaying)
+                GameAudio.I.PlayMusic(GameMusic.Dungeon);
 
             BuildCathedralNaveArchitecture();
             SpawnWalkableHero();
             BuildShowcaseHUD();
             ApplyCameraMode(true);
+            _isPrebakedInScene = true;
+            _runtimeInitialized = Application.isPlaying;
         }
 
         private void BuildCathedralNaveArchitecture()
@@ -117,23 +172,27 @@ namespace AbyssGame
 
         private void BuildClerestoryLightShafts(Transform parent)
         {
-            Shader addSh = Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default");
-            var shaftMat = new Material(addSh) { name = "M_ClerestoryShaft" };
-            Color shaftCol = new Color(0.72f, 0.80f, 1.0f, 0.055f);
-            if (shaftMat.HasProperty("_Surface")) shaftMat.SetFloat("_Surface", 1f);
-            if (shaftMat.HasProperty("_Blend")) shaftMat.SetFloat("_Blend", 2f);
-            if (shaftMat.HasProperty("_SrcBlend")) shaftMat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            if (shaftMat.HasProperty("_DstBlend")) shaftMat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
-            if (shaftMat.HasProperty("_ZWrite")) shaftMat.SetFloat("_ZWrite", 0f);
-            if (shaftMat.HasProperty("_BaseColor")) shaftMat.SetColor("_BaseColor", shaftCol);
-            shaftMat.color = shaftCol;
+            Material shaftMat = BakedAssetRegistry.GetOrCreateMaterial("M_ClerestoryShaft", () =>
+            {
+                Shader addSh = Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default");
+                var m = new Material(addSh) { name = "M_ClerestoryShaft" };
+                Color shaftCol = new Color(0.72f, 0.80f, 1.0f, 0.055f);
+                if (m.HasProperty("_Surface")) m.SetFloat("_Surface", 1f);
+                if (m.HasProperty("_Blend")) m.SetFloat("_Blend", 2f);
+                if (m.HasProperty("_SrcBlend")) m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                if (m.HasProperty("_DstBlend")) m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+                if (m.HasProperty("_ZWrite")) m.SetFloat("_ZWrite", 0f);
+                if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", shaftCol);
+                m.color = shaftCol;
+                return m;
+            });
 
             float[] zPositions = { 8.5f, 15.5f, 22.0f };
             for (int i = 0; i < zPositions.Length; i++)
             {
                 var beam = GameObject.CreatePrimitive(PrimitiveType.Quad);
                 beam.name = "ClerestorySunShaft_" + i;
-                Destroy(beam.GetComponent<Collider>());
+                BakedAssetRegistry.DestroySafe(beam.GetComponent<Collider>());
                 beam.transform.SetParent(parent, false);
                 beam.transform.position = new Vector3(-2.5f, 4.4f, zPositions[i]);
                 beam.transform.rotation = Quaternion.Euler(12f, 25f, -38f);
@@ -209,11 +268,11 @@ namespace AbyssGame
                 14, FontStyle.Normal, GameUIKit.ColMuted, TextAnchor.MiddleRight,
                 new Vector2(0.45f, 0f), new Vector2(0.74f, 1f), Vector2.zero, new Vector2(-12f, 0f));
 
-            GameUIKit.MakeButton("BtnToggleCam", top.transform, "Đổi Camera [C]", 14, GameUIKit.ColAccent, Color.white,
+            _btnToggleCam = GameUIKit.MakeButton("BtnToggleCam", top.transform, "Đổi Camera [C]", 14, GameUIKit.ColAccent, Color.white,
                 new Vector2(0.75f, 0.16f), new Vector2(0.87f, 0.84f), Vector2.zero, Vector2.zero,
                 () => ApplyCameraMode(!_cinematicMode));
 
-            GameUIKit.MakeButton("BtnBack", top.transform, "← Main Menu", 14, GameUIKit.ColCard, Color.white,
+            _btnBack = GameUIKit.MakeButton("BtnBack", top.transform, "← Main Menu", 14, GameUIKit.ColCard, Color.white,
                 new Vector2(0.88f, 0.16f), new Vector2(0.99f, 0.84f), Vector2.zero, Vector2.zero,
                 () => GameSession.GoToScene("MainMenu"));
 
@@ -232,10 +291,11 @@ namespace AbyssGame
                 int idx = i;
                 float a0 = i / 7f + 0.005f;
                 float a1 = (i + 1) / 7f - 0.005f;
-                GameUIKit.MakeButton("BiomeBtn_" + i, bot.transform, shortNames[i], 13, GameUIKit.ColCard, Color.white,
+                _biomeBtns[i] = GameUIKit.MakeButton("BiomeBtn_" + i, bot.transform, shortNames[i], 13, GameUIKit.ColCard, Color.white,
                     new Vector2(a0, 0.14f), new Vector2(a1, 0.86f), Vector2.zero, Vector2.zero,
                     () => SwitchBiome((DungeonBiome)idx));
             }
+            GameUIKit.OptimizeCanvasHierarchy(_hudCanvas);
         }
 
         private void SwitchBiome(DungeonBiome biome)

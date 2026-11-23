@@ -35,6 +35,7 @@ namespace AbyssGame
     public enum Archetype { Melee, Ranged, Mage, Tank, Assassin, Elite, MiniBoss, Boss }
     public enum RoomType { Entrance, Combat, Elite, Puzzle, MiniBoss, Boss }
 
+    [System.Serializable]
     public class SkillDef
     {
         public string name;
@@ -58,6 +59,7 @@ namespace AbyssGame
         public float selfStatusDur;
     }
 
+    [System.Serializable]
     public class ClassDef
     {
         public int id;
@@ -77,6 +79,7 @@ namespace AbyssGame
         public string passive;
     }
 
+    [System.Serializable]
     public class EnemyDef
     {
         public string id;

@@ -34,6 +34,8 @@ namespace AbyssGame
         public ClassDef HeroClass;
         public int BuildIndex;
         public EnemyDef MonsterDef;
+        public string BakedEnemyId = "";
+        public bool IsRoomDormant;
         public int Level = 1;
 
         // Computed stats
@@ -136,11 +138,11 @@ namespace AbyssGame
         public GameObject BearVisual;
         private float _swingAnimTimer;
         private Vector3 _velocity;
-        private Transform _hpBarFill;
-        private Transform _staggerBarFill;
-        private Transform _shieldBarFill;
-        private Transform _hpBarRoot;
-        private TextMesh _nameLabel;
+        [SerializeField] private Transform _hpBarFill;
+        [SerializeField] private Transform _staggerBarFill;
+        [SerializeField] private Transform _shieldBarFill;
+        [SerializeField] private Transform _hpBarRoot;
+        [SerializeField] private TextMesh _nameLabel;
 
         // Events
         public event Action<ActorUnit, ActorUnit, float, bool> OnDamaged; // victim, attacker, dmg, crit
@@ -154,12 +156,30 @@ namespace AbyssGame
 
         private void OnEnable()
         {
-            if (!AllUnits.Contains(this)) AllUnits.Add(this);
+            if (!IsRoomDormant && !AllUnits.Contains(this)) AllUnits.Add(this);
         }
 
         private void OnDisable()
         {
             AllUnits.Remove(this);
+        }
+
+        public void SetRoomDormant(bool dormant)
+        {
+            IsRoomDormant = dormant;
+            if (dormant)
+            {
+                AllUnits.Remove(this);
+            }
+            else if (isActiveAndEnabled && !AllUnits.Contains(this))
+            {
+                AllUnits.Add(this);
+            }
+            var mAi = GetComponent<MonsterAI>();
+            if (mAi != null) mAi.enabled = !dormant;
+            var bAi = GetComponent<AbyssalBossAI>();
+            if (bAi != null) bAi.enabled = !dormant;
+            if (_hpBarRoot != null) _hpBarRoot.gameObject.SetActive(!dormant && !IsDead);
         }
 
         public void InitHero(int classId, int buildId, int level, string displayName, bool isLocal, int partySlot)
@@ -248,6 +268,7 @@ namespace AbyssGame
         {
             Team = Team.Monster;
             MonsterDef = def;
+            BakedEnemyId = def != null ? def.id : "";
             Level = Mathf.Max(1, floor);
             IsElite = elite || def.archetype == Archetype.Elite;
             IsMiniBoss = miniBoss || def.archetype == Archetype.MiniBoss;
@@ -258,13 +279,76 @@ namespace AbyssGame
             float h = IsBoss ? 3.2f : 2.0f;
             EnsureController(rad, h);
 
+            if (MainVisual != null)
+            {
+                BakedAssetRegistry.DestroySafe(MainVisual);
+                MainVisual = null;
+            }
+            if (_hpBarRoot != null)
+            {
+                BakedAssetRegistry.DestroySafe(_hpBarRoot.gameObject);
+                _hpBarRoot = null;
+            }
+
             MainVisual = CharacterVisualFactory.BuildMonsterVisual(def, IsElite || IsMiniBoss, transform, out Anim);
             if (IsMiniBoss && !IsBoss) MainVisual.transform.localScale *= 1.32f;
             else if (IsElite && def.archetype != Archetype.Elite && !IsBoss) MainVisual.transform.localScale *= 1.18f;
             VisualBaseScale = MainVisual != null ? MainVisual.transform.localScale.x : 1f;
 
+            ApplyMonsterFloorStats(def, floor, hpMult, atkMult, rollNewAffix: true);
+
+            if (Anim != null && Mathf.Abs(def.animSpeed - 1f) > 0.02f) Anim.speed = def.animSpeed;
+            if (!IsBoss)
+            {
+                Color barCol = IsMiniBoss ? new Color(1f, 0.5f, 0.1f) : (IsElite ? new Color(0.95f, 0.75f, 0.15f) : new Color(0.9f, 0.22f, 0.22f));
+                BuildOverheadBar(barCol, (IsMiniBoss ? 3.1f : 2.25f) * def.scale);
+            }
+
+            SetupCombatAttachments(rad, h);
+            _motionPolisher = GetComponent<CharacterMotionPolisher>();
+            if (_motionPolisher == null) _motionPolisher = gameObject.AddComponent<CharacterMotionPolisher>();
+            _motionPolisher.Bind(this);
+        }
+
+        public void ReinitializePrebakedMonster(int floor, float hpMult, float atkMult)
+        {
+            Team = Team.Monster;
+            EnemyDef def = MonsterDef;
+            if (def == null || string.IsNullOrEmpty(def.id))
+            {
+                if (IsBoss || BakedEnemyId == "AbyssalKnight")
+                    def = GameDB.Boss;
+                else if (!string.IsNullOrEmpty(BakedEnemyId) && GameDB.Enemies.TryGetValue(BakedEnemyId, out var found))
+                    def = found;
+                else
+                    def = GameDB.Enemies["Skeleton"];
+            }
+            MonsterDef = def;
+            BakedEnemyId = def.id;
+
+            if (Controller == null) Controller = GetComponent<CharacterController>();
+            if (Anim == null && MainVisual != null) Anim = MainVisual.GetComponentInChildren<Animator>();
+            if (MainVisual != null) VisualBaseScale = MainVisual.transform.localScale.x;
+
+            ApplyMonsterFloorStats(def, floor, hpMult, atkMult, rollNewAffix: true);
+
+            if (_nameLabel != null)
+                _nameLabel.text = DisplayName;
+
+            float rad = IsBoss ? 0.95f : (def.model == ModelKind.Golem ? 0.8f : 0.48f);
+            float h = IsBoss ? 3.2f : 2.0f;
+            SetupCombatAttachments(rad, h);
+            _motionPolisher = GetComponent<CharacterMotionPolisher>();
+            if (_motionPolisher == null) _motionPolisher = gameObject.AddComponent<CharacterMotionPolisher>();
+            _motionPolisher.Bind(this);
+        }
+
+        private void ApplyMonsterFloorStats(EnemyDef def, int floor, float hpMult, float atkMult, bool rollNewAffix)
+        {
+            Level = Mathf.Max(1, floor);
+            DisplayName = IsBoss ? def.name : (IsMiniBoss ? "[Mini Boss] " + def.name : (IsElite ? "[Tinh Anh] " + def.name : def.name));
+
             float floorScale = 1f + (floor - 1) * 0.28f;
-            // Rebalanced difficulty: Normal monsters 2.8x HP & 1.8x ATK; Elites/Bosses 5.2x-5.8x HP with Poise Bar & Affixes
             float tierHp = IsBoss ? 5.5f : (IsMiniBoss ? 5.8f : (IsElite ? 5.2f : 2.8f));
             float tierAtk = IsBoss ? 1.85f : (IsMiniBoss ? 2.05f : (IsElite ? 1.92f : 1.80f));
 
@@ -282,8 +366,7 @@ namespace AbyssGame
             IsRanged = (def.archetype == Archetype.Ranged || def.archetype == Archetype.Mage);
             CritChance = IsBoss ? 0.15f : (IsElite ? 0.09f : 0.05f);
 
-            // Roll Elite Affix (Vampiric, Thorns, Molten Death, Arcane Shielded)
-            if ((IsElite || IsMiniBoss) && !IsBoss)
+            if ((IsElite || IsMiniBoss) && !IsBoss && rollNewAffix)
             {
                 ActiveEliteAffix = EnemyTacticalBrain.RollEliteAffix(def, true);
                 string afx = EnemyTacticalBrain.GetAffixLabel(ActiveEliteAffix);
@@ -294,18 +377,6 @@ namespace AbyssGame
                 else if (ActiveEliteAffix == EliteAffixKind.ArcaneShielded)
                     Shield = MaxHp * 0.35f;
             }
-
-            if (Anim != null && Mathf.Abs(def.animSpeed - 1f) > 0.02f) Anim.speed = def.animSpeed;
-            if (!IsBoss)
-            {
-                Color barCol = IsMiniBoss ? new Color(1f, 0.5f, 0.1f) : (IsElite ? new Color(0.95f, 0.75f, 0.15f) : new Color(0.9f, 0.22f, 0.22f));
-                BuildOverheadBar(barCol, (IsMiniBoss ? 3.1f : 2.25f) * def.scale);
-            }
-
-            SetupCombatAttachments(rad, h);
-            _motionPolisher = GetComponent<CharacterMotionPolisher>();
-            if (_motionPolisher == null) _motionPolisher = gameObject.AddComponent<CharacterMotionPolisher>();
-            _motionPolisher.Bind(this);
         }
 
         public void InitSummon(ActorUnit summoner, float duration)

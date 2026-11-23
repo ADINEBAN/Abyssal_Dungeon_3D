@@ -19,7 +19,38 @@ namespace AbyssalDungeon.EditorTools
     public static class SceneRuntimeToEditModeBaker
     {
         public const string MainMenuScenePath = "Assets/Scenes/MainMenu.unity";
+        public const string ClassSelectionScenePath = "Assets/Scenes/ClassSelection.unity";
+        public const string LobbyScenePath = "Assets/Scenes/Lobby.unity";
         public const string TownScenePath = "Assets/Scenes/Town.unity";
+        public const string DungeonScenePath = "Assets/Scenes/Dungeon.unity";
+        public const string EndGameScenePath = "Assets/Scenes/EndGame.unity";
+        public const string VisualShowcaseScenePath = "Assets/Scenes/VisualShowcase.unity";
+
+        [MenuItem("Abyssal Dungeon/Bake Scenes to Edit Mode/0. Bake ALL 7 Game Scenes + Prefabs + NavMesh")]
+        public static void BakeAllSevenScenes()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogError("[SceneBaker] Please exit Play Mode before baking scenes.");
+                return;
+            }
+
+            BakedAssetRegistry.EnsureFolders();
+            BakedAssetRegistry.ResetPrefabSessionCache();
+
+            BakeClassSelectionScene();
+            BakeLobbyScene();
+            BakeTownScene();
+            BakeDungeonScene();
+            BakeEndGameScene();
+            BakeVisualShowcaseScene();
+            BakeMainMenuScene();
+            EnsureEditorBuildSettingsOrder();
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("<color=#78E888>[SceneBaker] All 7 Scenes + Prefabs + GeneratedBakedAssets + Build Settings successfully baked in Edit Mode!</color>");
+        }
 
         [MenuItem("Abyssal Dungeon/Bake Scenes to Edit Mode/1. Pilot: Bake MainMenu + Town Scenes")]
         public static void BakePilotMainMenuAndTown()
@@ -56,6 +87,116 @@ namespace AbyssalDungeon.EditorTools
                 var builder = root.AddComponent<TownSceneBuilder>();
                 builder.Build();
             }, bakeNavMesh: true);
+        }
+
+        [MenuItem("Abyssal Dungeon/Bake Scenes to Edit Mode/4. Bake ClassSelection Scene Only")]
+        public static void BakeClassSelectionScene()
+        {
+            BakeSingleScene(ClassSelectionScenePath, "ClassSelection", root =>
+            {
+                var view = root.AddComponent<ClassSelectSceneView>();
+                view.Build();
+            }, bakeNavMesh: false);
+        }
+
+        [MenuItem("Abyssal Dungeon/Bake Scenes to Edit Mode/5. Bake Lobby Scene Only")]
+        public static void BakeLobbyScene()
+        {
+            BakeSingleScene(LobbyScenePath, "Lobby", root =>
+            {
+                var view = root.AddComponent<LobbySceneView>();
+                view.Build();
+            }, bakeNavMesh: false);
+        }
+
+        [MenuItem("Abyssal Dungeon/Bake Scenes to Edit Mode/6. Bake Dungeon Scene Only (+ Prefabs & NavMesh)")]
+        public static void BakeDungeonScene()
+        {
+            BakedAssetRegistry.ResetPrefabSessionCache();
+            BakeSingleScene(DungeonScenePath, "Dungeon", root =>
+            {
+                var dw = root.AddComponent<DungeonWorldBuilder>();
+                dw.BuildAndStartDungeon();
+                var hud = root.AddComponent<DungeonHUDView>();
+                hud.Build();
+
+                // Ensure all pre-baked monsters' overhead HP bars remain visible in Edit Mode Scene View
+                foreach (var u in UnityEngine.Object.FindObjectsOfType<ActorUnit>(true))
+                {
+                    if (u == null) continue;
+                    var bar = u.transform.Find("OverheadBar");
+                    if (bar != null) bar.gameObject.SetActive(true);
+                }
+            }, bakeNavMesh: true);
+        }
+
+        [MenuItem("Abyssal Dungeon/Bake Scenes to Edit Mode/7. Bake EndGame Scene Only")]
+        public static void BakeEndGameScene()
+        {
+            BakeSingleScene(EndGameScenePath, "EndGame", root =>
+            {
+                var view = root.AddComponent<EndGameSceneView>();
+                view.Build();
+            }, bakeNavMesh: false);
+        }
+
+        [MenuItem("Abyssal Dungeon/Bake Scenes to Edit Mode/8. Bake VisualShowcase Scene Only")]
+        public static void BakeVisualShowcaseScene()
+        {
+            BakeSingleScene(VisualShowcaseScenePath, "VisualShowcase", root =>
+            {
+                var view = root.AddComponent<VisualShowcaseSceneView>();
+                view.Build();
+            }, bakeNavMesh: true);
+        }
+
+        [MenuItem("Abyssal Dungeon/Bake Scenes to Edit Mode/9. Bake Remaining 5 Scenes (ClassSelection, Lobby, Dungeon, EndGame, VisualShowcase)")]
+        public static void BakeRemainingFiveScenes()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogError("[SceneBaker] Please exit Play Mode before baking scenes.");
+                return;
+            }
+
+            BakedAssetRegistry.EnsureFolders();
+            BakedAssetRegistry.ResetPrefabSessionCache();
+
+            BakeClassSelectionScene();
+            BakeLobbyScene();
+            BakeDungeonScene();
+            BakeEndGameScene();
+            BakeVisualShowcaseScene();
+            EnsureEditorBuildSettingsOrder();
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("<color=#78E888>[SceneBaker] Remaining 5 Scenes (ClassSelection, Lobby, Dungeon, EndGame, VisualShowcase) + Prefabs + NavMesh + Build Settings baked in Edit Mode!</color>");
+        }
+
+        public static void EnsureEditorBuildSettingsOrder()
+        {
+            string[] orderedScenePaths =
+            {
+                MainMenuScenePath,
+                ClassSelectionScenePath,
+                LobbyScenePath,
+                TownScenePath,
+                DungeonScenePath,
+                EndGameScenePath,
+                VisualShowcaseScenePath
+            };
+
+            var list = new List<EditorBuildSettingsScene>(orderedScenePaths.Length);
+            for (int i = 0; i < orderedScenePaths.Length; i++)
+            {
+                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(orderedScenePaths[i]) != null)
+                {
+                    list.Add(new EditorBuildSettingsScene(orderedScenePaths[i], true));
+                }
+            }
+            EditorBuildSettings.scenes = list.ToArray();
+            Debug.Log($"<color=#F8DC85>[SceneBaker]</color> Updated EditorBuildSettings.scenes ({list.Count} scenes, Index 0 = {orderedScenePaths[0]}).");
         }
 
         private static void BakeSingleScene(string scenePath, string sceneKindName, Action<GameObject> buildAction, bool bakeNavMesh)
@@ -164,8 +305,9 @@ namespace AbyssalDungeon.EditorTools
             else
             {
                 // Remove leftover OrbitCamera3D before baking a non-gameplay scene if needed
+                string sn = SceneManager.GetActiveScene().name;
                 var orbit = Camera.main.GetComponent<OrbitCamera3D>();
-                if (orbit != null && SceneManager.GetActiveScene().name == "MainMenu")
+                if (orbit != null && sn != "Dungeon" && sn != "Town" && sn != "VisualShowcase")
                     UnityEngine.Object.DestroyImmediate(orbit);
             }
 
@@ -223,7 +365,15 @@ namespace AbyssalDungeon.EditorTools
                 "WoodPlank_",
                 "WoodDeckIronEdge",
                 "MetalFloor_",
-                "IronGratePlate"
+                "IronGratePlate",
+                "ModularCorridor",
+                "CorridorFloor",
+                "StoneStairs_Grand",
+                "StairsWalkRamp",
+                "SanctuaryDais",
+                "DaisCollider",
+                "BossThroneAltar",
+                "AncientRuins_Rubble"
             };
 
             foreach (var root in scene.GetRootGameObjects())
@@ -243,6 +393,52 @@ namespace AbyssalDungeon.EditorTools
                     }
                 }
             }
+        }
+
+        [MenuItem("Abyssal Dungeon/Bake Scenes to Edit Mode/10. Audit All 7 Scenes (Missing Scripts, Prefabs, Build Settings)")]
+        public static void AuditAllSevenScenes()
+        {
+            EnsureEditorBuildSettingsOrder();
+
+            string[] paths =
+            {
+                MainMenuScenePath,
+                ClassSelectionScenePath,
+                LobbyScenePath,
+                TownScenePath,
+                DungeonScenePath,
+                EndGameScenePath,
+                VisualShowcaseScenePath
+            };
+
+            int totalMissingScripts = 0;
+            for (int s = 0; s < paths.Length; s++)
+            {
+                var sc = EditorSceneManager.OpenScene(paths[s], OpenSceneMode.Single);
+                int missingInScene = 0;
+                int prefabRootsInScene = 0;
+                int totalTransforms = 0;
+
+                foreach (var r in sc.GetRootGameObjects())
+                {
+                    if (r == null) continue;
+                    foreach (var tr in r.GetComponentsInChildren<Transform>(true))
+                    {
+                        if (tr == null) continue;
+                        totalTransforms++;
+                        missingInScene += GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(tr.gameObject);
+                        if (PrefabUtility.IsAnyPrefabInstanceRoot(tr.gameObject))
+                            prefabRootsInScene++;
+                    }
+                }
+
+                totalMissingScripts += missingInScene;
+                Debug.Log($"<color=#78E888>[SceneAudit]</color> <b>{sc.name}.unity</b>: Roots={sc.rootCount}, Transforms={totalTransforms}, PrefabInstances={prefabRootsInScene}, MissingScripts={missingInScene}");
+            }
+
+            // Leave Dungeon.unity open so the user can immediately inspect the 7-room + branches + Prefab Instances in Edit Mode
+            EditorSceneManager.OpenScene(DungeonScenePath, OpenSceneMode.Single);
+            Debug.Log($"<color=#F8DC85>[SceneAudit] Completed audit across all 7 scenes. Total Missing Scripts = {totalMissingScripts}.</color>");
         }
     }
 }

@@ -172,6 +172,66 @@ namespace AbyssGame
                     }
                     return false;
 
+                case "Lobby":
+                    var lb = FindObjectOfType<LobbySceneView>();
+                    if (lb != null && lb.IsPrebakedInScene)
+                    {
+                        _activeRoot = lb.gameObject;
+                        AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(_activeRoot.transform);
+                        lb.InitializePrebaked();
+                        return true;
+                    }
+                    return false;
+
+                case "ClassSelection":
+                    var cs = FindObjectOfType<ClassSelectSceneView>();
+                    if (cs != null && cs.IsPrebakedInScene)
+                    {
+                        _activeRoot = cs.gameObject;
+                        AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(_activeRoot.transform);
+                        cs.InitializePrebaked();
+                        return true;
+                    }
+                    return false;
+
+                case "Dungeon":
+                    var dw = FindObjectOfType<DungeonWorldBuilder>();
+                    var hud = FindObjectOfType<DungeonHUDView>();
+                    if (dw != null && dw.IsPrebakedInScene)
+                    {
+                        _activeRoot = dw.gameObject;
+                        AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(_activeRoot.transform);
+                        dw.InitializePrebaked();
+                        if (hud != null && hud.IsPrebakedInScene)
+                            hud.InitializePrebaked();
+                        else if (hud == null)
+                            _activeRoot.AddComponent<DungeonHUDView>().Build();
+                        return true;
+                    }
+                    return false;
+
+                case "EndGame":
+                    var eg = FindObjectOfType<EndGameSceneView>();
+                    if (eg != null && eg.IsPrebakedInScene)
+                    {
+                        _activeRoot = eg.gameObject;
+                        AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(_activeRoot.transform);
+                        eg.InitializePrebaked();
+                        return true;
+                    }
+                    return false;
+
+                case "VisualShowcase":
+                    var vs = FindObjectOfType<VisualShowcaseSceneView>();
+                    if (vs != null && vs.IsPrebakedInScene)
+                    {
+                        _activeRoot = vs.gameObject;
+                        AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(_activeRoot.transform);
+                        vs.InitializePrebaked();
+                        return true;
+                    }
+                    return false;
+
                 default:
                     return false;
             }

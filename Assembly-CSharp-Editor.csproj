@@ -65,9 +65,9 @@
     <Compile Include="Assets\Scripts\Editor\TestSceneGenerator.cs" />
     <Compile Include="Assets\Scripts\Editor\AbyssalDungeonGenerator.cs" />
     <Compile Include="Assets\Editor\PlayModeStartSceneSetup.cs" />
+    <Compile Include="Assets\Editor\SceneRuntimeToEditModeBaker.cs" />
     <Compile Include="Assets\Scripts\Game\Editor\ModelImportSetup.cs" />
     <Compile Include="Assets\Scripts\Game\Editor\AbyssalAutoSetup.cs" />
-    <Compile Include="Assets\Editor\SceneRuntimeToEditModeBaker.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">

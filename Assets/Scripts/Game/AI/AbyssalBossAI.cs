@@ -33,11 +33,28 @@ namespace AbyssGame
         private void Awake()
         {
             _self = GetComponent<ActorUnit>();
-            ActiveBoss = this;
             if (_self != null)
             {
                 _self.OnKilled += HandleBossDefeated;
             }
+        }
+
+        private void OnEnable()
+        {
+            if (_self == null) _self = GetComponent<ActorUnit>();
+            if (_self != null && _self.IsRoomDormant) return;
+            ActiveBoss = this;
+            if (Application.isPlaying)
+            {
+                if (ArenaCenter == Vector3.zero) ArenaCenter = transform.position;
+                GameAudio.I.PlayMusic(GameMusic.Boss);
+                GameAudio.I.PlaySfx(GameSfx.BossRoar, 1f);
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (ActiveBoss == this) ActiveBoss = null;
         }
 
         private void OnDestroy()
@@ -60,8 +77,6 @@ namespace AbyssGame
         private void Start()
         {
             if (ArenaCenter == Vector3.zero) ArenaCenter = transform.position;
-            GameAudio.I.PlayMusic(GameMusic.Boss);
-            GameAudio.I.PlaySfx(GameSfx.BossRoar, 1f);
         }
 
         private void Update()
