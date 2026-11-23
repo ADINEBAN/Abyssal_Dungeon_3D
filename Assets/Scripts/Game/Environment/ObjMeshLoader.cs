@@ -310,21 +310,29 @@ namespace AbyssGame
                 AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(c * 0.52f, 4.62f, 0f), new Vector3(0.16f, 0.18f, 0.52f), 0.45f);
             }
 
-            _gothicBrickWallStoneMesh = new Mesh { name = "OrnateGothicBrickWall_Stone" };
-            _gothicBrickWallStoneMesh.SetVertices(sV);
-            _gothicBrickWallStoneMesh.SetUVs(0, sUV);
-            _gothicBrickWallStoneMesh.SetNormals(sN);
-            _gothicBrickWallStoneMesh.SetTriangles(sT, 0);
-            _gothicBrickWallStoneMesh.RecalculateBounds();
-            _gothicBrickWallStoneMesh.RecalculateTangents();
+            _gothicBrickWallStoneMesh = BakedAssetRegistry.GetOrCreateMesh("OrnateGothicBrickWall_Stone", () =>
+            {
+                var m = new Mesh { name = "OrnateGothicBrickWall_Stone" };
+                m.SetVertices(sV);
+                m.SetUVs(0, sUV);
+                m.SetNormals(sN);
+                m.SetTriangles(sT, 0);
+                m.RecalculateBounds();
+                m.RecalculateTangents();
+                return m;
+            });
 
-            _gothicBrickWallGoldMesh = new Mesh { name = "OrnateGothicBrickWall_GoldTrim" };
-            _gothicBrickWallGoldMesh.SetVertices(gV);
-            _gothicBrickWallGoldMesh.SetUVs(0, gUV);
-            _gothicBrickWallGoldMesh.SetNormals(gN);
-            _gothicBrickWallGoldMesh.SetTriangles(gT, 0);
-            _gothicBrickWallGoldMesh.RecalculateBounds();
-            _gothicBrickWallGoldMesh.RecalculateTangents();
+            _gothicBrickWallGoldMesh = BakedAssetRegistry.GetOrCreateMesh("OrnateGothicBrickWall_GoldTrim", () =>
+            {
+                var m = new Mesh { name = "OrnateGothicBrickWall_GoldTrim" };
+                m.SetVertices(gV);
+                m.SetUVs(0, gUV);
+                m.SetNormals(gN);
+                m.SetTriangles(gT, 0);
+                m.RecalculateBounds();
+                m.RecalculateTangents();
+                return m;
+            });
         }
 
         /// <summary>
@@ -348,25 +356,13 @@ namespace AbyssGame
             root.transform.localRotation = localRot;
             root.transform.localScale = localScale;
 
-            Material stoneMat = PbrMaterialLibrary.CathedralFloor();
+            Material stoneMat = floorMat != null ? floorMat : PbrMaterialLibrary.CathedralFloor();
             Material goldMat = PbrMaterialLibrary.RunicGold();
 
             var rStone = CreateMeshChild("GothicFloorMasonry", root.transform, _gothicCathedralFloorStoneMesh, stoneMat, false);
             rStone.receiveShadows = true;
             var rGold = CreateMeshChild("GothicFloorGoldInlay", root.transform, _gothicCathedralFloorGoldMesh, goldMat, false);
             rGold.receiveShadows = true;
-
-            // Subtle biome/room tint via MaterialPropertyBlock while preserving hand-crafted cathedral floor PBR texture
-            if (floorMat != null)
-            {
-                Color callerCol = floorMat.HasProperty("_BaseColor") ? floorMat.GetColor("_BaseColor") : floorMat.color;
-                Color tinted = Color.Lerp(Color.white, callerCol, 0.22f);
-                tinted.a = 1f;
-                _mpb.Clear();
-                _mpb.SetColor("_BaseColor", tinted);
-                _mpb.SetColor("_Color", tinted);
-                rStone.SetPropertyBlock(_mpb);
-            }
 
             if (addBoxCollider)
             {
@@ -451,21 +447,29 @@ namespace AbyssGame
             AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(-0.48f, 0.001f, 0f), new Vector3(0.06f, 0.028f, 1.02f));
             AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(0f, 0.003f, 0f), new Vector3(0.36f, 0.030f, 0.36f));
 
-            _gothicCathedralFloorStoneMesh = new Mesh { name = "OrnateGothicCathedralFloor_Stone" };
-            _gothicCathedralFloorStoneMesh.SetVertices(sV);
-            _gothicCathedralFloorStoneMesh.SetUVs(0, sUV);
-            _gothicCathedralFloorStoneMesh.SetNormals(sN);
-            _gothicCathedralFloorStoneMesh.SetTriangles(sT, 0);
-            _gothicCathedralFloorStoneMesh.RecalculateBounds();
-            _gothicCathedralFloorStoneMesh.RecalculateTangents();
+            _gothicCathedralFloorStoneMesh = BakedAssetRegistry.GetOrCreateMesh("OrnateGothicCathedralFloor_Stone", () =>
+            {
+                var m = new Mesh { name = "OrnateGothicCathedralFloor_Stone" };
+                m.SetVertices(sV);
+                m.SetUVs(0, sUV);
+                m.SetNormals(sN);
+                m.SetTriangles(sT, 0);
+                m.RecalculateBounds();
+                m.RecalculateTangents();
+                return m;
+            });
 
-            _gothicCathedralFloorGoldMesh = new Mesh { name = "OrnateGothicCathedralFloor_GoldInlay" };
-            _gothicCathedralFloorGoldMesh.SetVertices(gV);
-            _gothicCathedralFloorGoldMesh.SetUVs(0, gUV);
-            _gothicCathedralFloorGoldMesh.SetNormals(gN);
-            _gothicCathedralFloorGoldMesh.SetTriangles(gT, 0);
-            _gothicCathedralFloorGoldMesh.RecalculateBounds();
-            _gothicCathedralFloorGoldMesh.RecalculateTangents();
+            _gothicCathedralFloorGoldMesh = BakedAssetRegistry.GetOrCreateMesh("OrnateGothicCathedralFloor_GoldInlay", () =>
+            {
+                var m = new Mesh { name = "OrnateGothicCathedralFloor_GoldInlay" };
+                m.SetVertices(gV);
+                m.SetUVs(0, gUV);
+                m.SetNormals(gN);
+                m.SetTriangles(gT, 0);
+                m.RecalculateBounds();
+                m.RecalculateTangents();
+                return m;
+            });
         }
 
         /// <summary>
@@ -591,25 +595,29 @@ namespace AbyssGame
         public static Mesh GetHorizontalQuadMesh()
         {
             if (_quadMesh != null) return _quadMesh;
-            _quadMesh = new Mesh { name = "AbyssalHorizontalQuad" };
-            _quadMesh.vertices = new[]
+            _quadMesh = BakedAssetRegistry.GetOrCreateMesh("AbyssalHorizontalQuad", () =>
             {
-                new Vector3(-0.5f, 0f, -0.5f),
-                new Vector3(-0.5f, 0f,  0.5f),
-                new Vector3( 0.5f, 0f,  0.5f),
-                new Vector3( 0.5f, 0f, -0.5f)
-            };
-            _quadMesh.uv = new[]
-            {
-                new Vector2(0f, 0f),
-                new Vector2(0f, 1f),
-                new Vector2(1f, 1f),
-                new Vector2(1f, 0f)
-            };
-            _quadMesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
-            _quadMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
-            _quadMesh.RecalculateBounds();
-            _quadMesh.RecalculateTangents();
+                var m = new Mesh { name = "AbyssalHorizontalQuad" };
+                m.vertices = new[]
+                {
+                    new Vector3(-0.5f, 0f, -0.5f),
+                    new Vector3(-0.5f, 0f,  0.5f),
+                    new Vector3( 0.5f, 0f,  0.5f),
+                    new Vector3( 0.5f, 0f, -0.5f)
+                };
+                m.uv = new[]
+                {
+                    new Vector2(0f, 0f),
+                    new Vector2(0f, 1f),
+                    new Vector2(1f, 1f),
+                    new Vector2(1f, 0f)
+                };
+                m.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+                m.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+                m.RecalculateBounds();
+                m.RecalculateTangents();
+                return m;
+            });
             return _quadMesh;
         }
 

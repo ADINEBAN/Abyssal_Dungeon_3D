@@ -1643,9 +1643,29 @@ namespace AbyssGame
     {
         public Vector3 Position => transform.position;
         public float InteractRadius => 3.5f;
-        private string _prompt;
+        [SerializeField] private string _prompt;
         private Action _onEnter;
-        private Transform _ring;
+        [SerializeField] private Transform _ring;
+
+        private void OnEnable()
+        {
+            if (!HeroPlayerInput.Interactables.Contains(this))
+                HeroPlayerInput.Interactables.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            HeroPlayerInput.Interactables.Remove(this);
+        }
+
+        public void BindCallback(string prompt, Action onEnter)
+        {
+            if (!string.IsNullOrEmpty(prompt))
+                _prompt = prompt;
+            _onEnter = onEnter;
+            if (!HeroPlayerInput.Interactables.Contains(this))
+                HeroPlayerInput.Interactables.Add(this);
+        }
 
         public static WorldExitPortal Create(Transform parent, Vector3 pos, string prompt, Action onEnter)
         {
@@ -1668,7 +1688,8 @@ namespace AbyssGame
             p._prompt = prompt;
             p._onEnter = onEnter;
             p._ring = ring.transform;
-            HeroPlayerInput.Interactables.Add(p);
+            if (!HeroPlayerInput.Interactables.Contains(p))
+                HeroPlayerInput.Interactables.Add(p);
             return p;
         }
 

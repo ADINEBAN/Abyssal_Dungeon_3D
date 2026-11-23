@@ -74,16 +74,6 @@ namespace AbyssGame
         public void BootForName(string sceneName)
         {
             Time.timeScale = 1f;
-
-            // Clean previous virtual root if switching inside a fallback single scene
-            if (_activeRoot != null) Destroy(_activeRoot);
-
-            // Clean any lingering Canvas / stray units when virtual-switching
-            foreach (var c in FindObjectsOfType<Canvas>())
-                if (c.transform.parent == null) Destroy(c.gameObject);
-            for (int i = ActorUnit.AllUnits.Count - 1; i >= 0; i--)
-                if (ActorUnit.AllUnits[i] != null) Destroy(ActorUnit.AllUnits[i].gameObject);
-
             EnsureCameraAndLight();
             _ = GameSession.I;
             _ = GameAudio.I;
@@ -99,11 +89,29 @@ namespace AbyssGame
                 Cursor.visible = true;
             }
 
-            _activeRoot = new GameObject("SceneContent_" + sceneName);
-            AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(_activeRoot.transform);
-
             if (sceneName != "Dungeon" && sceneName != "VisualShowcase" && sceneName != "Town")
                 GameAudio.I.PlayAmbience("amb_forgotten_temple");
+
+            // Check if this scene is already pre-baked in Edit Mode (no runtime duplicate generation!)
+            if (TryInitializePrebakedScene(sceneName))
+            {
+                if (GraphicsManager.Instance != null)
+                    GraphicsManager.Instance.ApplyActivePresetToCurrentScene();
+                GameUIKit.OptimizeAllCanvasesInScene();
+                return;
+            }
+
+            // Clean previous virtual root if switching inside a fallback single scene
+            if (_activeRoot != null) Destroy(_activeRoot);
+
+            // Clean any lingering Canvas / stray units when virtual-switching
+            foreach (var c in FindObjectsOfType<Canvas>())
+                if (c.transform.parent == null) Destroy(c.gameObject);
+            for (int i = ActorUnit.AllUnits.Count - 1; i >= 0; i--)
+                if (ActorUnit.AllUnits[i] != null) Destroy(ActorUnit.AllUnits[i].gameObject);
+
+            _activeRoot = new GameObject("SceneContent_" + sceneName);
+            AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(_activeRoot.transform);
 
             switch (sceneName)
             {
@@ -136,6 +144,37 @@ namespace AbyssGame
                 GraphicsManager.Instance.ApplyActivePresetToCurrentScene();
 
             GameUIKit.OptimizeAllCanvasesInScene();
+        }
+
+        private bool TryInitializePrebakedScene(string sceneName)
+        {
+            switch (sceneName)
+            {
+                case "MainMenu":
+                    var mm = FindObjectOfType<MainMenuSceneView>();
+                    if (mm != null && mm.IsPrebakedInScene)
+                    {
+                        _activeRoot = mm.gameObject;
+                        AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(_activeRoot.transform);
+                        mm.InitializePrebaked();
+                        return true;
+                    }
+                    return false;
+
+                case "Town":
+                    var tb = FindObjectOfType<TownSceneBuilder>();
+                    if (tb != null && tb.IsPrebakedInScene)
+                    {
+                        _activeRoot = tb.gameObject;
+                        AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(_activeRoot.transform);
+                        tb.InitializePrebaked();
+                        return true;
+                    }
+                    return false;
+
+                default:
+                    return false;
+            }
         }
 
         private static void EnsureCameraAndLight()

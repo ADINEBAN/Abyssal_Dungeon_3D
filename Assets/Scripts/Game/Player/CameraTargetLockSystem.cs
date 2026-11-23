@@ -296,7 +296,7 @@ namespace AbyssGame
         private void BuildReticleVisuals()
         {
             _reticleRoot = new GameObject("TargetLockReticle3D");
-            DontDestroyOnLoad(_reticleRoot);
+            if (Application.isPlaying) DontDestroyOnLoad(_reticleRoot);
 
             Color col = new Color(0.32f, 0.88f, 1.0f, 0.88f);
             Material mat = CharacterVisualFactory.MakeTransparentMat(col, col * 2.4f);

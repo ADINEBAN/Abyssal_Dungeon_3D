@@ -173,6 +173,31 @@ namespace AbyssGame
             PartySlotIndex = partySlot;
             gameObject.tag = isLocal ? "Player" : "Untagged";
 
+            // Clean any pre-baked visual or locator ring children when re-initializing at runtime for current selectedClass/Build
+            if (MainVisual != null)
+            {
+                BakedAssetRegistry.DestroySafe(MainVisual);
+                MainVisual = null;
+            }
+            if (BearVisual != null)
+            {
+                BakedAssetRegistry.DestroySafe(BearVisual);
+                BearVisual = null;
+            }
+            for (int i = transform.childCount - 1; i >= 0; i--)
+            {
+                Transform ch = transform.GetChild(i);
+                if (ch == null) continue;
+                string cn = ch.name;
+                if (cn.StartsWith("Visual_", StringComparison.Ordinal) ||
+                    cn.StartsWith("BearForm", StringComparison.Ordinal) ||
+                    cn == "GroundLocatorRing" ||
+                    cn == "HumanGroundShadowGroup")
+                {
+                    BakedAssetRegistry.DestroySafe(ch.gameObject);
+                }
+            }
+
             EnsureController(0.45f, 1.9f);
             transform.localScale = Vector3.one;
             gameObject.layer = 0;

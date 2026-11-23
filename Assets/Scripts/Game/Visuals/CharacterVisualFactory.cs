@@ -163,7 +163,7 @@ namespace AbyssGame
             if (!keepCollider)
             {
                 var col = go.GetComponent<Collider>();
-                if (col != null) Object.Destroy(col);
+                if (col != null) BakedAssetRegistry.DestroySafe(col);
             }
             if (mat != null)
             {
@@ -497,33 +497,37 @@ namespace AbyssGame
         private static Texture2D GetLocatorRingTexture()
         {
             if (_locatorRingTex != null) return _locatorRingTex;
-            int sz = 128;
-            _locatorRingTex = new Texture2D(sz, sz, TextureFormat.RGBA32, false)
+            _locatorRingTex = BakedAssetRegistry.GetOrCreateTexture("T_HeroLocatorRing", () =>
             {
-                name = "T_HeroLocatorRing",
-                wrapMode = TextureWrapMode.Clamp,
-                filterMode = FilterMode.Bilinear
-            };
-            var px = new Color32[sz * sz];
-            float half = (sz - 1) * 0.5f;
-            for (int y = 0; y < sz; y++)
-            {
-                float ny = (y - half) / half;
-                for (int x = 0; x < sz; x++)
+                int sz = 128;
+                var tex = new Texture2D(sz, sz, TextureFormat.RGBA32, false)
                 {
-                    float nx = (x - half) / half;
-                    float r = Mathf.Sqrt(nx * nx + ny * ny);
-                    float ang = Mathf.Atan2(ny, nx);
-                    float outer = Mathf.Exp(-Mathf.Pow((r - 0.86f) / 0.055f, 2f));
-                    float inner = Mathf.Exp(-Mathf.Pow((r - 0.68f) / 0.032f, 2f)) * 0.45f;
-                    float runeTicks = (r > 0.72f && r < 0.84f && Mathf.Cos(ang * 12f) > 0.35f) ? 0.55f : 0f;
-                    float softBase = r < 0.88f ? Mathf.Pow(r / 0.88f, 2f) * 0.14f : 0f;
-                    float a = r <= 0.98f ? Mathf.Clamp01(outer + inner + runeTicks + softBase) : 0f;
-                    px[y * sz + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+                    name = "T_HeroLocatorRing",
+                    wrapMode = TextureWrapMode.Clamp,
+                    filterMode = FilterMode.Bilinear
+                };
+                var px = new Color32[sz * sz];
+                float half = (sz - 1) * 0.5f;
+                for (int y = 0; y < sz; y++)
+                {
+                    float ny = (y - half) / half;
+                    for (int x = 0; x < sz; x++)
+                    {
+                        float nx = (x - half) / half;
+                        float r = Mathf.Sqrt(nx * nx + ny * ny);
+                        float ang = Mathf.Atan2(ny, nx);
+                        float outer = Mathf.Exp(-Mathf.Pow((r - 0.86f) / 0.055f, 2f));
+                        float inner = Mathf.Exp(-Mathf.Pow((r - 0.68f) / 0.032f, 2f)) * 0.45f;
+                        float runeTicks = (r > 0.72f && r < 0.84f && Mathf.Cos(ang * 12f) > 0.35f) ? 0.55f : 0f;
+                        float softBase = r < 0.88f ? Mathf.Pow(r / 0.88f, 2f) * 0.14f : 0f;
+                        float a = r <= 0.98f ? Mathf.Clamp01(outer + inner + runeTicks + softBase) : 0f;
+                        px[y * sz + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+                    }
                 }
-            }
-            _locatorRingTex.SetPixels32(px);
-            _locatorRingTex.Apply(false, false);
+                tex.SetPixels32(px);
+                tex.Apply(false, false);
+                return tex;
+            });
             return _locatorRingTex;
         }
 
@@ -531,14 +535,18 @@ namespace AbyssGame
         {
             if (_locatorRingMat == null)
             {
-                Shader sh = Shader.Find("Sprites/Default")
-                            ?? Shader.Find("Universal Render Pipeline/Particles/Unlit")
-                            ?? UrpUnlit;
-                _locatorRingMat = new Material(sh) { name = "M_HeroGroundLocatorRing", enableInstancing = true };
-                Texture2D tex = GetLocatorRingTexture();
-                _locatorRingMat.mainTexture = tex;
-                if (_locatorRingMat.HasProperty("_BaseMap")) _locatorRingMat.SetTexture("_BaseMap", tex);
-                _locatorRingMat.renderQueue = 3008;
+                _locatorRingMat = BakedAssetRegistry.GetOrCreateMaterial("M_HeroGroundLocatorRing", () =>
+                {
+                    Shader sh = Shader.Find("Sprites/Default")
+                                ?? Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                                ?? UrpUnlit;
+                    var mat = new Material(sh) { name = "M_HeroGroundLocatorRing", enableInstancing = true };
+                    Texture2D tex = GetLocatorRingTexture();
+                    mat.mainTexture = tex;
+                    if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+                    mat.renderQueue = 3008;
+                    return mat;
+                });
             }
 
             var go = new GameObject(name);
@@ -1365,7 +1373,7 @@ namespace AbyssGame
         public void Bind(Transform visualRoot, Animator anim, float scale = 1f)
         {
             Transform oldGroup = transform.Find("HumanGroundShadowGroup");
-            if (oldGroup != null) Destroy(oldGroup.gameObject);
+            if (oldGroup != null) BakedAssetRegistry.DestroySafe(oldGroup.gameObject);
 
             if (visualRoot == null) return;
             foreach (var smr in visualRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true))

@@ -35,7 +35,7 @@ namespace AbyssGame
                     if (_inst == null)
                     {
                         var go = new GameObject("[GameModeManager]");
-                        DontDestroyOnLoad(go);
+                        if (Application.isPlaying) DontDestroyOnLoad(go);
                         _inst = go.AddComponent<GameModeManager>();
                     }
                 }
@@ -54,9 +54,9 @@ namespace AbyssGame
 
         private void Awake()
         {
-            if (_inst != null && _inst != this) { Destroy(gameObject); return; }
+            if (_inst != null && _inst != this) { BakedAssetRegistry.DestroySafe(gameObject); return; }
             _inst = this;
-            DontDestroyOnLoad(gameObject);
+            if (Application.isPlaying) DontDestroyOnLoad(gameObject);
         }
 
         /// <summary>
@@ -346,7 +346,7 @@ namespace AbyssGame
                     if (_inst == null)
                     {
                         var go = new GameObject("[LanRoomBridge]");
-                        DontDestroyOnLoad(go);
+                        if (Application.isPlaying) DontDestroyOnLoad(go);
                         _inst = go.AddComponent<LanRoomBridge>();
                     }
                 }
@@ -370,9 +370,9 @@ namespace AbyssGame
 
         private void Awake()
         {
-            if (_inst != null && _inst != this) { Destroy(gameObject); return; }
+            if (_inst != null && _inst != this) { BakedAssetRegistry.DestroySafe(gameObject); return; }
             _inst = this;
-            DontDestroyOnLoad(gameObject);
+            if (Application.isPlaying) DontDestroyOnLoad(gameObject);
         }
 
         private void OnApplicationQuit() => StopNetwork();

@@ -679,7 +679,7 @@ namespace AbyssGame
                 plank.transform.SetParent(deck.transform, false);
                 plank.transform.localPosition = new Vector3(0f, 0.011f, lz);
                 plank.transform.localScale = new Vector3(width - 0.14f, 0.022f * shade, plankLenZ);
-                Object.Destroy(plank.GetComponent<Collider>());
+                BakedAssetRegistry.DestroySafe(plank.GetComponent<Collider>());
                 var mr = plank.GetComponent<MeshRenderer>();
                 mr.sharedMaterial = woodMat;
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -694,7 +694,7 @@ namespace AbyssGame
                 rail.transform.SetParent(deck.transform, false);
                 rail.transform.localPosition = new Vector3(s * (width * 0.5f - 0.06f), 0.014f, 0f);
                 rail.transform.localScale = new Vector3(0.12f, 0.028f, length);
-                Object.Destroy(rail.GetComponent<Collider>());
+                BakedAssetRegistry.DestroySafe(rail.GetComponent<Collider>());
                 var mr = rail.GetComponent<MeshRenderer>();
                 mr.sharedMaterial = ironMat;
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -723,7 +723,7 @@ namespace AbyssGame
             plate.transform.SetParent(deck.transform, false);
             plate.transform.localPosition = new Vector3(0f, 0.011f, 0f);
             plate.transform.localScale = new Vector3(width, 0.022f, length);
-            Object.Destroy(plate.GetComponent<Collider>());
+            BakedAssetRegistry.DestroySafe(plate.GetComponent<Collider>());
             var mr = plate.GetComponent<MeshRenderer>();
             mr.sharedMaterial = ironMat;
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -743,29 +743,32 @@ namespace AbyssGame
         private static Mesh GetCrossedFlameMesh()
         {
             if (_crossedFlameMesh != null) return _crossedFlameMesh;
-            _crossedFlameMesh = new Mesh { name = "CrossedTorchFlameMesh" };
-            // Two vertical intersecting quads (X and Z planes) from y = -0.25 to +0.75 with UVs 0..1
-            _crossedFlameMesh.vertices = new[]
+            _crossedFlameMesh = BakedAssetRegistry.GetOrCreateMesh("CrossedTorchFlameMesh", () =>
             {
-                new Vector3(-0.5f, -0.2f, 0f), new Vector3(-0.5f, 0.8f, 0f), new Vector3(0.5f, 0.8f, 0f), new Vector3(0.5f, -0.2f, 0f),
-                new Vector3(0f, -0.2f, -0.5f), new Vector3(0f, 0.8f, -0.5f), new Vector3(0f, 0.8f, 0.5f), new Vector3(0f, -0.2f, 0.5f)
-            };
-            _crossedFlameMesh.uv = new[]
-            {
-                new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f),
-                new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f)
-            };
-            _crossedFlameMesh.normals = new[]
-            {
-                Vector3.back, Vector3.back, Vector3.back, Vector3.back,
-                Vector3.right, Vector3.right, Vector3.right, Vector3.right
-            };
-            _crossedFlameMesh.triangles = new[]
-            {
-                0, 1, 2, 0, 2, 3,
-                4, 5, 6, 4, 6, 7
-            };
-            _crossedFlameMesh.RecalculateBounds();
+                var mesh = new Mesh { name = "CrossedTorchFlameMesh" };
+                mesh.vertices = new[]
+                {
+                    new Vector3(-0.5f, -0.2f, 0f), new Vector3(-0.5f, 0.8f, 0f), new Vector3(0.5f, 0.8f, 0f), new Vector3(0.5f, -0.2f, 0f),
+                    new Vector3(0f, -0.2f, -0.5f), new Vector3(0f, 0.8f, -0.5f), new Vector3(0f, 0.8f, 0.5f), new Vector3(0f, -0.2f, 0.5f)
+                };
+                mesh.uv = new[]
+                {
+                    new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f),
+                    new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f)
+                };
+                mesh.normals = new[]
+                {
+                    Vector3.back, Vector3.back, Vector3.back, Vector3.back,
+                    Vector3.right, Vector3.right, Vector3.right, Vector3.right
+                };
+                mesh.triangles = new[]
+                {
+                    0, 1, 2, 0, 2, 3,
+                    4, 5, 6, 4, 6, 7
+                };
+                mesh.RecalculateBounds();
+                return mesh;
+            });
             return _crossedFlameMesh;
         }
     }

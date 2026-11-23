@@ -259,8 +259,13 @@ namespace AbyssGame
                     if (_inst == null)
                     {
                         var go = new GameObject("[GameSession]");
-                        DontDestroyOnLoad(go);
+                        if (Application.isPlaying) DontDestroyOnLoad(go);
                         _inst = go.AddComponent<GameSession>();
+                        if (!Application.isPlaying)
+                        {
+                            _inst.LoadProfile();
+                            _inst.EnsureDefaultParty();
+                        }
                     }
                 }
                 return _inst;
@@ -281,9 +286,9 @@ namespace AbyssGame
 
         private void Awake()
         {
-            if (_inst != null && _inst != this) { Destroy(gameObject); return; }
+            if (_inst != null && _inst != this) { BakedAssetRegistry.DestroySafe(gameObject); return; }
             _inst = this;
-            DontDestroyOnLoad(gameObject);
+            if (Application.isPlaying) DontDestroyOnLoad(gameObject);
             LoadProfile();
             EnsureDefaultParty();
         }

@@ -50,37 +50,41 @@ namespace AbyssGame
             volume.priority = 10f;
             volume.weight = 1f;
 
-            var profile = ScriptableObject.CreateInstance<VolumeProfile>();
-            profile.name = "AbyssalDarkFantasyProfile";
+            var profile = BakedAssetRegistry.GetOrCreateVolumeProfile("AbyssalDarkFantasyProfile", () =>
+            {
+                var p = ScriptableObject.CreateInstance<VolumeProfile>();
+                p.name = "AbyssalDarkFantasyProfile";
 
-            // 1. ACES Filmic Tonemapping for rich shadow rolloff & highlight retention
-            var tonemapping = profile.Add<Tonemapping>(true);
-            tonemapping.mode.Override(TonemappingMode.ACES);
+                // 1. ACES Filmic Tonemapping for rich shadow rolloff & highlight retention
+                var tonemapping = p.Add<Tonemapping>(true);
+                tonemapping.mode.Override(TonemappingMode.ACES);
 
-            // 2. Controlled Bloom (lights torches, crystals & skill VFX without washing out floor telegraphs)
-            var bloom = profile.Add<Bloom>(true);
-            bloom.threshold.Override(0.95f);
-            bloom.intensity.Override(0.55f);
-            bloom.scatter.Override(0.64f);
-            bloom.highQualityFiltering.Override(false);
+                // 2. Controlled Bloom (lights torches, crystals & skill VFX without washing out floor telegraphs)
+                var bloom = p.Add<Bloom>(true);
+                bloom.threshold.Override(0.95f);
+                bloom.intensity.Override(0.55f);
+                bloom.scatter.Override(0.64f);
+                bloom.highQualityFiltering.Override(false);
 
-            // 3. Subtle Dark-Fantasy Vignette
-            var vignette = profile.Add<Vignette>(true);
-            vignette.color.Override(new Color(0.02f, 0.02f, 0.04f, 1f));
-            vignette.intensity.Override(0.27f);
-            vignette.smoothness.Override(0.42f);
+                // 3. Subtle Dark-Fantasy Vignette
+                var vignette = p.Add<Vignette>(true);
+                vignette.color.Override(new Color(0.02f, 0.02f, 0.04f, 1f));
+                vignette.intensity.Override(0.27f);
+                vignette.smoothness.Override(0.42f);
 
-            // 4. Crisp Contrast & Exposure
-            var colorAdj = profile.Add<ColorAdjustments>(true);
-            colorAdj.postExposure.Override(0.14f);
-            colorAdj.contrast.Override(14f);
-            colorAdj.saturation.Override(5f);
+                // 4. Crisp Contrast & Exposure
+                var colorAdj = p.Add<ColorAdjustments>(true);
+                colorAdj.postExposure.Override(0.14f);
+                colorAdj.contrast.Override(14f);
+                colorAdj.saturation.Override(5f);
 
-            // 5. Split-Toning: Cool Slate-Blue Shadows + Warm Torchlit Sandstone Midtones (Reference Image 4)
-            var smh = profile.Add<ShadowsMidtonesHighlights>(true);
-            smh.shadows.Override(new Vector4(0.88f, 0.92f, 1.06f, 0f));
-            smh.midtones.Override(new Vector4(1.03f, 0.99f, 0.95f, 0f));
-            smh.highlights.Override(new Vector4(1.04f, 1.01f, 0.96f, 0f));
+                // 5. Split-Toning: Cool Slate-Blue Shadows + Warm Torchlit Sandstone Midtones (Reference Image 4)
+                var smh = p.Add<ShadowsMidtonesHighlights>(true);
+                smh.shadows.Override(new Vector4(0.88f, 0.92f, 1.06f, 0f));
+                smh.midtones.Override(new Vector4(1.03f, 0.99f, 0.95f, 0f));
+                smh.highlights.Override(new Vector4(1.04f, 1.01f, 0.96f, 0f));
+                return p;
+            });
 
             volume.sharedProfile = profile;
             if (GraphicsManager.Instance != null)

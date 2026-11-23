@@ -1358,14 +1358,109 @@ namespace AbyssGame
     /// </summary>
     public class TownSceneBuilder : MonoBehaviour
     {
-        private ActorUnit _hero;
-        private Text _topInfoTxt;
-        private Text _interactPrompt;
-        private GameObject _interactBox;
-        private GameObject _charModal;
-        private GameObject _toastBox;
-        private Text _toastTxt;
+        [SerializeField] private bool _isPrebakedInScene;
+        [SerializeField] private Canvas _townCanvas;
+        [SerializeField] private ActorUnit _hero;
+        [SerializeField] private Text _topInfoTxt;
+        [SerializeField] private Text _interactPrompt;
+        [SerializeField] private GameObject _interactBox;
+        [SerializeField] private GameObject _charModal;
+        [SerializeField] private GameObject _toastBox;
+        [SerializeField] private Text _toastTxt;
+        [SerializeField] private Button _btnBag;
+        [SerializeField] private Button _btnLobby;
+        [SerializeField] private Button _btnMenu;
+        [SerializeField] private WorldExitPortal _blacksmithPortal;
+        [SerializeField] private WorldExitPortal _alchemistPortal;
+        [SerializeField] private WorldExitPortal _dungeonExitPortal;
+
         private float _toastTimer;
+        private bool _runtimeInitialized;
+        public bool IsPrebakedInScene => _isPrebakedInScene;
+
+        private void Start()
+        {
+            if (_isPrebakedInScene && !_runtimeInitialized)
+                InitializePrebaked();
+        }
+
+        public void InitializePrebaked()
+        {
+            if (_runtimeInitialized) return;
+            _runtimeInitialized = true;
+
+            HeroPlayerInput.Interactables.Clear();
+            GameAudio.I.PlayMusic(GameMusic.Town);
+
+            // Principle 2: Even though TownHero is pre-baked in Town.unity, always synchronize its Class, Build, Level & Equipment with GameSession
+            if (_hero != null)
+            {
+                _hero.InitHero(GameSession.I.Profile.selectedClass, GameSession.I.Profile.selectedBuild,
+                    GameSession.I.Profile.level, GameSession.I.Profile.heroName, true, 0);
+                if (_hero.GetComponent<HeroPlayerInput>() == null)
+                    _hero.gameObject.AddComponent<HeroPlayerInput>();
+            }
+
+            if (Camera.main != null && _hero != null)
+            {
+                var cam = Camera.main.GetComponent<OrbitCamera3D>();
+                if (cam == null) cam = Camera.main.gameObject.AddComponent<OrbitCamera3D>();
+                cam.Target = _hero.transform;
+                cam.AllowCursorLock = false;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
+
+            if (_blacksmithPortal != null)
+                _blacksmithPortal.BindCallback("[F] Rèn Trang Bị Cổ Ngữ Mới (80 Gold)", OnUseBlacksmith);
+            if (_alchemistPortal != null)
+                _alchemistPortal.BindCallback("[F] Điều Chế 2 Bình Hồi Máu (25 Gold)", OnUseAlchemist);
+            if (_dungeonExitPortal != null)
+                _dungeonExitPortal.BindCallback("[F] BƯỚC VÀO CỔNG HẦM NGỤC ABYSSAL DUNGEON", () => GameSession.GoToScene("Dungeon"));
+
+            BindTownButton(_btnBag, () => { if (_charModal != null) _charModal.SetActive(!_charModal.activeSelf); });
+            BindTownButton(_btnLobby, () => GameSession.GoToScene("Lobby"));
+            BindTownButton(_btnMenu, () => GameSession.GoToScene("MainMenu"));
+
+            if (_townCanvas != null)
+                _charModal = GameUIKit.BuildCharacterSheetModal(_townCanvas.transform, () => _hero, null);
+
+            HeroPlayerInput.OnToggleInventory = () => { if (_charModal != null) _charModal.SetActive(!_charModal.activeSelf); };
+        }
+
+        private static void BindTownButton(Button btn, System.Action onClick)
+        {
+            if (btn == null) return;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() =>
+            {
+                GameAudio.I?.PlaySfx(GameSfx.Click, 0.6f);
+                onClick?.Invoke();
+            });
+        }
+
+        private void OnUseBlacksmith()
+        {
+            var p = GameSession.I.Profile;
+            if (p.gold < 80) { ShowToast("Không đủ Vàng trong kho (cần 80 Gold)!"); return; }
+            p.gold -= 80;
+            EquipItem item = LootRoller.RollItem(p.highestFloor, 2, 0.45f);
+            GameSession.I.AddItemToBag(item, autoEquipIfBetter: true);
+            if (_hero != null) _hero.RecalculateStats(true);
+            GameAudio.I.PlaySfx(GameSfx.Loot, 1f);
+            ShowToast($"Đã rèn thành công: [{GameDB.RarityNames[(int)item.rarity]}] {item.name} ({item.Summary()})!");
+        }
+
+        private void OnUseAlchemist()
+        {
+            var p = GameSession.I.Profile;
+            if (p.gold < 25) { ShowToast("Không đủ Vàng trong kho (cần 25 Gold)!"); return; }
+            p.gold -= 25;
+            p.potions += 2;
+            GameSession.I.SaveProfile();
+            GameAudio.I.PlaySfx(GameSfx.Heal, 0.9f);
+            ShowToast($"Đã nhận +2 Bình Máu Cổ Ngữ (Hiện có: {p.potions})!");
+        }
 
         public void Build()
         {
@@ -1373,7 +1468,8 @@ namespace AbyssGame
             AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(transform);
             var atmo = BiomeAtmosphereController.EnsureOnScene(transform);
             atmo.ApplyBiome(DungeonBiome.ForgottenTemple, instant: true);
-            GameAudio.I.PlayMusic(GameMusic.Town);
+            if (Application.isPlaying)
+                GameAudio.I.PlayMusic(GameMusic.Town);
 
             ModularDungeonArchitect.BuildModularRoomShell(
                 transform, Vector3.zero, width: 32f, length: 32f, wallHeight: 5.8f,
@@ -1394,34 +1490,15 @@ namespace AbyssGame
             ModularDungeonArchitect.BuildIronGrateDeck(transform, "ForgeIronGrate", new Vector3(-4.2f, 0f, 3f), 3.2f, 4.2f);
 
             // Blacksmith Station (West)
-            CreateTownStation(new Vector3(-8f, 0f, 3f), "Thợ Rèn Cổ Ngữ", new Color(1f, 0.68f, 0.24f),
-                "[F] Rèn Trang Bị Cổ Ngữ Mới (80 Gold)", () =>
-                {
-                    var p = GameSession.I.Profile;
-                    if (p.gold < 80) { ShowToast("Không đủ Vàng trong kho (cần 80 Gold)!"); return; }
-                    p.gold -= 80;
-                    EquipItem item = LootRoller.RollItem(p.highestFloor, 2, 0.45f);
-                    GameSession.I.AddItemToBag(item, autoEquipIfBetter: true);
-                    _hero.RecalculateStats(true);
-                    GameAudio.I.PlaySfx(GameSfx.Loot, 1f);
-                    ShowToast($"Đã rèn thành công: [{GameDB.RarityNames[(int)item.rarity]}] {item.name} ({item.Summary()})!");
-                });
+            _blacksmithPortal = CreateTownStation(new Vector3(-8f, 0f, 3f), "Thợ Rèn Cổ Ngữ", new Color(1f, 0.68f, 0.24f),
+                "[F] Rèn Trang Bị Cổ Ngữ Mới (80 Gold)", OnUseBlacksmith);
 
             // Alchemist Station (East)
-            CreateTownStation(new Vector3(8f, 0f, 3f), "Giả Kim Thuật Sư", new Color(0.38f, 0.88f, 0.48f),
-                "[F] Điều Chế 2 Bình Hồi Máu (25 Gold)", () =>
-                {
-                    var p = GameSession.I.Profile;
-                    if (p.gold < 25) { ShowToast("Không đủ Vàng trong kho (cần 25 Gold)!"); return; }
-                    p.gold -= 25;
-                    p.potions += 2;
-                    GameSession.I.SaveProfile();
-                    GameAudio.I.PlaySfx(GameSfx.Heal, 0.9f);
-                    ShowToast($"Đã nhận +2 Bình Máu Cổ Ngữ (Hiện có: {p.potions})!");
-                });
+            _alchemistPortal = CreateTownStation(new Vector3(8f, 0f, 3f), "Giả Kim Thuật Sư", new Color(0.38f, 0.88f, 0.48f),
+                "[F] Điều Chế 2 Bình Hồi Máu (25 Gold)", OnUseAlchemist);
 
             // North Abyssal Dungeon Portal
-            WorldExitPortal.Create(transform, new Vector3(0f, 0f, 11.5f),
+            _dungeonExitPortal = WorldExitPortal.Create(transform, new Vector3(0f, 0f, 11.5f),
                 "[F] BƯỚC VÀO CỔNG HẦM NGỤC ABYSSAL DUNGEON", () => GameSession.GoToScene("Dungeon"));
 
             // Spawn Player Hero
@@ -1443,9 +1520,11 @@ namespace AbyssGame
             }
 
             BuildTownHUD();
+            _isPrebakedInScene = true;
+            _runtimeInitialized = Application.isPlaying;
         }
 
-        private void CreateTownStation(Vector3 pos, string title, Color glowCol, string prompt, System.Action onUse)
+        private WorldExitPortal CreateTownStation(Vector3 pos, string title, Color glowCol, string prompt, System.Action onUse)
         {
             var st = new GameObject(title);
             st.transform.SetParent(transform, false);
@@ -1466,32 +1545,33 @@ namespace AbyssGame
             lbl.fontStyle = FontStyle.Bold;
             lbl.color = glowCol;
 
-            WorldExitPortal.Create(st.transform, Vector3.zero, prompt, onUse);
+            return WorldExitPortal.Create(st.transform, Vector3.zero, prompt, onUse);
         }
 
         private void BuildTownHUD()
         {
             var canvas = GameUIKit.CreateCanvas("TownHUD");
+            _townCanvas = canvas;
             var root = canvas.transform;
 
             var top = GameUIKit.MakeStyledPanel("TopBar", root, UIPanelStyle.Ornate,
                 new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(24f, -82f), new Vector2(-24f, -12f));
 
             GameUIKit.MakeIcon("TownCrest", top.transform, GameUIKit.GetIcon("anvil"),
-                new Vector2(0f, 0.16f), new Vector2(0f, 0.84f), new Vector2(18f, 0f), new Vector2(62f, 0f));
+                new Vector2(0f, 0.16f), new Vector2(0.84f, 0.84f), new Vector2(18f, 0f), new Vector2(62f, 0f));
 
             _topInfoTxt = GameUIKit.MakeText("Info", top.transform, "", 18, FontStyle.Bold, GameUIKit.ColGoldBright, TextAnchor.MiddleLeft,
                 new Vector2(0f, 0f), new Vector2(0.54f, 1f), new Vector2(72f, 0f), Vector2.zero);
 
-            GameUIKit.MakeStyledButton("BtnBag", top.transform, "Hành Trang & Cổ Ngữ [I]", 14, UIButtonStyle.Primary,
+            _btnBag = GameUIKit.MakeStyledButton("BtnBag", top.transform, "Hành Trang & Cổ Ngữ [I]", 14, UIButtonStyle.Primary,
                 new Vector2(0.55f, 0.16f), new Vector2(0.71f, 0.84f), Vector2.zero, Vector2.zero,
                 () => _charModal.SetActive(!_charModal.activeSelf), GameUIKit.GetIcon("bag"));
 
-            GameUIKit.MakeStyledButton("BtnLobby", top.transform, "Sảnh Tổ Đội (Lobby)", 14, UIButtonStyle.Secondary,
+            _btnLobby = GameUIKit.MakeStyledButton("BtnLobby", top.transform, "Sảnh Tổ Đội (Lobby)", 14, UIButtonStyle.Secondary,
                 new Vector2(0.72f, 0.16f), new Vector2(0.86f, 0.84f), Vector2.zero, Vector2.zero,
                 () => GameSession.GoToScene("Lobby"), GameUIKit.GetIcon("crossed_swords"));
 
-            GameUIKit.MakeStyledButton("BtnMenu", top.transform, "Main Menu", 14, UIButtonStyle.Secondary,
+            _btnMenu = GameUIKit.MakeStyledButton("BtnMenu", top.transform, "Main Menu", 14, UIButtonStyle.Secondary,
                 new Vector2(0.87f, 0.16f), new Vector2(0.985f, 0.84f), Vector2.zero, Vector2.zero,
                 () => GameSession.GoToScene("MainMenu"), GameUIKit.GetIcon("crown"));
 
@@ -1511,6 +1591,7 @@ namespace AbyssGame
 
             _charModal = GameUIKit.BuildCharacterSheetModal(root, () => _hero, null);
             HeroPlayerInput.OnToggleInventory = () => _charModal.SetActive(!_charModal.activeSelf);
+            GameUIKit.OptimizeCanvasHierarchy(canvas);
         }
 
         private void ShowToast(string msg)

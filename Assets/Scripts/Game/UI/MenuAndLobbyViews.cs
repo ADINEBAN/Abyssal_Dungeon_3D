@@ -11,18 +11,124 @@ namespace AbyssGame
     /// </summary>
     public class MainMenuSceneView : MonoBehaviour
     {
-        private GameObject _howToModal;
-        private GameObject _settingsModal;
-        private Transform _stageRoot;
-        private GameObject _heroPreview;
-        private Animator _heroAnim;
+        [SerializeField] private bool _isPrebakedInScene;
+        [SerializeField] private Canvas _mainCanvas;
+        [SerializeField] private GameObject _howToModal;
+        [SerializeField] private GameObject _settingsModal;
+        [SerializeField] private Transform _stageRoot;
+        [SerializeField] private GameObject _heroPreview;
+        [SerializeField] private Animator _heroAnim;
+        [SerializeField] private int _bakedClassId = -1;
+        [SerializeField] private int _bakedBuildId = -1;
+        [SerializeField] private Image _heroPortraitImg;
+        [SerializeField] private Text _heroInfoTitleTxt;
+        [SerializeField] private Text _heroInfoSubTxt;
+        [SerializeField] private Text _stageHeroTxt;
+        [SerializeField] private Button _btnPlay;
+        [SerializeField] private Button _btnClasses;
+        [SerializeField] private Button _btnTown;
+        [SerializeField] private Button _btnShowcase;
+        [SerializeField] private Button _btnHowTo;
+        [SerializeField] private Button _btnSettings;
+        [SerializeField] private Button _btnQuit;
+        [SerializeField] private Button _btnCloseHowTo;
+
+        private bool _runtimeInitialized;
+        public bool IsPrebakedInScene => _isPrebakedInScene;
+
+        private void Start()
+        {
+            if (_isPrebakedInScene && !_runtimeInitialized)
+                InitializePrebaked();
+        }
+
+        public void InitializePrebaked()
+        {
+            if (_runtimeInitialized) return;
+            _runtimeInitialized = true;
+
+            GameAudio.I.PlayMusic(GameMusic.MainMenu);
+            BindMenuButton(_btnPlay, () => GameSession.GoToScene("Lobby"));
+            BindMenuButton(_btnClasses, () =>
+            {
+                GameSession.I.ReturnSceneAfterClassSelect = "MainMenu";
+                GameSession.GoToScene("ClassSelection");
+            });
+            BindMenuButton(_btnTown, () => GameSession.GoToScene("Town"));
+            BindMenuButton(_btnShowcase, () => GameSession.GoToScene("VisualShowcase"));
+            BindMenuButton(_btnHowTo, () => { if (_howToModal != null) _howToModal.SetActive(true); });
+            BindMenuButton(_btnSettings, () => { if (_settingsModal != null) _settingsModal.SetActive(true); });
+            BindMenuButton(_btnQuit, QuitGame);
+            BindMenuButton(_btnCloseHowTo, () => { if (_howToModal != null) _howToModal.SetActive(false); });
+
+            if (_mainCanvas != null)
+                _settingsModal = GameUIKit.BuildSettingsModal(_mainCanvas.transform, includeResetSave: true);
+
+            RefreshHeroProfileAndPreview();
+        }
+
+        private static void BindMenuButton(Button btn, System.Action onClick)
+        {
+            if (btn == null) return;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() =>
+            {
+                GameAudio.I?.PlaySfx(GameSfx.Click, 0.6f);
+                onClick?.Invoke();
+            });
+        }
+
+        private static void QuitGame()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
+        private void RefreshHeroProfileAndPreview()
+        {
+            var p = GameSession.I.Profile;
+            ClassDef curCls = GameDB.GetClass(p.selectedClass);
+            string curBuildName = curCls.builds[Mathf.Clamp(p.selectedBuild, 0, curCls.builds.Length - 1)];
+
+            if (_heroPortraitImg != null)
+                _heroPortraitImg.sprite = GameUIKit.GetClassIcon(p.selectedClass);
+
+            if (_heroInfoTitleTxt != null)
+                _heroInfoTitleTxt.text = $"THỢ SĂN HIỆN TẠI: <color=#F8DC85>{p.heroName.ToUpper()}</color> (Lv.{p.level})";
+
+            if (_heroInfoSubTxt != null)
+                _heroInfoSubTxt.text =
+                    $"Hệ phái: <color=#EDE0BA>{curCls.name} — {curBuildName}</color>\n" +
+                    $"Kho ngân: <color=#F8DC85>{p.gold} Gold</color>  •  Tầng sâu nhất: <color=#F8DC85>Tầng {p.highestFloor}</color>";
+
+            if (_stageHeroTxt != null)
+                _stageHeroTxt.text =
+                    $"<color=#F8DC85>{curCls.name.ToUpper()} — {curBuildName}</color>\n" +
+                    $"<size=13>{curCls.roleText}  •  Nội tại: {curCls.passive}</size>";
+
+            if (_stageRoot != null && (_heroPreview == null || _bakedClassId != p.selectedClass || _bakedBuildId != p.selectedBuild))
+            {
+                if (_heroPreview != null)
+                    BakedAssetRegistry.DestroySafe(_heroPreview);
+                _heroPreview = CharacterVisualFactory.BuildHeroVisual(curCls, _stageRoot, out _heroAnim, p.selectedBuild);
+                _heroPreview.transform.position = new Vector3(1.35f, 0f, -0.6f);
+                _heroPreview.transform.rotation = Quaternion.Euler(0f, -162f, 0f);
+                _bakedClassId = p.selectedClass;
+                _bakedBuildId = p.selectedBuild;
+            }
+        }
 
         public void Build()
         {
-            GameAudio.I.PlayMusic(GameMusic.MainMenu);
+            if (Application.isPlaying)
+                GameAudio.I.PlayMusic(GameMusic.MainMenu);
             Build3DMenuStage();
 
             var canvas = GameUIKit.CreateCanvas("MainMenuCanvas");
+            _mainCanvas = canvas;
             var root = canvas.transform;
 
             // Left Ancient Gothic Command Monument
@@ -59,16 +165,16 @@ namespace AbyssGame
             Sprite curIcon = GameUIKit.GetClassIcon(p.selectedClass);
             if (curIcon != null)
             {
-                GameUIKit.MakeIcon("HeroPortrait", charPlaque.transform, curIcon,
+                _heroPortraitImg = GameUIKit.MakeIcon("HeroPortrait", charPlaque.transform, curIcon,
                     new Vector2(0.03f, 0.12f), new Vector2(0.21f, 0.88f), Vector2.zero, Vector2.zero);
             }
 
-            GameUIKit.MakeText("HeroInfoTitle", charPlaque.transform,
+            _heroInfoTitleTxt = GameUIKit.MakeText("HeroInfoTitle", charPlaque.transform,
                 $"THỢ SĂN HIỆN TẠI: <color=#F8DC85>{p.heroName.ToUpper()}</color> (Lv.{p.level})",
                 15, FontStyle.Bold, GameUIKit.ColGold, TextAnchor.UpperLeft,
                 new Vector2(0.24f, 0.52f), new Vector2(0.97f, 0.90f), Vector2.zero, Vector2.zero);
 
-            GameUIKit.MakeText("HeroInfoSub", charPlaque.transform,
+            _heroInfoSubTxt = GameUIKit.MakeText("HeroInfoSub", charPlaque.transform,
                 $"Hệ phái: <color=#EDE0BA>{curCls.name} — {curBuildName}</color>\n" +
                 $"Kho ngân: <color=#F8DC85>{p.gold} Gold</color>  •  Tầng sâu nhất: <color=#F8DC85>Tầng {p.highestFloor}</color>",
                 13, FontStyle.Normal, GameUIKit.ColMuted, TextAnchor.LowerLeft,
@@ -78,14 +184,14 @@ namespace AbyssGame
             float btnTop = -230f;
             float btnStep = 72f;
 
-            GameUIKit.MakeStyledButton("BtnPlay", leftCard.transform,
+            _btnPlay = GameUIKit.MakeStyledButton("BtnPlay", leftCard.transform,
                 "KHỞI HÀNH — SẢNH TỔ ĐỘI (LOBBY)", 18, UIButtonStyle.Primary,
                 new Vector2(0.06f, 1f), new Vector2(0.94f, 1f),
                 new Vector2(0f, btnTop - 58f), new Vector2(0f, btnTop),
                 () => GameSession.GoToScene("Lobby"),
                 GameUIKit.GetIcon("crossed_swords"));
 
-            GameUIKit.MakeStyledButton("BtnClasses", leftCard.transform,
+            _btnClasses = GameUIKit.MakeStyledButton("BtnClasses", leftCard.transform,
                 "ĐỀN CHỌN LỚP NHÂN VẬT (10 CLASSES)", 16, UIButtonStyle.Secondary,
                 new Vector2(0.06f, 1f), new Vector2(0.94f, 1f),
                 new Vector2(0f, btnTop - btnStep - 58f), new Vector2(0f, btnTop - btnStep),
@@ -96,46 +202,39 @@ namespace AbyssGame
                 },
                 GameUIKit.GetIcon("crown"));
 
-            GameUIKit.MakeStyledButton("BtnTown", leftCard.transform,
+            _btnTown = GameUIKit.MakeStyledButton("BtnTown", leftCard.transform,
                 "THỊ TRẤN AETHER HAVEN (RÈN & NÂNG CẤP)", 16, UIButtonStyle.Secondary,
                 new Vector2(0.06f, 1f), new Vector2(0.94f, 1f),
                 new Vector2(0f, btnTop - btnStep * 2 - 58f), new Vector2(0f, btnTop - btnStep * 2),
                 () => GameSession.GoToScene("Town"),
                 GameUIKit.GetIcon("anvil"));
 
-            GameUIKit.MakeStyledButton("BtnShowcase", leftCard.transform,
+            _btnShowcase = GameUIKit.MakeStyledButton("BtnShowcase", leftCard.transform,
                 "PHÒNG TRƯNG BÀY DI VẬT 3D (SHOWCASE)", 16, UIButtonStyle.Secondary,
                 new Vector2(0.06f, 1f), new Vector2(0.94f, 1f),
                 new Vector2(0f, btnTop - btnStep * 3 - 58f), new Vector2(0f, btnTop - btnStep * 3),
                 () => GameSession.GoToScene("VisualShowcase"),
                 GameUIKit.GetIcon("portal"));
 
-            GameUIKit.MakeStyledButton("BtnHowTo", leftCard.transform,
+            _btnHowTo = GameUIKit.MakeStyledButton("BtnHowTo", leftCard.transform,
                 "CỔ THƯ HƯỚNG DẪN & ĐIỀU KHIỂN", 16, UIButtonStyle.Secondary,
                 new Vector2(0.06f, 1f), new Vector2(0.94f, 1f),
                 new Vector2(0f, btnTop - btnStep * 4 - 58f), new Vector2(0f, btnTop - btnStep * 4),
                 () => _howToModal.SetActive(true),
                 GameUIKit.GetIcon("exp"));
 
-            GameUIKit.MakeStyledButton("BtnSettings", leftCard.transform,
+            _btnSettings = GameUIKit.MakeStyledButton("BtnSettings", leftCard.transform,
                 "CÀI ĐẶT ÂM THANH & ĐỒ HỌA", 16, UIButtonStyle.Secondary,
                 new Vector2(0.06f, 1f), new Vector2(0.94f, 1f),
                 new Vector2(0f, btnTop - btnStep * 5 - 58f), new Vector2(0f, btnTop - btnStep * 5),
                 () => _settingsModal.SetActive(true),
                 GameUIKit.GetIcon("settings"));
 
-            GameUIKit.MakeStyledButton("BtnQuit", leftCard.transform,
+            _btnQuit = GameUIKit.MakeStyledButton("BtnQuit", leftCard.transform,
                 "THOÁT KHỎI HẦM NGỤC (QUIT GAME)", 16, UIButtonStyle.Danger,
                 new Vector2(0.06f, 1f), new Vector2(0.94f, 1f),
                 new Vector2(0f, btnTop - btnStep * 6 - 58f), new Vector2(0f, btnTop - btnStep * 6),
-                () =>
-                {
-#if UNITY_EDITOR
-                    UnityEditor.EditorApplication.isPlaying = false;
-#else
-                    Application.Quit();
-#endif
-                },
+                QuitGame,
                 GameUIKit.GetIcon("skull_boss"));
 
             GameUIKit.MakeText("FooterVer", leftCard.transform,
@@ -152,7 +251,7 @@ namespace AbyssGame
             GameUIKit.MakeIcon("StageCrest", stageBanner.transform, GameUIKit.GetIcon("shield"),
                 new Vector2(0.03f, 0.16f), new Vector2(0.15f, 0.84f), Vector2.zero, Vector2.zero);
 
-            GameUIKit.MakeText("StageHeroTxt", stageBanner.transform,
+            _stageHeroTxt = GameUIKit.MakeText("StageHeroTxt", stageBanner.transform,
                 $"<color=#F8DC85>{curCls.name.ToUpper()} — {curBuildName}</color>\n" +
                 $"<size=13>{curCls.roleText}  •  Nội tại: {curCls.passive}</size>",
                 15, FontStyle.Bold, GameUIKit.ColParchment, TextAnchor.MiddleLeft,
@@ -161,6 +260,8 @@ namespace AbyssGame
             BuildHowToModal(root);
             BuildSettingsModal(root);
             GameUIKit.OptimizeCanvasHierarchy(canvas);
+            _isPrebakedInScene = true;
+            _runtimeInitialized = Application.isPlaying;
         }
 
         private void Build3DMenuStage()
@@ -208,7 +309,9 @@ namespace AbyssGame
             rimLight.intensity = 1.8f;
 
             ClassDef cls = GameDB.GetClass(GameSession.I.Profile.selectedClass);
-            _heroPreview = CharacterVisualFactory.BuildHeroVisual(cls, _stageRoot, out _heroAnim, GameSession.I.Profile.selectedBuild);
+            _bakedClassId = GameSession.I.Profile.selectedClass;
+            _bakedBuildId = GameSession.I.Profile.selectedBuild;
+            _heroPreview = CharacterVisualFactory.BuildHeroVisual(cls, _stageRoot, out _heroAnim, _bakedBuildId);
             _heroPreview.transform.position = new Vector3(1.35f, 0f, -0.6f);
             _heroPreview.transform.rotation = Quaternion.Euler(0f, -162f, 0f);
         }
@@ -248,7 +351,7 @@ namespace AbyssGame
             GameUIKit.MakeText("Body", img.transform, body, 16, FontStyle.Normal, GameUIKit.ColParchment, TextAnchor.UpperLeft,
                 new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(36f, 92f), new Vector2(-36f, -86f));
 
-            GameUIKit.MakeStyledButton("Close", img.transform, "ĐÃ LĨNH HỘI (ĐÓNG)", 17, UIButtonStyle.Primary,
+            _btnCloseHowTo = GameUIKit.MakeStyledButton("Close", img.transform, "ĐÃ LĨNH HỘI (ĐÓNG)", 17, UIButtonStyle.Primary,
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-150f, 22f), new Vector2(150f, 74f),
                 () => _howToModal.SetActive(false), GameUIKit.GetIcon("check_seal"));
 

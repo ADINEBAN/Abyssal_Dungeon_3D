@@ -24,7 +24,7 @@ namespace AbyssGame
                     if (_inst == null)
                     {
                         var go = new GameObject("[GameAudio]");
-                        DontDestroyOnLoad(go);
+                        if (Application.isPlaying) DontDestroyOnLoad(go);
                         _inst = go.AddComponent<GameAudio>();
                     }
                 }
@@ -48,9 +48,9 @@ namespace AbyssGame
 
         private void Awake()
         {
-            if (_inst != null && _inst != this) { Destroy(gameObject); return; }
+            if (_inst != null && _inst != this) { BakedAssetRegistry.DestroySafe(gameObject); return; }
             _inst = this;
-            DontDestroyOnLoad(gameObject);
+            if (Application.isPlaying) DontDestroyOnLoad(gameObject);
 
             _bgmSource = gameObject.AddComponent<AudioSource>();
             _bgmSource.loop = true;

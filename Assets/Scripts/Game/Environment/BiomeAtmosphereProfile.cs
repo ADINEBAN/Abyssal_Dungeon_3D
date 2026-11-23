@@ -280,20 +280,38 @@ namespace AbyssGame
         public static BiomeAtmosphereController Instance { get; private set; }
         public DungeonBiome CurrentBiome { get; private set; }
 
+        [SerializeField] private DungeonBiome _serializedBiome = DungeonBiome.ForgottenTemple;
+        [SerializeField] private Light _dirLight;
+        [SerializeField] private ParticleSystem _envParticles;
+
         private BiomeAtmosphereData _from;
         private BiomeAtmosphereData _target;
         private float _blend = 1f;
-        private Light _dirLight;
-        private ParticleSystem _envParticles;
+        private bool _initialized;
 
         public static BiomeAtmosphereController EnsureOnScene(Transform parent = null)
         {
             if (Instance != null) return Instance;
+            var existing = FindObjectOfType<BiomeAtmosphereController>();
+            if (existing != null)
+            {
+                Instance = existing;
+                existing.InitSystem();
+                return existing;
+            }
             var go = new GameObject("BiomeAtmosphereController");
             if (parent != null) go.transform.SetParent(parent, false);
             Instance = go.AddComponent<BiomeAtmosphereController>();
             Instance.InitSystem();
             return Instance;
+        }
+
+        private void Awake()
+        {
+            Instance = this;
+            InitSystem();
+            if (_blend >= 1f && _target.vietnameseTitle == null)
+                ApplyBiome(_serializedBiome, instant: true);
         }
 
         private void OnDestroy()
@@ -303,6 +321,8 @@ namespace AbyssGame
 
         private void InitSystem()
         {
+            if (_initialized && _dirLight != null && _envParticles != null) return;
+            _initialized = true;
             var preset = GraphicsManager.Instance != null ? GraphicsManager.Instance.ActivePreset : null;
             if (preset != null)
             {
@@ -358,7 +378,10 @@ namespace AbyssGame
                 _dirLight.shadowNormalBias = 0.20f;
             }
 
-            BuildEnvironmentalParticleEmitter();
+            if (_envParticles == null)
+                _envParticles = GetComponentInChildren<ParticleSystem>();
+            if (_envParticles == null)
+                BuildEnvironmentalParticleEmitter();
             if (GraphicsManager.Instance != null)
                 GraphicsManager.Instance.ApplyActivePresetToCurrentScene();
         }
@@ -367,6 +390,7 @@ namespace AbyssGame
         {
             var next = BiomeAtmosphereLibrary.Get(biome);
             CurrentBiome = biome;
+            _serializedBiome = biome;
 
             if (instant)
             {
@@ -383,7 +407,7 @@ namespace AbyssGame
             }
 
             UpdateParticleStyle(next);
-            if (GameAudio.I != null && !string.IsNullOrEmpty(next.ambienceClipName))
+            if (Application.isPlaying && GameAudio.I != null && !string.IsNullOrEmpty(next.ambienceClipName))
                 GameAudio.I.PlayAmbience(next.ambienceClipName);
         }
 

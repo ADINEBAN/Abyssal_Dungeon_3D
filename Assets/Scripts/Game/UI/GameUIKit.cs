@@ -104,6 +104,42 @@ namespace AbyssGame
             if (_spriteCache.TryGetValue(key, out Sprite cached) && cached != null)
                 return cached;
 
+#if UNITY_EDITOR
+            string diskPath = "Assets/Resources/" + resourcePath + ".png";
+            var importer = UnityEditor.AssetImporter.GetAtPath(diskPath) as UnityEditor.TextureImporter;
+            if (importer != null)
+            {
+                bool dirty = false;
+                if (importer.textureType != UnityEditor.TextureImporterType.Sprite)
+                {
+                    importer.textureType = UnityEditor.TextureImporterType.Sprite;
+                    importer.spriteImportMode = UnityEditor.SpriteImportMode.Single;
+                    dirty = true;
+                }
+                if (border != Vector4.zero && importer.spriteBorder != border)
+                {
+                    importer.spriteBorder = border;
+                    dirty = true;
+                }
+                if (dirty)
+                    importer.SaveAndReimport();
+
+                Sprite editorSp = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(diskPath);
+                if (editorSp != null)
+                {
+                    _spriteCache[key] = editorSp;
+                    return editorSp;
+                }
+            }
+#endif
+
+            Sprite direct = Resources.Load<Sprite>(resourcePath);
+            if (direct != null)
+            {
+                _spriteCache[key] = direct;
+                return direct;
+            }
+
             Texture2D tex = Resources.Load<Texture2D>(resourcePath);
             if (tex != null)
             {
@@ -119,12 +155,6 @@ namespace AbyssGame
                 return sp;
             }
 
-            Sprite direct = Resources.Load<Sprite>(resourcePath);
-            if (direct != null)
-            {
-                _spriteCache[key] = direct;
-                return direct;
-            }
             return null;
         }
 
@@ -852,28 +882,56 @@ namespace AbyssGame
         // =====================================================================
         public static GameObject BuildCharacterSheetModal(Transform canvasRoot, Func<ActorUnit> getHero, Action onChanged)
         {
-            var modal = MakeStyledPanel(
-                "CharacterSheetModal", canvasRoot, UIPanelStyle.Dialog,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(-880f, -470f), new Vector2(880f, 470f));
+            Transform existingModal = canvasRoot != null ? canvasRoot.Find("CharacterSheetModal") : null;
+            Image modal;
+            RectTransform bodyRoot;
 
-            // Ornate Top Header
-            MakeIcon("CrestLeft", modal.transform, GetIcon("crown"),
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(26f, -60f), new Vector2(66f, -20f));
+            if (existingModal != null && existingModal.TryGetComponent<Image>(out var existingImg))
+            {
+                modal = existingImg;
+                var closeBtn = modal.transform.Find("CloseBtn")?.GetComponent<Button>();
+                if (closeBtn != null)
+                {
+                    closeBtn.onClick.RemoveAllListeners();
+                    closeBtn.onClick.AddListener(() =>
+                    {
+                        GameAudio.I?.PlaySfx(GameSfx.Click, 0.6f);
+                        modal.gameObject.SetActive(false);
+                        onChanged?.Invoke();
+                    });
+                }
+                bodyRoot = modal.transform.Find("Body") as RectTransform
+                           ?? MakeRect("Body", modal.transform, Vector2.zero, Vector2.one, new Vector2(20f, 18f), new Vector2(-20f, -76f));
+            }
+            else
+            {
+                modal = MakeStyledPanel(
+                    "CharacterSheetModal", canvasRoot, UIPanelStyle.Dialog,
+                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    new Vector2(-880f, -470f), new Vector2(880f, 470f));
 
-            MakeText("Title", modal.transform,
-                "DI VẬT THỢ SĂN — HỒ SƠ CHỈ SỐ, CÂY CỔ NGỮ & HÀNH TRANG",
-                24, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleLeft,
-                new Vector2(0f, 1f), new Vector2(0.76f, 1f), new Vector2(76f, -64f), new Vector2(0f, -14f));
+                // Ornate Top Header
+                MakeIcon("CrestLeft", modal.transform, GetIcon("crown"),
+                    new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(26f, -60f), new Vector2(66f, -20f));
 
-            MakeGothicDivider("HeaderDiv", modal.transform,
-                new Vector2(0.02f, 1f), new Vector2(0.98f, 1f), new Vector2(0f, -72f), new Vector2(0f, -54f));
+                MakeText("Title", modal.transform,
+                    "DI VẬT THỢ SĂN — HỒ SƠ CHỈ SỐ, CÂY CỔ NGỮ & HÀNH TRANG",
+                    24, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleLeft,
+                    new Vector2(0f, 1f), new Vector2(0.76f, 1f), new Vector2(76f, -64f), new Vector2(0f, -14f));
 
-            MakeStyledButton("CloseBtn", modal.transform, "ĐÓNG [ESC / I]", 15, UIButtonStyle.Danger,
-                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-196f, -60f), new Vector2(-24f, -16f),
-                () => modal.gameObject.SetActive(false));
+                MakeGothicDivider("HeaderDiv", modal.transform,
+                    new Vector2(0.02f, 1f), new Vector2(0.98f, 1f), new Vector2(0f, -72f), new Vector2(0f, -54f));
 
-            var bodyRoot = MakeRect("Body", modal.transform, Vector2.zero, Vector2.one, new Vector2(20f, 18f), new Vector2(-20f, -76f));
+                MakeStyledButton("CloseBtn", modal.transform, "ĐÓNG [ESC / I]", 15, UIButtonStyle.Danger,
+                    new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-196f, -60f), new Vector2(-24f, -16f),
+                    () =>
+                    {
+                        modal.gameObject.SetActive(false);
+                        onChanged?.Invoke();
+                    });
+
+                bodyRoot = MakeRect("Body", modal.transform, Vector2.zero, Vector2.one, new Vector2(20f, 18f), new Vector2(-20f, -76f));
+            }
 
             int activeBagFilter = -1; // -1 = All, 0 = Weapon, 1 = Armor/Helm, 2 = Ring/Amulet/Relic
             EquipItem inspectedItem = null;
@@ -887,7 +945,7 @@ namespace AbyssGame
                 if (currentBagScrollRect != null)
                     savedBagScrollPos = currentBagScrollRect.verticalNormalizedPosition;
                 for (int i = bodyRoot.childCount - 1; i >= 0; i--)
-                    UnityEngine.Object.Destroy(bodyRoot.GetChild(i).gameObject);
+                    BakedAssetRegistry.DestroySafe(bodyRoot.GetChild(i).gameObject);
 
                 var p = GameSession.I.Profile;
                 ClassDef cls = GameDB.GetClass(p.selectedClass);
@@ -1464,8 +1522,19 @@ namespace AbyssGame
             };
 
             rebuild();
+            var refreshHook = modal.gameObject.GetComponent<ModalAutoRebuildBehaviour>() ?? modal.gameObject.AddComponent<ModalAutoRebuildBehaviour>();
+            refreshHook.OnRebuild = rebuild;
             modal.gameObject.SetActive(false);
             return modal.gameObject;
+        }
+
+        private class ModalAutoRebuildBehaviour : MonoBehaviour
+        {
+            public Action OnRebuild;
+            private void OnEnable()
+            {
+                OnRebuild?.Invoke();
+            }
         }
 
         private static string FormatCompactPrimaryStat(EquipItem eq)
@@ -1645,20 +1714,35 @@ namespace AbyssGame
 
         public static GameObject BuildSettingsModal(Transform canvasRoot, bool includeResetSave = false)
         {
-            var img = MakeStyledPanel("SettingsModal", canvasRoot, UIPanelStyle.Dialog,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-640f, -420f), new Vector2(640f, 420f));
-            var modal = img.gameObject;
+            Transform existingModal = canvasRoot != null ? canvasRoot.Find("SettingsModal") : null;
+            Image img;
+            GameObject modal;
+            RectTransform content;
 
-            MakeIcon("SetIc", img.transform, GetIcon("settings"),
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -58f), new Vector2(66f, -20f));
+            if (existingModal != null && existingModal.TryGetComponent<Image>(out var existingImg))
+            {
+                img = existingImg;
+                modal = img.gameObject;
+                content = img.transform.Find("SettingsContent") as RectTransform
+                          ?? MakeRect("SettingsContent", img.transform, Vector2.zero, Vector2.one, new Vector2(24f, 82f), new Vector2(-24f, -74f));
+            }
+            else
+            {
+                img = MakeStyledPanel("SettingsModal", canvasRoot, UIPanelStyle.Dialog,
+                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-640f, -420f), new Vector2(640f, 420f));
+                modal = img.gameObject;
 
-            MakeText("Title", img.transform, "CỔ ĐÀI THIẾT LẬP ĐỒ HỌA THÍCH ỨNG & ÂM THANH (URP 12.1.7)", 22, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleLeft,
-                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(76f, -62f), new Vector2(-24f, -14f));
+                MakeIcon("SetIc", img.transform, GetIcon("settings"),
+                    new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -58f), new Vector2(66f, -20f));
 
-            MakeGothicDivider("SetDiv", img.transform,
-                new Vector2(0.025f, 1f), new Vector2(0.975f, 1f), new Vector2(0f, -72f), new Vector2(0f, -54f));
+                MakeText("Title", img.transform, "CỔ ĐÀI THIẾT LẬP ĐỒ HỌA THÍCH ỨNG & ÂM THANH (URP 12.1.7)", 22, FontStyle.Bold, ColGoldBright, TextAnchor.MiddleLeft,
+                    new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(76f, -62f), new Vector2(-24f, -14f));
 
-            var content = MakeRect("SettingsContent", img.transform, Vector2.zero, Vector2.one, new Vector2(24f, 82f), new Vector2(-24f, -74f));
+                MakeGothicDivider("SetDiv", img.transform,
+                    new Vector2(0.025f, 1f), new Vector2(0.975f, 1f), new Vector2(0f, -72f), new Vector2(0f, -54f));
+
+                content = MakeRect("SettingsContent", img.transform, Vector2.zero, Vector2.one, new Vector2(24f, 82f), new Vector2(-24f, -74f));
+            }
 
             Text telemetryTxt = null;
             Action rebuildUI = null;
@@ -1666,7 +1750,7 @@ namespace AbyssGame
             rebuildUI = () =>
             {
                 for (int i = content.childCount - 1; i >= 0; i--)
-                    UnityEngine.Object.Destroy(content.GetChild(i).gameObject);
+                    BakedAssetRegistry.DestroySafe(content.GetChild(i).gameObject);
 
                 var gm = GraphicsManager.Instance;
                 var hw = gm != null ? gm.HardwareReport : GraphicsDetector.AnalyzeHardware();
@@ -1937,16 +2021,30 @@ namespace AbyssGame
 
             rebuildUI();
 
-            var updater = modal.AddComponent<SettingsModalTelemetryBehaviour>();
+            var updater = modal.GetComponent<SettingsModalTelemetryBehaviour>() ?? modal.AddComponent<SettingsModalTelemetryBehaviour>();
             updater.GetTelemetryText = () => telemetryTxt;
 
-            MakeStyledButton("Close", img.transform, "LƯU & ĐÓNG CỔ ĐÀI", 15, UIButtonStyle.Primary,
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-160f, 16f), new Vector2(160f, 64f),
-                () =>
+            var existingClose = img.transform.Find("Close")?.GetComponent<Button>();
+            if (existingClose != null)
+            {
+                existingClose.onClick.RemoveAllListeners();
+                existingClose.onClick.AddListener(() =>
                 {
+                    GameAudio.I?.PlaySfx(GameSfx.Click, 0.6f);
                     GraphicsManager.Instance?.ApplyAndSave();
                     modal.SetActive(false);
-                }, GetIcon("check_seal"));
+                });
+            }
+            else
+            {
+                MakeStyledButton("Close", img.transform, "LƯU & ĐÓNG CỔ ĐÀI", 15, UIButtonStyle.Primary,
+                    new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-160f, 16f), new Vector2(160f, 64f),
+                    () =>
+                    {
+                        GraphicsManager.Instance?.ApplyAndSave();
+                        modal.SetActive(false);
+                    }, GetIcon("check_seal"));
+            }
 
             modal.SetActive(false);
             return modal;
