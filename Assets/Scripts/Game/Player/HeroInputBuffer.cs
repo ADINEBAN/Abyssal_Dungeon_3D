@@ -16,13 +16,13 @@ namespace AbyssGame
     }
 
     /// <summary>
-    /// Zero-allocation 180ms Action Input Buffer (input-systems skill):
+    /// Zero-allocation 150ms Action Input Buffer:
     /// Captures combat/evasion inputs pressed during the final recovery frames of another action
     /// and executes them on the exact first frame the Hero becomes actionable.
     /// </summary>
     public struct HeroInputBuffer
     {
-        public const float DefaultBufferWindow = 0.18f;
+        public const float DefaultBufferWindow = 0.15f;
 
         private BufferedActionType _queuedType;
         private float _expireTime;

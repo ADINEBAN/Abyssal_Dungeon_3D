@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.EventSystems;
 
 namespace AbyssGame
@@ -19,6 +19,7 @@ namespace AbyssGame
     /// - Zero-wall-clip SphereCastNonAlloc with asymmetric collision spring (fast snap-in, smooth ease-out)
     /// - Sampled harmonic/Perlin trauma shake + dynamic Sprint/Dodge FOV kick + persistent Zoom & Invert-Y.
     /// </summary>
+    [DefaultExecutionOrder(20)]
     public class OrbitCamera3D : MonoBehaviour
     {
         public static OrbitCamera3D Instance { get; private set; }
@@ -83,11 +84,12 @@ namespace AbyssGame
             }
         }
 
-        public void Shake(float amp = 0.25f, float dur = 0.22f)
+        public void Shake(float amp = 0.16f, float dur = 0.18f)
         {
-            float addTrauma = Mathf.Clamp01(amp * 2.1f);
-            _trauma = Mathf.Clamp01(Mathf.Max(_trauma, addTrauma) + addTrauma * 0.35f);
-            _shakeAmpScale = Mathf.Max(0.18f, amp * 1.15f);
+            float clampedAmp = Mathf.Clamp(amp, 0.04f, 0.32f);
+            float addTrauma = Mathf.Clamp01(clampedAmp * 1.9f);
+            _trauma = Mathf.Clamp01(Mathf.Max(_trauma, addTrauma) + addTrauma * 0.25f);
+            _shakeAmpScale = Mathf.Clamp(clampedAmp * 0.92f, 0.08f, 0.28f);
         }
 
         public void PunchFov(float deltaFov = 3.2f, float dur = 0.24f)
@@ -171,13 +173,13 @@ namespace AbyssGame
 
             _orbitDistance = Mathf.Lerp(_orbitDistance, Distance, 1f - Mathf.Exp(-14f * dt));
 
-            // 1. Pivot SmoothDamp + Interpolated Physics Position + Teleport Guard + Planar Look-Ahead
+            // 1. Pivot SmoothDamp directly on Update()-driven Target.position (zero FixedUpdate mismatch)
             if (_cachedTargetTransform != Target)
             {
                 _cachedTargetTransform = Target;
                 _cachedTargetUnit = Target != null ? Target.GetComponent<ActorUnit>() : null;
             }
-            Vector3 targetPos = _cachedTargetUnit != null ? _cachedTargetUnit.InterpolatedPosition : Target.position;
+            Vector3 targetPos = Target.position;
             if (!_pivotInitialized || Vector3.Distance(targetPos, _lastTargetPos) > 6.5f)
             {
                 _pivotInitialized = true;
@@ -199,16 +201,16 @@ namespace AbyssGame
             {
                 Vector3 toLock = lockSys.LockedTarget.transform.position - targetPos;
                 toLock.y = 0f;
-                desiredLookAhead = Vector3.ClampMagnitude(toLock * 0.14f, 0.95f);
+                desiredLookAhead = Vector3.ClampMagnitude(toLock * 0.14f, 0.90f);
             }
             else if (planarVel.sqrMagnitude > 0.4f)
             {
-                desiredLookAhead = Vector3.ClampMagnitude(planarVel * 0.085f, 0.58f);
+                desiredLookAhead = Vector3.ClampMagnitude(planarVel * 0.075f, 0.50f);
             }
-            _lookAheadOffset = Vector3.SmoothDamp(_lookAheadOffset, desiredLookAhead, ref _lookAheadVel, 0.18f, 14f, dt);
+            _lookAheadOffset = Vector3.SmoothDamp(_lookAheadOffset, desiredLookAhead, ref _lookAheadVel, 0.20f, 12f, dt);
 
             Vector3 rawAnchor = targetPos + PivotOffset + _lookAheadOffset;
-            _smoothedPivot = Vector3.SmoothDamp(_smoothedPivot, rawAnchor, ref _pivotVelXz, 0.045f, 70f, dt);
+            _smoothedPivot = Vector3.SmoothDamp(_smoothedPivot, rawAnchor, ref _pivotVelXz, 0.055f, 80f, dt);
 
             // 2. Soft Target Lock-On Framing (over-the-shoulder toward locked enemy)
             if (isLockedOn && lockSys.LockedTarget != null && Time.timeScale > 0.01f)

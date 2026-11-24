@@ -23,6 +23,9 @@ namespace AbyssGame
         public bool cleared;
         public bool visited;
         public bool discovered;
+        public int wave1InitialCount;
+        public bool hasReinforcementWave;
+        public bool wave2Spawned;
         public bool openNorth;
         public bool openSouth;
         public bool openWest;
@@ -135,6 +138,9 @@ namespace AbyssGame
                 rm.cleared = false;
                 rm.visited = false;
                 rm.discovered = false;
+                rm.wave1InitialCount = 0;
+                rm.hasReinforcementWave = false;
+                rm.wave2Spawned = false;
 
                 if (rm.puzzlePillars != null)
                 {
@@ -696,6 +702,16 @@ namespace AbyssGame
                 {
                     cur.activeMonsters.RemoveAll(m => m == null || m.IsDead);
 
+                    // Wave 2 Reinforcement Trigger: when 50% of Wave 1 has been defeated!
+                    if (cur.hasReinforcementWave && !cur.wave2Spawned && cur.wave1InitialCount > 0)
+                    {
+                        int triggerThreshold = Mathf.FloorToInt(cur.wave1InitialCount * 0.5f);
+                        if (cur.activeMonsters.Count <= triggerThreshold)
+                        {
+                            SpawnWave2Reinforcements(cur);
+                        }
+                    }
+
                     if (cur.type == RoomType.Puzzle)
                     {
                         int lit = 0;
@@ -712,8 +728,9 @@ namespace AbyssGame
                     }
                     else
                     {
-                        CurrentObjective = $"{cur.title} — Tiêu diệt quái còn lại: {cur.activeMonsters.Count}";
-                        if (cur.activeMonsters.Count == 0)
+                        string waveTag = cur.hasReinforcementWave ? (cur.wave2Spawned ? " [Đợt 2/2]" : " [Đợt 1/2]") : "";
+                        CurrentObjective = $"{cur.title}{waveTag} — Tiêu diệt quái còn lại: {cur.activeMonsters.Count}";
+                        if (cur.activeMonsters.Count == 0 && (!cur.hasReinforcementWave || cur.wave2Spawned))
                             MarkRoomCleared(cur);
                     }
                 }
@@ -788,6 +805,7 @@ namespace AbyssGame
             var dir = AbyssDirectorAI.Instance;
             float hpM = dir != null ? dir.HpMultiplier : 1f;
             float atkM = dir != null ? dir.AtkMultiplier : 1f;
+            float eliteChance = dir != null ? dir.GetFloorEliteAffixChance(floor) : 0.25f;
 
             if (dir != null && dir.SpawnBonusHealingShrine && room.type != RoomType.Entrance)
             {
@@ -795,10 +813,17 @@ namespace AbyssGame
                     room.center + new Vector3(-room.width * 0.32f, 0f, -room.length * 0.28f));
             }
 
+            int promotedElites = 0;
+            int maxPromotions = Mathf.Clamp(1 + floor / 5, 1, 3);
             for (int i = 0; i < room.activeMonsters.Count; i++)
             {
                 var m = room.activeMonsters[i];
                 if (m == null) continue;
+                if (!m.IsBoss && !m.IsMiniBoss && !m.IsElite && promotedElites < maxPromotions && UnityEngine.Random.value < eliteChance)
+                {
+                    m.IsElite = true;
+                    promotedElites++;
+                }
                 m.ReinitializePrebakedMonster(floor, hpM, atkM);
                 m.OnKilled -= HandleMonsterKilled;
                 m.OnKilled += HandleMonsterKilled;
@@ -812,7 +837,85 @@ namespace AbyssGame
                 }
             }
 
+            // Top up Wave 1 density with layered Frontline + Backline Ranged/Mage support (preserves all baked monsters!)
+            if (room.type == RoomType.Combat || room.type == RoomType.Elite)
+            {
+                int targetWave1 = room.type == RoomType.Combat
+                    ? Mathf.Clamp(6 + (floor >= 5 ? 1 : 0) + (dir != null ? Mathf.Max(0, dir.ExtraMonsterDelta) : 0), 6, 9)
+                    : Mathf.Clamp(5 + (floor >= 6 ? 1 : 0), 5, 7);
+
+                Transform mParent = room.monstersRoot != null ? room.monstersRoot : (room.roomRoot != null ? room.roomRoot : transform);
+                string[] frontlineIds = { "SkeletonWarrior", "Skeleton", "Demon", "ForestMonster", "Zombie" };
+                string[] backlineIds = { "GoblinArcher", "SkeletonMage" };
+
+                int added = 0;
+                while (room.activeMonsters.Count < targetWave1)
+                {
+                    bool spawnRanged = (added % 2 == 0); // Prioritize ranged/mage backline depth!
+                    string id = spawnRanged
+                        ? backlineIds[(added + floor) % backlineIds.Length]
+                        : frontlineIds[(added + floor) % frontlineIds.Length];
+                    bool makeElite = !spawnRanged && promotedElites < maxPromotions && UnityEngine.Random.value < eliteChance;
+                    if (makeElite) promotedElites++;
+
+                    Vector3 offset = spawnRanged
+                        ? new Vector3((added % 2 == 0 ? -1f : 1f) * UnityEngine.Random.Range(4.2f, 7.2f), 0f, UnityEngine.Random.Range(4.5f, 7.2f))
+                        : new Vector3(UnityEngine.Random.Range(-5.2f, 5.2f), 0f, UnityEngine.Random.Range(0.5f, 3.8f));
+                    var extra = SpawnMonsterAt(GameDB.Enemies[id], room.center + offset, floor, makeElite, false, false, mParent);
+                    room.activeMonsters.Add(extra);
+                    added++;
+                }
+            }
+
+            room.hasReinforcementWave = (room.type == RoomType.Combat || room.type == RoomType.Elite || room.type == RoomType.MiniBoss);
+            room.wave1InitialCount = room.activeMonsters.Count;
+            room.wave2Spawned = false;
+
             ShowRoomEncounterBanner(room);
+        }
+
+        private void SpawnWave2Reinforcements(DungeonRoomRuntime room)
+        {
+            if (room == null || room.wave2Spawned) return;
+            room.wave2Spawned = true;
+
+            int floor = GameSession.I.Profile.selectedFloor;
+            var dir = AbyssDirectorAI.Instance;
+            int count = dir != null ? dir.GetWave2ReinforcementCount(floor, room.type) : 4;
+            float eliteChance = dir != null ? dir.GetFloorEliteAffixChance(floor) : 0.30f;
+            Transform mParent = room.monstersRoot != null ? room.monstersRoot : (room.roomRoot != null ? room.roomRoot : transform);
+
+            string[] frontlinePool = room.type == RoomType.Elite
+                ? new[] { "DarkKnight", "Demon", "SkeletonWarrior" }
+                : new[] { "SkeletonWarrior", "Demon", "Goblin", "ForestMonster", "Skeleton" };
+            string[] backlinePool = { "GoblinArcher", "SkeletonMage" };
+
+            int guaranteedElites = room.type == RoomType.Elite ? 2 : (floor >= 4 ? 1 : 0);
+            int elitesSpawned = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                // Layered formation: ~45% Backline Ranged/Mage + ~55% Frontline Melee/Assassin
+                bool isBackline = (i % 2 == 1);
+                string id = isBackline
+                    ? backlinePool[(i + floor) % backlinePool.Length]
+                    : frontlinePool[(i + floor) % frontlinePool.Length];
+
+                bool isElite = (elitesSpawned < guaranteedElites) || (!isBackline && UnityEngine.Random.value < eliteChance * 0.75f);
+                if (isElite) elitesSpawned++;
+
+                float sideSign = (i % 2 == 0) ? -1f : 1f;
+                Vector3 spawnPos = isBackline
+                    ? room.center + new Vector3(sideSign * UnityEngine.Random.Range(4.8f, room.width * 0.38f), 0f, UnityEngine.Random.Range(3.8f, room.length * 0.36f))
+                    : room.center + new Vector3(sideSign * UnityEngine.Random.Range(2.5f, room.width * 0.34f), 0f, UnityEngine.Random.Range(-2.5f, 3.5f));
+
+                var unit = SpawnMonsterAt(GameDB.Enemies[id], spawnPos, floor, isElite, false, false, mParent);
+                room.activeMonsters.Add(unit);
+                CharacterVisualFactory.SpawnBurst(spawnPos + Vector3.up * 0.6f, new Color(0.75f, 0.22f, 1f), 1.4f, 0.35f);
+            }
+
+            GameAudio.I.PlaySfx(GameSfx.BossRoar, 0.72f);
+            ShowBanner($"ĐỢT TĂNG CƯỜNG (WAVE 2): +{count} QUÁI VỰC THẲM ĐỔ BỘ!", 3.2f);
         }
 
         private void ShowRoomEncounterBanner(DungeonRoomRuntime room)
@@ -852,32 +955,44 @@ namespace AbyssGame
             {
                 case RoomType.Combat:
                     {
-                        string[] pool = room.index == 1
-                            ? new[] { "Goblin", "GoblinArcher", "Skeleton", "Zombie" }
-                            : new[] { "Skeleton", "GoblinArcher", "SkeletonMage", "ForestMonster", "Zombie", "Demon" };
-                        int count = Mathf.Clamp((room.index == 1 ? 5 : 6) + delta, 3, 9);
+                        string[] frontline = room.index == 1
+                            ? new[] { "Goblin", "Skeleton", "Zombie", "SkeletonWarrior" }
+                            : new[] { "SkeletonWarrior", "Demon", "ForestMonster", "Skeleton", "Zombie" };
+                        string[] backline = { "GoblinArcher", "SkeletonMage" };
+                        float eliteChance = dir != null ? dir.GetFloorEliteAffixChance(floor) : 0.25f;
+                        int count = Mathf.Clamp((room.index == 1 ? 6 : 7) + delta, 5, 10);
                         Vector3[] deterministicOffsets =
                         {
-                            new Vector3(-4.2f, 0f, 2.5f),
-                            new Vector3(4.2f, 0f, 2.5f),
-                            new Vector3(0f, 0f, 4.8f),
-                            new Vector3(-3.6f, 0f, -1.8f),
-                            new Vector3(3.6f, 0f, -1.8f),
-                            new Vector3(0f, 0f, 1.2f),
-                            new Vector3(-5.4f, 0f, 4.4f),
-                            new Vector3(5.4f, 0f, 4.4f),
-                            new Vector3(0f, 0f, -3.4f)
+                            new Vector3(-3.8f, 0f, 1.5f),
+                            new Vector3(3.8f, 0f, 1.5f),
+                            new Vector3(-5.2f, 0f, 5.2f),
+                            new Vector3(5.2f, 0f, 5.2f),
+                            new Vector3(0f, 0f, 2.2f),
+                            new Vector3(0f, 0f, 6.2f),
+                            new Vector3(-3.2f, 0f, -1.6f),
+                            new Vector3(3.2f, 0f, -1.6f),
+                            new Vector3(-6.0f, 0f, 3.8f),
+                            new Vector3(6.0f, 0f, 3.8f)
                         };
                         for (int i = 0; i < count; i++)
                         {
-                            string id = pool[i % pool.Length];
-                            bool bonusElite = (dir != null && dir.PromoteBonusElite && i == count - 1);
+                            bool isBackline = (i % 3 == 2); // Structured Frontline + Backline Ranged/Mage
+                            string id = isBackline ? backline[i % backline.Length] : frontline[i % frontline.Length];
+                            bool bonusElite = !isBackline && ((dir != null && dir.PromoteBonusElite && i == count - 1) || (!dormantForUnactivatedRoom && UnityEngine.Random.value < eliteChance * 0.5f));
                             Vector3 pos = dormantForUnactivatedRoom
                                 ? (room.center + deterministicOffsets[i % deterministicOffsets.Length])
-                                : RandomPointInRoom(room, 3.5f);
+                                : (isBackline
+                                    ? room.center + new Vector3(UnityEngine.Random.Range(-6.2f, 6.2f), 0f, UnityEngine.Random.Range(4.2f, 6.8f))
+                                    : RandomPointInRoom(room, 3.5f));
                             var m = SpawnMonsterAt(GameDB.Enemies[id], pos, floor, bonusElite, false, false, mParent);
                             if (dormantForUnactivatedRoom) m.SetRoomDormant(true);
                             room.activeMonsters.Add(m);
+                        }
+                        if (!dormantForUnactivatedRoom)
+                        {
+                            room.hasReinforcementWave = true;
+                            room.wave1InitialCount = room.activeMonsters.Count;
+                            room.wave2Spawned = false;
                         }
                         break;
                     }
@@ -898,7 +1013,13 @@ namespace AbyssGame
                         {
                             foreach (var m in room.activeMonsters) if (m != null) m.SetRoomDormant(true);
                         }
-                        else ShowRoomEncounterBanner(room);
+                        else
+                        {
+                            room.hasReinforcementWave = true;
+                            room.wave1InitialCount = room.activeMonsters.Count;
+                            room.wave2Spawned = false;
+                            ShowRoomEncounterBanner(room);
+                        }
                         break;
                     }
 
@@ -932,7 +1053,13 @@ namespace AbyssGame
                         {
                             foreach (var m in room.activeMonsters) if (m != null) m.SetRoomDormant(true);
                         }
-                        else ShowRoomEncounterBanner(room);
+                        else
+                        {
+                            room.hasReinforcementWave = true;
+                            room.wave1InitialCount = room.activeMonsters.Count;
+                            room.wave2Spawned = false;
+                            ShowRoomEncounterBanner(room);
+                        }
                         break;
                     }
 

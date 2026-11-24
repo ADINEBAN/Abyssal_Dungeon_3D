@@ -17,6 +17,7 @@ namespace AbyssGame
     /// <summary>
     /// Core 3D combatant used by Local Player, AI Party Members, Summons, 10 Monster types, Mini-Boss, and 3-Phase Boss.
     /// </summary>
+    [DefaultExecutionOrder(0)]
     public class ActorUnit : MonoBehaviour
     {
         public static readonly List<ActorUnit> AllUnits = new List<ActorUnit>();
@@ -90,28 +91,19 @@ namespace AbyssGame
         public float Poise = 60f;
         public bool IsStaggered;
         public bool IsEnraged;
+        public bool IsDodging { get; private set; }
+        public float PoiseImmunityTimer;
+        public bool IsPoiseImmune => PoiseImmunityTimer > 0f;
         private float _staggerTimer;
         private float _poiseRegenDelay;
+        private float _lifestealBudget;
+        private int _attackCancelVersion;
         private Vector3 _knockbackVel;
         private Vector3 _lungeVel;
         private Vector3 _queuedPlanarVel;
-        private Vector3 _prevPhysicsPos;
-        private Vector3 _currPhysicsPos;
-        private bool _physicsPosInitialized;
         private string _lastOverheadLabel;
 
-        public Vector3 InterpolatedPosition
-        {
-            get
-            {
-                if (!_physicsPosInitialized || (transform.position - _currPhysicsPos).sqrMagnitude > 0.25f)
-                    return transform.position;
-                float alpha = Time.fixedDeltaTime > 0.0001f
-                    ? Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime)
-                    : 1f;
-                return Vector3.Lerp(_prevPhysicsPos, _currPhysicsPos, alpha);
-            }
-        }
+        public Vector3 InterpolatedPosition => transform.position;
 
         public void SyncPhysicsPosition(Vector3 worldPos)
         {
@@ -119,9 +111,26 @@ namespace AbyssGame
             if (wasEnabled) Controller.enabled = false;
             transform.position = worldPos;
             if (wasEnabled) Controller.enabled = true;
-            _prevPhysicsPos = worldPos;
-            _currPhysicsPos = worldPos;
-            _physicsPosInitialized = true;
+            _queuedPlanarVel = Vector3.zero;
+        }
+
+        public void GrantPoiseImmunity(float seconds)
+        {
+            PoiseImmunityTimer = Mathf.Max(PoiseImmunityTimer, seconds);
+            if (IsStaggered)
+            {
+                IsStaggered = false;
+                _staggerTimer = 0f;
+                Poise = MaxPoise;
+            }
+        }
+
+        public float ConsumeLifestealBudget(float requestedHeal)
+        {
+            if (requestedHeal <= 0f || _lifestealBudget <= 0.1f) return 0f;
+            float granted = Mathf.Min(requestedHeal, _lifestealBudget);
+            _lifestealBudget -= granted;
+            return granted;
         }
 
         private WeaponHitboxSweep3D _hitboxSweep;
@@ -343,28 +352,90 @@ namespace AbyssGame
             _motionPolisher.Bind(this);
         }
 
+        private static void GetPartyReferenceStats(int floor, out float refHeroHp, out float refHeroAtk)
+        {
+            float sumHp = 0f;
+            float sumAtk = 0f;
+            int count = 0;
+
+            for (int i = 0; i < AllUnits.Count; i++)
+            {
+                var u = AllUnits[i];
+                if (u != null && u.Team == Team.Hero && !u.IsSummon)
+                {
+                    // Weight local player slightly higher so solo/party combat feels tuned around the player
+                    float w = u.IsLocalPlayer ? 1.5f : 1.0f;
+                    sumHp += u.MaxHp * w;
+                    sumAtk += u.Atk * w;
+                    count++;
+                }
+            }
+
+            if (count > 0)
+            {
+                float weightTotal = count + 0.5f;
+                refHeroHp = Mathf.Max(850f, sumHp / weightTotal);
+                refHeroAtk = Mathf.Max(85f, sumAtk / weightTotal);
+                return;
+            }
+
+            // Fallback estimate before heroes spawn (e.g., Edit Mode bake)
+            float flScale = 1f + Mathf.Max(0, floor - 1) * 0.38f;
+            refHeroHp = 950f * flScale;
+            refHeroAtk = 95f * flScale;
+        }
+
         private void ApplyMonsterFloorStats(EnemyDef def, int floor, float hpMult, float atkMult, bool rollNewAffix)
         {
             Level = Mathf.Max(1, floor);
             DisplayName = IsBoss ? def.name : (IsMiniBoss ? "[Mini Boss] " + def.name : (IsElite ? "[Tinh Anh] " + def.name : def.name));
 
-            float floorScale = 1f + (floor - 1) * 0.28f;
-            float tierHp = IsBoss ? 5.5f : (IsMiniBoss ? 5.8f : (IsElite ? 5.2f : 2.8f));
-            float tierAtk = IsBoss ? 1.85f : (IsMiniBoss ? 2.05f : (IsElite ? 1.92f : 1.80f));
+            GetPartyReferenceStats(floor, out float refHeroHp, out float refHeroAtk);
 
-            MaxHp = Mathf.Round(def.hp * floorScale * tierHp * hpMult);
+            // Progressive Floor Scaling (HP, ATK, Attack Speed, Poise)
+            float floorHpScale = 1f + (floor - 1) * 0.42f + Mathf.Pow(Mathf.Max(0, floor - 1), 1.35f) * 0.08f;
+            float tierHp = IsBoss ? 7.2f : (IsMiniBoss ? 6.2f : (IsElite ? 4.6f : 2.35f));
+
+            // Calibrate HP to both floor progression AND party attack power so Floor 13 fights stay thrilling (no 3s melts)
+            float floorBasedHp = def.hp * floorHpScale * tierHp;
+            float ttkTargetHits = IsBoss ? 88f : (IsMiniBoss ? 36f : (IsElite ? 18f : 6.2f));
+            float partyScaledHp = refHeroAtk * ttkTargetHits * (1f + (floor - 1) * 0.04f);
+            MaxHp = Mathf.Round(Mathf.Max(floorBasedHp, partyScaledHp * 0.72f) * hpMult);
             Hp = MaxHp;
             MaxMana = 100f;
             Mana = 100f;
-            MaxPoise = IsBoss ? 360f : (IsMiniBoss ? 220f : (IsElite ? 135f : 65f));
+
+            // Poise scales gently with floor so Bosses & Elites require intentional Heavy Attacks / skills to break
+            float poiseFloorScale = 1f + (floor - 1) * 0.08f;
+            MaxPoise = Mathf.Round((IsBoss ? 420f : (IsMiniBoss ? 250f : (IsElite ? 150f : 70f))) * poiseFloorScale);
             Poise = MaxPoise;
-            Atk = Mathf.Round(def.atk * floorScale * tierAtk * atkMult);
-            Def = Mathf.Round(def.def * (1f + (floor - 1) * 0.15f));
-            MoveSpeed = def.speed;
-            AtkSpeed = 1f / Mathf.Max(0.4f, def.attackCd);
+            PoiseImmunityTimer = 0f;
+
+            // Calibrate Monster & Boss ATK directly to Party MaxHP + asymptotic DR (~42-50% avg mitigation):
+            // - Normal Monster basic: ~6-10% Hero MaxHP post-DR (raw ~13-17% refHeroHp)
+            // - Elite Monster basic:  ~12-18% Hero MaxHP post-DR (raw ~24-30% refHeroHp)
+            // - Mini-Boss basic:      ~14-20% Hero MaxHP post-DR (raw ~28-34% refHeroHp)
+            // - Boss basic:           ~15-22% Hero MaxHP post-DR (raw ~31-38% refHeroHp)
+            // - Boss Heavy / Red AoE: ~35-55% Hero MaxHP post-DR (via 2.35x-2.65x skill mult)
+            float speciesAtkFactor = Mathf.Clamp(def.atk / 34f, 0.82f, 1.25f);
+            float floorDangerBoost = 1f + Mathf.Min(0.28f, (floor - 1) * 0.022f);
+            float baseTargetPct = IsBoss
+                ? 0.34f
+                : (IsMiniBoss ? 0.30f : (IsElite ? 0.26f : 0.145f * speciesAtkFactor));
+
+            float calibratedAtk = refHeroHp * baseTargetPct * floorDangerBoost * atkMult;
+            float legacyFloorAtk = def.atk * (1f + (floor - 1) * 0.34f) * (IsBoss ? 2.4f : (IsElite ? 2.1f : 1.75f)) * atkMult;
+            Atk = Mathf.Round(Mathf.Max(calibratedAtk, legacyFloorAtk));
+
+            Def = Mathf.Round(def.def * (1f + (floor - 1) * 0.22f));
+            MoveSpeed = def.speed * (1f + Mathf.Min(0.20f, (floor - 1) * 0.015f));
+
+            // Progressive Floor Attack Speed: higher floors attack noticeably faster (up to +55% at high floors)
+            float floorAspdMult = 1f + Mathf.Min(0.55f, (floor - 1) * 0.04f);
+            AtkSpeed = (1f / Mathf.Max(0.38f, def.attackCd)) * floorAspdMult;
             AttackRange = def.attackRange;
             IsRanged = (def.archetype == Archetype.Ranged || def.archetype == Archetype.Mage);
-            CritChance = IsBoss ? 0.15f : (IsElite ? 0.09f : 0.05f);
+            CritChance = IsBoss ? 0.16f : (IsElite ? 0.10f : 0.05f);
 
             if ((IsElite || IsMiniBoss) && !IsBoss && rollNewAffix)
             {
@@ -373,9 +444,9 @@ namespace AbyssGame
                 if (!string.IsNullOrEmpty(afx))
                     DisplayName = $"{DisplayName} [{afx}]";
                 if (ActiveEliteAffix == EliteAffixKind.Vampiric)
-                    Lifesteal = Mathf.Max(Lifesteal, 0.35f);
+                    Lifesteal = Mathf.Max(Lifesteal, 0.25f);
                 else if (ActiveEliteAffix == EliteAffixKind.ArcaneShielded)
-                    Shield = MaxHp * 0.35f;
+                    Shield = MaxHp * 0.28f;
             }
         }
 
@@ -520,13 +591,14 @@ namespace AbyssGame
             MaxMana = Mathf.Max(50f, Mathf.Round(mp));
             Atk = Mathf.Max(10f, atk);
             Def = Mathf.Max(0f, def);
-            AtkSpeed = Mathf.Clamp(aspd, 0.5f, 3.5f);
-            CritChance = Mathf.Clamp(crit, 0f, 0.85f);
-            CritDamage = crd;
+            AtkSpeed = Mathf.Clamp(aspd, 0.5f, 3.0f);
+            CritChance = Mathf.Clamp(crit, 0f, 0.72f);
+            CritDamage = Mathf.Clamp(crd, 1.50f, 2.15f);
             MoveSpeed = spd;
-            Lifesteal = Mathf.Clamp(ls, 0f, 0.5f);
-            CooldownReduction = Mathf.Clamp(cdr, 0f, 0.55f);
+            Lifesteal = Mathf.Clamp(ls, 0f, 0.30f);
+            CooldownReduction = Mathf.Clamp(cdr, 0f, 0.45f);
             HealBonus = healB;
+            _lifestealBudget = MaxHp * 0.08f;
 
             for (int i = 0; i < 4; i++)
             {
@@ -619,11 +691,17 @@ namespace AbyssGame
 
         private void Update()
         {
-            float dt = Time.deltaTime;
+            float dt = Mathf.Min(Time.deltaTime, 0.05f);
             if (BasicAttackCd > 0f) BasicAttackCd -= dt;
             if (HeavyAttackCd > 0f) HeavyAttackCd -= dt;
             if (DodgeCd > 0f) DodgeCd -= dt;
             if (_jumpCooldown > 0f) _jumpCooldown -= dt;
+            if (PoiseImmunityTimer > 0f) PoiseImmunityTimer = Mathf.Max(0f, PoiseImmunityTimer - dt);
+
+            // Refill rolling 1-second Lifesteal cap budget (max 8% MaxHP per second)
+            float maxLsPerSec = MaxHp * 0.08f;
+            _lifestealBudget = Mathf.Min(maxLsPerSec, _lifestealBudget + maxLsPerSec * dt);
+
             if (_comboWindowTimer > 0f)
             {
                 _comboWindowTimer -= dt;
@@ -636,6 +714,13 @@ namespace AbyssGame
                 {
                     IsStaggered = false;
                     Poise = MaxPoise;
+                    // Anti-stunlock Hyper-Armor / Unstoppable window (8-10s for Boss/MiniBoss)
+                    PoiseImmunityTimer = IsBoss ? 9.5f : (IsMiniBoss ? 8.5f : (IsElite ? 6.0f : 3.5f));
+                    if (IsBoss || IsMiniBoss)
+                    {
+                        CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.5f,
+                            $"BẤT KHUẤT ({PoiseImmunityTimer:0}s)!", new Color(0.75f, 0.9f, 1f), 1.05f);
+                    }
                 }
             }
             else if (Poise < MaxPoise)
@@ -698,6 +783,7 @@ namespace AbyssGame
             }
 
             UpdateStatuses(dt);
+            UpdateLocomotionAndGravity(dt);
             UpdateGravityAndVisuals(dt);
         }
 
@@ -729,21 +815,13 @@ namespace AbyssGame
             }
         }
 
-        private void FixedUpdate()
+        /// <summary>
+        /// Single unified Update()-driven CharacterController.Move loop using Time.deltaTime.
+        /// Eliminates FixedUpdate/Update beat stutter and keeps OrbitCamera3D.LateUpdate silky smooth.
+        /// </summary>
+        private void UpdateLocomotionAndGravity(float dt)
         {
-            float fdt = Time.fixedDeltaTime;
-            if (fdt <= 0.0001f) return;
-
-            if (!_physicsPosInitialized || (transform.position - _currPhysicsPos).sqrMagnitude > 0.25f)
-            {
-                _prevPhysicsPos = transform.position;
-                _currPhysicsPos = transform.position;
-                _physicsPosInitialized = true;
-            }
-            else
-            {
-                _prevPhysicsPos = _currPhysicsPos;
-            }
+            if (dt <= 0.0001f) return;
 
             if (Controller != null && Controller.enabled && !IsDead)
             {
@@ -755,15 +833,15 @@ namespace AbyssGame
                 }
                 else
                 {
-                    _coyoteTimer = Mathf.Max(0f, _coyoteTimer - fdt);
-                    _velocity.y -= 20f * fdt;
+                    _coyoteTimer = Mathf.Max(0f, _coyoteTimer - dt);
+                    _velocity.y -= 20f * dt;
                 }
 
                 Vector3 planarImpulse = _knockbackVel + _lungeVel;
                 if (planarImpulse.sqrMagnitude > 0.002f)
                 {
-                    _knockbackVel = Vector3.Lerp(_knockbackVel, Vector3.zero, 1f - Mathf.Exp(-11f * fdt));
-                    _lungeVel = Vector3.Lerp(_lungeVel, Vector3.zero, 1f - Mathf.Exp(-15f * fdt));
+                    _knockbackVel = Vector3.Lerp(_knockbackVel, Vector3.zero, 1f - Mathf.Exp(-11f * dt));
+                    _lungeVel = Vector3.Lerp(_lungeVel, Vector3.zero, 1f - Mathf.Exp(-15f * dt));
                 }
                 else
                 {
@@ -775,7 +853,7 @@ namespace AbyssGame
                 Vector3 totalPlanarVel = _queuedPlanarVel + new Vector3(planarImpulse.x, 0f, planarImpulse.z);
                 _queuedPlanarVel = Vector3.zero;
 
-                Vector3 stepDisp = new Vector3(totalPlanarVel.x * fdt, _velocity.y * fdt, totalPlanarVel.z * fdt);
+                Vector3 stepDisp = new Vector3(totalPlanarVel.x * dt, _velocity.y * dt, totalPlanarVel.z * dt);
                 if (transform.position.y + stepDisp.y < 0f && _velocity.y < 0f)
                 {
                     stepDisp.y = -transform.position.y;
@@ -791,8 +869,6 @@ namespace AbyssGame
             {
                 _queuedPlanarVel = Vector3.zero;
             }
-
-            _currPhysicsPos = transform.position;
         }
 
         private void UpdateGravityAndVisuals(float dt)
@@ -831,7 +907,7 @@ namespace AbyssGame
                 {
                     string desiredLabel = IsDowned
                         ? $"{DisplayName} [GỤC - Đứng gần cứu {(int)(ReviveProgress * 100)}%]"
-                        : (IsStaggered ? $"{DisplayName} [PHÁ GIÁP!]" : DisplayName);
+                        : (IsStaggered ? $"{DisplayName} [PHÁ GIÁP!]" : (IsPoiseImmune && (IsElite || IsMiniBoss) ? $"{DisplayName} [BẤT KHUẤT]" : DisplayName));
                     if (!string.Equals(_lastOverheadLabel, desiredLabel, StringComparison.Ordinal))
                     {
                         _lastOverheadLabel = desiredLabel;
@@ -861,16 +937,20 @@ namespace AbyssGame
 
         public bool ApplyPoiseDamage(float poiseDmg, ActorUnit attacker)
         {
-            if (IsDead || IsDowned || IsStaggered || poiseDmg <= 0f || MaxPoise <= 0f) return false;
+            if (IsDead || IsDowned || IsStaggered || IsPoiseImmune || poiseDmg <= 0f || MaxPoise <= 0f) return false;
             // Heroes only stagger from massive Boss/MiniBoss blows; Monsters have full Poise/Guard break!
             if (Team == Team.Hero) return false;
 
-            _poiseRegenDelay = 3.4f;
+            // AI teammates deal reduced Poise pressure so the player controls stagger timing
+            if (attacker != null && attacker.Team == Team.Hero && !attacker.IsLocalPlayer)
+                poiseDmg *= 0.50f;
+
+            _poiseRegenDelay = 3.2f;
             Poise = Mathf.Max(0f, Poise - poiseDmg);
             if (Poise > 0.01f) return false;
 
             IsStaggered = true;
-            _staggerTimer = 2.5f;
+            _staggerTimer = IsBoss ? 2.4f : 2.5f;
             if (_hitboxSweep != null) _hitboxSweep.CancelAllSweeps();
 
             // Shatter Arcane Shielded barrier when guard-broken!
@@ -878,19 +958,19 @@ namespace AbyssGame
             {
                 Shield = 0f;
                 CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.65f,
-                    "VỠ KHIÊN KHÁNG PHÉP!", new Color(0.42f, 0.95f, 1f), 1.15f);
+                    "VỠ KHIÊN KHÁNG PHÉP!", new Color(0.42f, 0.95f, 1f), 1.05f);
             }
 
             GameAudio.I.PlaySfx(GameSfx.GuardBreak, 0.9f);
-            AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn("VFX_Knight_Judgement", transform.position, Quaternion.identity, null, IsBoss ? 1.35f : 0.95f);
-            CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.35f, "PHÁ GIÁP! (200% SÁT THƯƠNG • 2.5s)", new Color(1f, 0.85f, 0.22f), 1.35f);
+            AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn("VFX_Knight_Judgement", transform.position, Quaternion.identity, null, IsBoss ? 1.05f : 0.78f);
+            CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.35f, "PHÁ GIÁP! (140% SÁT THƯƠNG • 2.5s)", new Color(1f, 0.85f, 0.22f), 1.25f);
 
             if (attacker != null && attacker.IsLocalPlayer)
             {
-                CombatFeelManager.I.TriggerHitStop(0.04f, 0.04f);
-                if (OrbitCamera3D.Instance != null) OrbitCamera3D.Instance.Shake(0.32f, 0.25f);
+                CombatFeelManager.I.TriggerHitStop(0.03f, 0.08f);
+                if (OrbitCamera3D.Instance != null) OrbitCamera3D.Instance.Shake(0.18f, 0.18f);
                 if (ScreenCombatFeedbackUI.Instance != null)
-                    ScreenCombatFeedbackUI.Instance.NotifyCombatSurge(new Color(1f, 0.84f, 0.28f), 0.42f);
+                    ScreenCombatFeedbackUI.Instance.NotifyCombatSurge(new Color(1f, 0.84f, 0.28f), 0.34f);
             }
             return true;
         }
@@ -952,19 +1032,19 @@ namespace AbyssGame
             float a = Atk;
             if (HeroClass != null && HeroClass.id == 2)
             {
-                // Berserker passive: up to +60% damage as HP drops
+                // Berserker passive: up to +40% damage as HP drops (rebalanced from 60% to prevent runaway spikes)
                 float missing = 1f - Mathf.Clamp01(Hp / Mathf.Max(1f, MaxHp));
-                a *= (1f + missing * 0.60f);
+                a *= (1f + missing * 0.40f);
             }
-            if (HasStatus(StatusType.AtkUp)) a *= 1.25f;
-            if (HasStatus(StatusType.Rage)) a *= 1.40f;
+            if (HasStatus(StatusType.AtkUp)) a *= 1.20f;
+            if (HasStatus(StatusType.Rage)) a *= 1.28f;
             return a;
         }
 
         public float EffectiveDefense()
         {
             float d = Def;
-            if (HasStatus(StatusType.DefUp)) d *= 1.45f;
+            if (HasStatus(StatusType.DefUp)) d *= 1.32f;
             return d;
         }
 
@@ -982,7 +1062,7 @@ namespace AbyssGame
             _staminaRegenDelay = 0.45f;
         }
 
-        public void SetFixedMoveVelocity(Vector3 worldVelocity)
+        public void SetPlanarMoveVelocity(Vector3 worldVelocity)
         {
             if (!CanAct()) return;
             worldVelocity.y = 0f;
@@ -990,15 +1070,20 @@ namespace AbyssGame
             if (_motionPolisher == null && Anim != null)
             {
                 float spdRatio = worldVelocity.magnitude / Mathf.Max(0.01f, EffectiveMoveSpeed());
-                Anim.SetFloat(HashSpeed, Mathf.Clamp01(spdRatio), 0.1f, Time.fixedDeltaTime);
+                Anim.SetFloat(HashSpeed, Mathf.Clamp01(spdRatio), 0.1f, Time.deltaTime);
             }
+        }
+
+        public void SetFixedMoveVelocity(Vector3 worldVelocity)
+        {
+            SetPlanarMoveVelocity(worldVelocity);
         }
 
         public void MoveWorld(Vector3 worldDelta)
         {
             if (!CanAct()) return;
             worldDelta.y = 0f;
-            float dt = Time.inFixedTimeStep ? Time.fixedDeltaTime : Mathf.Max(0.0001f, Time.deltaTime);
+            float dt = Mathf.Clamp(Time.deltaTime, 0.0001f, 0.05f);
             Vector3 vel = worldDelta / dt;
             _queuedPlanarVel = vel;
             if (_motionPolisher == null && Anim != null)
@@ -1017,13 +1102,14 @@ namespace AbyssGame
         {
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.001f) return;
+            float dt = Mathf.Min(Time.deltaTime, 0.05f);
             Quaternion targetRot = Quaternion.LookRotation(dir.normalized);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, turnSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 1f - Mathf.Exp(-turnSpeed * dt));
         }
 
         public bool TryJump()
         {
-            if (!CanAct() || _jumpCooldown > 0f) return false;
+            if (!CanAct() || IsDodging || _jumpCooldown > 0f) return false;
             if (!IsGroundedUnit && _coyoteTimer <= 0f) return false;
             if (IsLocalPlayer && Stamina < 10f) return false;
 
@@ -1037,13 +1123,25 @@ namespace AbyssGame
             return true;
         }
 
+        /// <summary>
+        /// Responsive Dodge Cancel with explicit 0.35s i-frames:
+        /// Immediately cancels active attack swings/windups/lunges so the player can react cleanly to Boss red AoEs.
+        /// </summary>
         public bool TryDodge(Vector3 moveDir)
         {
-            if (!CanAct() || DodgeCd > 0f) return false;
-            if (IsLocalPlayer && !ConsumeStamina(18f)) return false;
+            if (!CanAct() || IsDodging || DodgeCd > 0f) return false;
+            if (IsLocalPlayer && !ConsumeStamina(16f)) return false;
+
+            // Dodge Cancel: abort ongoing attack sweeps, attack coroutines, and forward lunges immediately!
+            _attackCancelVersion++;
+            if (_hitboxSweep != null) _hitboxSweep.CancelAllSweeps();
+            _lungeVel = Vector3.zero;
+            _swingAnimTimer = 0f;
+            BasicAttackCd = Mathf.Min(BasicAttackCd, 0.10f);
+            HeavyAttackCd = Mathf.Min(HeavyAttackCd, 0.25f);
 
             IsSprinting = false;
-            DodgeCd = 1.15f;
+            DodgeCd = IsLocalPlayer ? 0.95f : 2.6f;
             Vector3 dir = moveDir.sqrMagnitude > 0.02f ? moveDir.normalized : transform.forward;
             dir.y = 0f;
             transform.rotation = Quaternion.LookRotation(dir);
@@ -1053,35 +1151,41 @@ namespace AbyssGame
             if (IsLocalPlayer && LanRoomBridge.HasInstance)
                 LanRoomBridge.I.BroadcastHeroAction(PartySlotIndex, "dodge", dir, transform.position + dir * 4f);
             if (IsLocalPlayer && OrbitCamera3D.Instance != null)
-                OrbitCamera3D.Instance.PunchFov(3.2f, 0.24f);
-            StartCoroutine(DodgeCoroutine(dir, 6.2f, 0.34f));
+                OrbitCamera3D.Instance.PunchFov(2.4f, 0.20f);
+
+            const float dodgeIFrameDuration = 0.35f;
+            StartCoroutine(DodgeCoroutine(dir, 6.4f, dodgeIFrameDuration));
             return true;
         }
 
         private IEnumerator DodgeCoroutine(Vector3 dir, float dist, float dur)
         {
+            IsDodging = true;
             IsInvincible = true;
-            AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn("VFX_Common_SpiralDash", transform.position, transform.rotation, null, 0.9f);
+            AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn("VFX_Common_SpiralDash", transform.position, transform.rotation, null, 0.85f);
             float t = 0f;
             float spd = dist / dur;
             int ghostsSpawned = 0;
-            while (t < dur)
+            while (t < dur && !IsDead && !IsDowned)
             {
-                if (_motionPolisher != null && ghostsSpawned < 3 && t >= ghostsSpawned * 0.075f)
+                if (_motionPolisher != null && ghostsSpawned < 3 && t >= ghostsSpawned * 0.085f)
                 {
                     _motionPolisher.SpawnDodgeGhost();
                     ghostsSpawned++;
                 }
-                _queuedPlanarVel = dir * spd;
-                t += Time.deltaTime;
+                // Slight ease-out curve on dodge velocity for crisp start and clean stop
+                float ease = Mathf.Lerp(1.22f, 0.72f, Mathf.Clamp01(t / dur));
+                _queuedPlanarVel = dir * (spd * ease);
+                t += Mathf.Min(Time.deltaTime, 0.05f);
                 yield return null;
             }
             IsInvincible = false;
+            IsDodging = false;
         }
 
         public bool TryBasicAttack(Vector3 aimDir, Vector3 aimPoint)
         {
-            if (!CanAct() || BasicAttackCd > 0f) return false;
+            if (!CanAct() || IsDodging || BasicAttackCd > 0f) return false;
             IsSprinting = false;
 
             int step = (_comboWindowTimer > 0f) ? (ComboStep % 3) : 0;
@@ -1215,7 +1319,7 @@ namespace AbyssGame
         /// </summary>
         public bool TryHeavyAttack(Vector3 aimDir, Vector3 aimPoint)
         {
-            if (!CanAct() || HeavyAttackCd > 0f || BasicAttackCd > 0.25f) return false;
+            if (!CanAct() || IsDodging || HeavyAttackCd > 0f || BasicAttackCd > 0.25f) return false;
             if (IsLocalPlayer && !ConsumeStamina(20f)) return false;
 
             IsSprinting = false;
@@ -1294,8 +1398,9 @@ namespace AbyssGame
 
         private IEnumerator DelayedHeavyRangedShot(float delay, Vector3 aimDir, float rawHeavy, Color accent, float poiseDmg, float kb)
         {
+            int token = _attackCancelVersion;
             yield return new WaitForSeconds(delay);
-            if (IsDead || IsDowned) yield break;
+            if (IsDead || IsDowned || token != _attackCancelVersion) yield break;
             CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 1.25f + aimDir * 0.7f, accent, 0.95f, 0.22f);
             SkillProjectile.Spawn(this, transform.position + Vector3.up * 1.25f + aimDir * 0.75f, aimDir,
                 27f, AttackRange + 6f, rawHeavy * 0.95f, true, StatusType.Slow, 1.8f, 0f, 2.2f, accent, poiseDmg * 0.85f, kb * 0.75f, 0.15f);
@@ -1303,7 +1408,7 @@ namespace AbyssGame
 
         public bool TryUseSkill(int slot, Vector3 aimPoint)
         {
-            if (HeroClass == null || slot < 0 || slot >= 4 || !CanAct()) return false;
+            if (HeroClass == null || slot < 0 || slot >= 4 || !CanAct() || IsDodging) return false;
             SkillDef sk = HeroClass.skills[slot];
             if (SkillCds[slot] > 0f) return false;
             float cost = (HeroClass.id == 5) ? sk.mana * 0.9f : sk.mana; // Mage passive -10% mana
@@ -1541,12 +1646,13 @@ namespace AbyssGame
 
         private IEnumerator MultiArcRoutine(int hits, float rawPow, SkillDef sk, float effRadius = -1f, Color overrideCol = default)
         {
+            int token = _attackCancelVersion;
             float rad = effRadius > 0f ? effRadius : sk.radius;
             Color fxCol = overrideCol != default ? overrideCol : sk.color;
             for (int i = 0; i < hits; i++)
             {
-                if (IsDead || IsDowned) yield break;
-                PulseWeaponTrails(0.22f, fxCol);
+                if (IsDead || IsDowned || token != _attackCancelVersion) yield break;
+                PulseWeaponTrails(0.18f, fxCol);
                 CombatFeelManager.I.SpawnSlashArc(
                     transform.position + Vector3.up * 1.1f + transform.forward * 0.25f,
                     transform.rotation,
@@ -1555,8 +1661,8 @@ namespace AbyssGame
                     (i % 2 == 0) ? -16f : 18f,
                     Color.Lerp(fxCol, Color.white, 0.45f),
                     fxCol,
-                    0.22f,
-                    0.78f,
+                    0.20f,
+                    0.72f,
                     i % 2 == 1);
                 DealConeDamage(rawPow, rad, sk.arc, sk.status, sk.statusDur, EffectiveAttack() * sk.statusPower, fxCol);
                 if (i < hits - 1) yield return new WaitForSeconds(0.11f);
@@ -1569,7 +1675,7 @@ namespace AbyssGame
             var hitSet = new HashSet<ActorUnit>();
             float dur = 0.22f, t = 0f;
             float spd = dist / dur;
-            while (t < dur)
+            while (t < dur && !IsDead && !IsDowned)
             {
                 _queuedPlanarVel = dir * spd;
                 for (int i = AllUnits.Count - 1; i >= 0; i--)
@@ -1580,18 +1686,18 @@ namespace AbyssGame
                         if (Vector3.Distance(transform.position, u.transform.position) <= hitRadius)
                         {
                             hitSet.Add(u);
-                            DealDamageTo(u, rawDmg, StatusType.None, 0f, 0f);
+                            DealDamageTo(u, rawDmg, StatusType.None, 0f, 0f, isMultiTargetOrAoe: true);
                         }
                     }
                 }
-                t += Time.deltaTime;
+                t += Mathf.Min(Time.deltaTime, 0.05f);
                 yield return null;
             }
             IsInvincible = false;
             CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up, col, hitRadius, 0.35f);
         }
 
-        public void DealConeDamage(float rawDamage, float radius, float arcDeg, StatusType status, float statusDur, float statusPow, Color fxCol)
+        public void DealConeDamage(float rawDamage, float radius, float arcDeg, StatusType status, float statusDur, float statusPow, Color fxCol, bool heavyTelegraph = false)
         {
             CharacterVisualFactory.SpawnBurst(transform.position + transform.forward * (radius * 0.5f) + Vector3.up * 0.9f, fxCol, radius * 0.6f, 0.28f);
             float cosHalf = Mathf.Cos(arcDeg * 0.5f * Mathf.Deg2Rad);
@@ -1606,15 +1712,15 @@ namespace AbyssGame
                 {
                     if (d < 0.6f || Vector3.Dot(transform.forward, to.normalized) >= cosHalf)
                     {
-                        DealDamageTo(u, rawDamage, status, statusDur, statusPow, 0f, 26f, 3.2f, u.transform.position + Vector3.up * 1.05f, false);
+                        DealDamageTo(u, rawDamage, status, statusDur, statusPow, 0f, 24f, 3.0f, u.transform.position + Vector3.up * 1.05f, heavyTelegraph, isMultiTargetOrAoe: true, heavyTelegraph: heavyTelegraph);
                     }
                 }
             }
         }
 
-        public void DealCircleDamage(Vector3 center, float radius, float rawDamage, StatusType status, float statusDur, float statusPow, Color fxCol)
+        public void DealCircleDamage(Vector3 center, float radius, float rawDamage, StatusType status, float statusDur, float statusPow, Color fxCol, bool heavyTelegraph = false)
         {
-            CharacterVisualFactory.SpawnBurst(center + Vector3.up * 0.5f, fxCol, radius, 0.45f);
+            CharacterVisualFactory.SpawnBurst(center + Vector3.up * 0.5f, fxCol, radius, 0.42f);
             for (int i = AllUnits.Count - 1; i >= 0; i--)
             {
                 var u = AllUnits[i];
@@ -1624,7 +1730,7 @@ namespace AbyssGame
                 float rExtra = u.Controller != null ? u.Controller.radius : 0.4f;
                 if (Vector3.Distance(a, b) <= radius + rExtra)
                 {
-                    DealDamageTo(u, rawDamage, status, statusDur, statusPow, 0f, 30f, 3.6f, u.transform.position + Vector3.up * 1.05f, false);
+                    DealDamageTo(u, rawDamage, status, statusDur, statusPow, 0f, 28f, heavyTelegraph ? 5.2f : 3.2f, u.transform.position + Vector3.up * 1.05f, heavyTelegraph, isMultiTargetOrAoe: true, heavyTelegraph: heavyTelegraph);
                 }
             }
         }
@@ -1639,16 +1745,18 @@ namespace AbyssGame
             float poiseDmg = 20f,
             float knockbackForce = 2.0f,
             Vector3 contactPoint = default,
-            bool isHeavyOrFinisher = false)
+            bool isHeavyOrFinisher = false,
+            bool isMultiTargetOrAoe = false,
+            bool heavyTelegraph = false)
         {
             if (target == null || target.IsDead || target.IsDowned) return;
             if (target.IsInvincible)
             {
-                CharacterVisualFactory.SpawnFloatingText(target.transform.position + Vector3.up * 1.8f, "NÉ!", new Color(0.6f, 0.9f, 1f), 0.9f);
+                CharacterVisualFactory.SpawnFloatingText(target.transform.position + Vector3.up * 1.8f, "NÉ ĐÒN!", new Color(0.55f, 0.92f, 1f), 0.92f);
                 return;
             }
 
-            // Positional Backstab Detection: striking from behind target (+20% damage + +10% crit)
+            // Positional Backstab Detection: striking from behind target (+15% damage + +8% crit)
             Vector3 attackVector = target.transform.position - transform.position;
             attackVector.y = 0f;
             bool backstab = false;
@@ -1658,23 +1766,36 @@ namespace AbyssGame
                 if (backDot > 0.42f) backstab = true;
             }
 
-            // Ranger passive "Mắt Ưng": +10% Crit (+20% on Deadeye Sniper) vs targets >= 8m away
+            // Ranger passive "Mắt Ưng": +10% Crit (+18% on Deadeye Sniper) vs targets >= 8m away
             float rangerRangeCrit = 0f;
             if (HeroClass != null && HeroClass.id == 4 && attackVector.sqrMagnitude >= 64f)
-                rangerRangeCrit = (BuildIndex == 0) ? 0.20f : 0.10f;
+                rangerRangeCrit = (BuildIndex == 0) ? 0.18f : 0.10f;
 
-            float effectiveCrit = Mathf.Clamp01(CritChance + bonusCrit + rangerRangeCrit + (backstab ? 0.10f : 0f));
+            float effectiveCrit = Mathf.Clamp01(CritChance + bonusCrit + rangerRangeCrit + (backstab ? 0.08f : 0f));
             bool crit = UnityEngine.Random.value < effectiveCrit;
 
-            // Organic +/-5% RPG damage roll
+            // Organic +/-5% RPG damage roll (removed duplicate 1.25x stagger double-dip!)
             float variance = UnityEngine.Random.Range(0.95f, 1.05f);
             float dmg = rawDamage * variance * (crit ? CritDamage : 1f);
-            if (backstab) dmg *= 1.20f;
-            if (target.IsStaggered) dmg *= 1.25f;
+            if (backstab) dmg *= 1.15f;
 
-            // Assassin passive: +50% execute damage on targets below 30% HP
+            // Assassin passive: +30% execute damage on targets below 30% HP
             if (HeroClass != null && HeroClass.id == 3 && target.Hp / Mathf.Max(1f, target.MaxHp) < 0.30f)
-                dmg *= 1.50f;
+                dmg *= 1.30f;
+
+            // AI Companion Damage Scaling: AI teammates deal ~40% of player damage (support roles, never carry solo!)
+            if (Team == Team.Hero && !IsLocalPlayer)
+            {
+                dmg *= IsSummon ? 0.35f : 0.40f;
+            }
+
+            // Anti-snowball soft cap on extreme single-hit hero spikes (prevents 75k anomalies while rewarding big crits)
+            if (Team == Team.Hero)
+            {
+                float softCap = EffectiveAttack() * 6.5f;
+                if (dmg > softCap)
+                    dmg = softCap + (dmg - softCap) * 0.35f;
+            }
 
             Vector3 hitPt = contactPoint != default
                 ? contactPoint
@@ -1683,15 +1804,15 @@ namespace AbyssGame
 
             // Apply Knockback & Poise/Stagger Break
             if (knockbackForce > 0.05f)
-                target.ApplyKnockback(pushDir, knockbackForce * (crit ? 1.25f : 1.0f));
+                target.ApplyKnockback(pushDir, knockbackForce * (crit ? 1.15f : 1.0f));
 
             bool brokeGuard = false;
             if (poiseDmg > 0f)
-                brokeGuard = target.ApplyPoiseDamage(poiseDmg * (crit ? 1.25f : 1.0f), this);
+                brokeGuard = target.ApplyPoiseDamage(poiseDmg * (crit ? 1.15f : 1.0f), this);
 
-            target.ReceiveHit(dmg, crit, this, isHeavyOrFinisher || backstab);
+            target.ReceiveHit(dmg, crit, this, isHeavyOrFinisher || backstab, isMultiTargetOrAoe, heavyTelegraph);
 
-            // 3D Contact Sparks & Hit-Stop Juice
+            // 3D Contact Sparks & Subtle Hit-Stop Juice
             Color sparkCol = HeroClass != null ? HeroClass.color : new Color(1f, 0.55f, 0.3f);
             CombatFeelManager.I.SpawnHitImpact(hitPt, pushDir, sparkCol, crit || isHeavyOrFinisher, target);
 
@@ -1703,9 +1824,9 @@ namespace AbyssGame
 
                 if (!brokeGuard && (crit || isHeavyOrFinisher))
                 {
-                    CombatFeelManager.I.TriggerHitStop(isHeavyOrFinisher ? 0.048f : 0.032f, 0.06f);
+                    CombatFeelManager.I.TriggerHitStop(0.03f, 0.08f);
                     if (OrbitCamera3D.Instance != null)
-                        OrbitCamera3D.Instance.Shake(isHeavyOrFinisher ? 0.22f : 0.14f, 0.16f);
+                        OrbitCamera3D.Instance.Shake(isHeavyOrFinisher ? 0.12f : 0.07f, 0.14f);
                 }
                 if (backstab && HeroClass != null && HeroClass.id == 3)
                     CharacterVisualFactory.SpawnFloatingText(target.transform.position + Vector3.up * 2.15f, "ĐÁNH LÉN!", new Color(0.85f, 0.45f, 1f), 0.85f);
@@ -1715,82 +1836,100 @@ namespace AbyssGame
             {
                 float sp = statusPow;
                 // Mage Fire build: stronger Burn
-                if (HeroClass != null && HeroClass.id == 5 && BuildIndex == 0 && status == StatusType.Burn) sp *= 1.5f;
+                if (HeroClass != null && HeroClass.id == 5 && BuildIndex == 0 && status == StatusType.Burn) sp *= 1.35f;
                 target.ApplyStatus(status, statusDur, sp, this);
             }
         }
 
-        public void ReceiveHit(float incomingRaw, bool crit, ActorUnit attacker, bool emphaticPopup = false)
+        public void ReceiveHit(float incomingRaw, bool crit, ActorUnit attacker, bool emphaticPopup = false, bool isMultiTargetOrAoe = false, bool heavyTelegraph = false)
         {
             if (IsDead || IsDowned || IsInvincible) return;
 
-            // Defense mitigation formula (smooth armor curve)
-            float def = EffectiveDefense();
-            float mult = 100f / (100f + Mathf.Max(0f, def));
-            float finalDmg = Mathf.Max(2f, incomingRaw * mult);
+            // Asymptotic ARPG Defense Formula: DamageReduction = DEF / (DEF + 150 + 25 * AttackerLevel), capped at 65%
+            int attackerLevel = attacker != null ? Mathf.Max(1, attacker.Level) : Mathf.Max(1, Level);
+            float def = Mathf.Max(0f, EffectiveDefense());
+            float damageReduction = Mathf.Clamp(def / (def + 150f + 25f * attackerLevel), 0f, 0.65f);
+            float finalDmg = incomingRaw * (1f - damageReduction);
 
-            // Curse increases damage taken by 25%
-            if (HasStatus(StatusType.Curse)) finalDmg *= 1.25f;
+            // Curse increases damage taken by 20%
+            if (HasStatus(StatusType.Curse)) finalDmg *= 1.20f;
 
-            // Staggered monsters take 200% damage; Arcane Shielded Elites take 25% less damage until Staggered!
+            // Staggered monsters take 140% damage (rebalanced from 200%/250% to curb snowball bursts)
             if (Team == Team.Monster)
             {
                 if (IsStaggered)
-                    finalDmg *= 2.0f;
+                    finalDmg *= 1.40f;
                 else if (ActiveEliteAffix == EliteAffixKind.ArcaneShielded)
-                    finalDmg *= 0.75f;
+                    finalDmg *= 0.78f;
             }
 
-            // Knight passive -10% damage taken
-            if (HeroClass != null && HeroClass.id == 0) finalDmg *= 0.90f;
+            // Knight passive -8% damage taken
+            if (HeroClass != null && HeroClass.id == 0) finalDmg *= 0.92f;
 
-            // Guardian aura: nearby allies take 8% less damage
+            // Guardian aura: nearby allies take 6% less damage
             if (Team == Team.Hero)
             {
                 foreach (var u in AllUnits)
                 {
                     if (u.Team == Team.Hero && !u.IsDead && !u.IsDowned && u.HeroClass != null && u.HeroClass.id == 1)
                     {
-                        if (Vector3.Distance(transform.position, u.transform.position) <= 10f) { finalDmg *= 0.92f; break; }
+                        if (Vector3.Distance(transform.position, u.transform.position) <= 10f) { finalDmg *= 0.94f; break; }
                     }
                 }
             }
 
-            finalDmg = Mathf.Round(finalDmg);
+            // Strict non-zero damage floor so Boss/Monsters never hit Heroes for 0 HP!
+            float minChipFloor = Mathf.Max(5f, incomingRaw * 0.28f);
+            finalDmg = Mathf.Round(Mathf.Max(minChipFloor, finalDmg));
 
-            // Absorb with Shield first
-            if (Shield > 0f)
+            float beforeHp = Hp;
+            float hpDamage = finalDmg;
+
+            // Heavy red-telegraph AoEs & Boss strikes pierce 35% of shields directly into HP so players must dodge!
+            float shieldPierce = (Team == Team.Hero && (heavyTelegraph || (attacker != null && attacker.IsBoss)))
+                ? Mathf.Round(hpDamage * 0.35f)
+                : 0f;
+            float shieldableDmg = hpDamage - shieldPierce;
+
+            if (Shield > 0f && shieldableDmg > 0f)
             {
-                float absorbed = Mathf.Min(Shield, finalDmg);
+                float absorbed = Mathf.Min(Shield, shieldableDmg);
                 Shield -= absorbed;
-                finalDmg -= absorbed;
+                shieldableDmg -= absorbed;
             }
 
-            Hp = Mathf.Max(0f, Hp - finalDmg);
+            float actualHpDmg = shieldPierce + shieldableDmg;
+            Hp = Mathf.Max(0f, Hp - actualHpDmg);
+            float realHpLost = beforeHp - Hp;
 
-            // Lifesteal for attacker
-            if (attacker != null && !attacker.IsDead && !attacker.IsDowned)
+            // Lifesteal for attacker: -60% effectiveness on AoE/multi-target hits + per-second MaxHP cap!
+            if (attacker != null && !attacker.IsDead && !attacker.IsDowned && actualHpDmg > 0f)
             {
-                float ls = attacker.Lifesteal + (attacker.HasStatus(StatusType.Rage) ? 0.15f : 0f);
-                if (ls > 0.001f && finalDmg > 0f)
-                    attacker.ReceiveHeal(finalDmg * ls, attacker, false);
+                float ls = attacker.Lifesteal + (attacker.HasStatus(StatusType.Rage) ? 0.10f : 0f);
+                if (isMultiTargetOrAoe) ls *= 0.40f; // 60% reduction on AoE / multi-target skills
+                if (ls > 0.001f)
+                {
+                    float cappedHeal = attacker.ConsumeLifestealBudget(actualHpDmg * ls);
+                    if (cappedHeal > 0.5f)
+                        attacker.ReceiveHeal(cappedHeal, attacker, false);
+                }
 
-                // Guardian "Thorns Templar" Build (Build 1): reflect 35% melee damage back to attacker!
+                // Guardian "Thorns Templar" Build (Build 1): reflect 28% melee damage back to attacker!
                 if (HeroClass != null && HeroClass.id == 1 && BuildIndex == 1 && attacker.Team != Team)
                 {
                     if (Vector3.Distance(transform.position, attacker.transform.position) <= 4.4f)
                     {
-                        float thorns = Mathf.Max(4f, Mathf.Round((finalDmg + (Shield > 0f ? incomingRaw * 0.2f : 0f)) * 0.35f));
+                        float thorns = Mathf.Max(4f, Mathf.Round(finalDmg * 0.28f));
                         attacker.ReceiveTrueDot(thorns, this, new Color(1f, 0.56f, 0.18f));
                     }
                 }
 
-                // Elite Affix "Phản đòn / Thorns": reflects 18% of close-range damage back to attacker
+                // Elite Affix "Phản đòn / Thorns": reflects 14% of close-range damage back to attacker
                 if (Team == Team.Monster && ActiveEliteAffix == EliteAffixKind.Thorns && attacker.Team != Team)
                 {
                     if (Vector3.Distance(transform.position, attacker.transform.position) <= 5.2f)
                     {
-                        float reflectDmg = Mathf.Max(3f, Mathf.Round(incomingRaw * 0.18f));
+                        float reflectDmg = Mathf.Max(4f, Mathf.Round(Mathf.Min(incomingRaw * 0.14f, attacker.MaxHp * 0.06f)));
                         attacker.ReceiveTrueDot(reflectDmg, this, new Color(1f, 0.45f, 0.18f));
                     }
                 }
@@ -1802,22 +1941,31 @@ namespace AbyssGame
                 if (Team == Team.Monster && attacker != null && attacker.Team == Team.Hero)
                     AbyssDirectorAI.Instance.RecordDamageDealt(finalDmg);
                 else if (Team == Team.Hero && !IsSummon)
-                    AbyssDirectorAI.Instance.RecordDamageTaken(finalDmg);
+                    AbyssDirectorAI.Instance.RecordDamageTaken(realHpLost > 0f ? realHpLost : finalDmg);
             }
 
-            Color popCol = Team == Team.Hero ? new Color(1f, 0.35f, 0.35f) : (crit ? new Color(1f, 0.86f, 0.18f) : (emphaticPopup ? new Color(1f, 0.72f, 0.32f) : Color.white));
-            float popScale = crit ? 1.32f : (emphaticPopup ? 1.14f : 0.95f);
-            CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 1.8f, (crit || emphaticPopup) ? $"{finalDmg:0}!" : $"{finalDmg:0}", popCol, popScale);
+            float shownDmg = realHpLost > 0.5f ? realHpLost : finalDmg;
+            Color popCol = Team == Team.Hero
+                ? (heavyTelegraph ? new Color(1f, 0.16f, 0.16f) : new Color(1f, 0.38f, 0.38f))
+                : (crit ? new Color(1f, 0.86f, 0.18f) : (emphaticPopup ? new Color(1f, 0.72f, 0.32f) : Color.white));
+            float popScale = crit ? 1.24f : (heavyTelegraph ? 1.28f : (emphaticPopup ? 1.08f : 0.90f));
+            CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 1.8f, (crit || emphaticPopup || heavyTelegraph) ? $"{shownDmg:0}!" : $"{shownDmg:0}", popCol, popScale);
             GameAudio.I.PlaySfxVaried(crit ? GameSfx.CritHit : GameSfx.Hit, 0.46f, 0.07f);
 
-            bool heavyHit = crit || emphaticPopup || finalDmg >= MaxHp * 0.12f;
+            bool heavyHit = crit || emphaticPopup || heavyTelegraph || realHpLost >= MaxHp * 0.12f;
             if (_motionPolisher != null) _motionPolisher.NotifyTakeDamage(attacker, heavyHit);
-            if (IsLocalPlayer)
+
+            // Red screen vignette flash + subtle camera shake ONLY when player takes real HP loss
+            if (IsLocalPlayer && realHpLost > 0.5f)
             {
+                float hpLossFrac = realHpLost / Mathf.Max(1f, MaxHp);
                 if (OrbitCamera3D.Instance != null)
-                    OrbitCamera3D.Instance.Shake(heavyHit ? 0.26f : 0.14f, heavyHit ? 0.22f : 0.14f);
+                {
+                    float shakeAmp = Mathf.Clamp(0.08f + hpLossFrac * 0.45f, 0.08f, 0.24f);
+                    OrbitCamera3D.Instance.Shake(shakeAmp, heavyHit ? 0.20f : 0.13f);
+                }
                 if (ScreenCombatFeedbackUI.Instance != null)
-                    ScreenCombatFeedbackUI.Instance.NotifyPlayerDamaged(finalDmg / Mathf.Max(1f, MaxHp));
+                    ScreenCombatFeedbackUI.Instance.NotifyPlayerDamaged(hpLossFrac);
             }
 
             if (Team == Team.Monster)
@@ -1826,9 +1974,9 @@ namespace AbyssGame
                 if (proc != null) proc.TriggerHitReaction();
             }
 
-            OnDamaged?.Invoke(this, attacker, finalDmg, crit);
+            OnDamaged?.Invoke(this, attacker, realHpLost > 0f ? realHpLost : finalDmg, crit);
 
-            if (Team == Team.Monster && (IsElite || IsMiniBoss || IsBoss) && Hp > 0f && !IsEnraged && (Hp / Mathf.Max(1f, MaxHp)) < 0.40f)
+            if (Team == Team.Monster && (IsElite || IsMiniBoss) && !IsBoss && Hp > 0f && !IsEnraged && (Hp / Mathf.Max(1f, MaxHp)) < 0.40f)
             {
                 TriggerMonsterEnrage();
             }
@@ -1898,8 +2046,11 @@ namespace AbyssGame
         public void AddShield(float amount)
         {
             if (IsDead || IsDowned || amount <= 0f) return;
-            Shield = Mathf.Min(MaxHp * 0.8f, Shield + amount);
-            CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.0f, $"+Khiên {amount:0}", new Color(0.55f, 0.85f, 1f), 0.85f);
+            // Cap Hero shield at 35% MaxHP (down from 80%) so party cannot become permanently immune to Boss hits
+            float maxCap = Team == Team.Hero ? (MaxHp * 0.35f) : (MaxHp * 0.40f);
+            if (Team == Team.Hero && !IsLocalPlayer) amount *= 0.70f;
+            Shield = Mathf.Min(maxCap, Shield + amount);
+            CharacterVisualFactory.SpawnFloatingText(transform.position + Vector3.up * 2.0f, $"+Khiên {amount:0}", new Color(0.55f, 0.85f, 1f), 0.78f);
         }
 
         public void Revive(float hpPercent)
@@ -2177,7 +2328,7 @@ namespace AbyssGame
                     }
                     else if (_owner != null)
                     {
-                        _owner.DealDamageTo(u, _rawDmg, _status, _statusDur, _statusPow, _bonusCrit, _poiseDmg, _kbForce, transform.position, _bonusCrit > 0.1f);
+                        _owner.DealDamageTo(u, _rawDmg, _status, _statusDur, _statusPow, _bonusCrit, _poiseDmg, _kbForce, transform.position, _bonusCrit > 0.1f, isMultiTargetOrAoe: _pierce);
                     }
                     else
                     {

@@ -297,7 +297,7 @@ namespace AbyssGame
             BloomQualityOption bloomOpt = custom ? (BloomQualityOption)SettingsData.bloomQuality : ActivePreset.bloomQualityOption;
             bool effBloom = bloomOpt != BloomQualityOption.Off;
             bool effBloomHq = bloomOpt == BloomQualityOption.High;
-            float effBloomInt = bloomOpt == BloomQualityOption.Low ? 0.42f : (bloomOpt == BloomQualityOption.Medium ? 0.55f : 0.62f);
+            float effBloomInt = bloomOpt == BloomQualityOption.Low ? 0.22f : (bloomOpt == BloomQualityOption.Medium ? 0.30f : 0.36f);
 
             VfxQualityOption vfxOpt = custom ? (VfxQualityOption)SettingsData.vfxQuality : ActivePreset.vfxQualityOption;
             float effDensity = custom ? Mathf.Clamp(SettingsData.effectsDensity, 0.25f, 1.50f) : ActivePreset.particleDensityMultiplier;
@@ -708,7 +708,7 @@ namespace AbyssGame
             BloomQualityOption bloomOpt = custom ? (BloomQualityOption)SettingsData.bloomQuality : ActivePreset.bloomQualityOption;
             bool effBloom = bloomOpt != BloomQualityOption.Off;
             bool effBloomHq = bloomOpt == BloomQualityOption.High;
-            float effBloomInt = bloomOpt == BloomQualityOption.Low ? 0.42f : (bloomOpt == BloomQualityOption.Medium ? 0.55f : 0.62f);
+            float effBloomInt = bloomOpt == BloomQualityOption.Low ? 0.22f : (bloomOpt == BloomQualityOption.Medium ? 0.30f : 0.36f);
 
             float effDensity = ParticleDensityMultiplier;
             ViewDistanceOption viewOpt = custom ? (ViewDistanceOption)SettingsData.viewDistance : ActivePreset.viewDistanceOption;
@@ -775,6 +775,7 @@ namespace AbyssGame
                 if (prof.TryGet(out Bloom bloom))
                 {
                     bloom.active = enableBloom;
+                    bloom.threshold.Override(1.15f);
                     bloom.intensity.Override(bloomInt);
                     bloom.highQualityFiltering.Override(bloomHq);
                 }

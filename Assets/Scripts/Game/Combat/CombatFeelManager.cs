@@ -39,6 +39,8 @@ namespace AbyssGame
         private int _hitStopToken;
         private bool _inHitStop;
         private Shader _slashShader;
+        private static readonly MaterialPropertyBlock _sharedFlashMpb = new MaterialPropertyBlock();
+        private static readonly List<Renderer> _sharedFlashRenderers = new List<Renderer>(16);
 
         private void Awake()
         {
@@ -90,12 +92,12 @@ namespace AbyssGame
         /// Freezes simulation briefly on WaitForSecondsRealtime using a monotonic token so overlapping crits
         /// never get stuck at slow-mo and Pause (Time.timeScale == 0) is strictly respected.
         /// </summary>
-        public void TriggerHitStop(float duration = 0.042f, float slowScale = 0.05f)
+        public void TriggerHitStop(float duration = 0.03f, float slowScale = 0.08f)
         {
             if (Time.timeScale < 0.005f && !_inHitStop) return;
-            duration = Mathf.Clamp(duration, 0.018f, 0.095f);
+            duration = Mathf.Clamp(duration, 0.015f, 0.045f);
             _hitStopToken++;
-            StartCoroutine(HitStopRoutine(_hitStopToken, duration, Mathf.Clamp(slowScale, 0.02f, 0.25f)));
+            StartCoroutine(HitStopRoutine(_hitStopToken, duration, Mathf.Clamp(slowScale, 0.05f, 0.25f)));
         }
 
         private IEnumerator HitStopRoutine(int token, float duration, float slowScale)
@@ -157,25 +159,26 @@ namespace AbyssGame
         private IEnumerator FlashVictimRenderersRoutine(ActorUnit victim, Color flashEmission, float dur)
         {
             if (victim == null || victim.MainVisual == null) yield break;
-            var renderers = victim.MainVisual.GetComponentsInChildren<Renderer>(false);
-            var block = new MaterialPropertyBlock();
-
-            for (int i = 0; i < renderers.Length; i++)
+            _sharedFlashRenderers.Clear();
+            victim.MainVisual.GetComponentsInChildren(false, _sharedFlashRenderers);
+            var snapshot = new List<Renderer>(_sharedFlashRenderers.Count);
+            for (int i = 0; i < _sharedFlashRenderers.Count; i++)
             {
-                var r = renderers[i];
+                var r = _sharedFlashRenderers[i];
                 if (r == null || r is TrailRenderer || r is ParticleSystemRenderer) continue;
-                r.GetPropertyBlock(block);
-                block.SetColor("_EmissionColor", flashEmission * 1.65f);
-                r.SetPropertyBlock(block);
+                snapshot.Add(r);
+                r.GetPropertyBlock(_sharedFlashMpb);
+                _sharedFlashMpb.SetColor("_EmissionColor", flashEmission * 0.85f);
+                r.SetPropertyBlock(_sharedFlashMpb);
             }
 
             yield return new WaitForSeconds(dur);
 
             if (victim == null || victim.MainVisual == null) yield break;
-            for (int i = 0; i < renderers.Length; i++)
+            for (int i = 0; i < snapshot.Count; i++)
             {
-                var r = renderers[i];
-                if (r == null || r is TrailRenderer || r is ParticleSystemRenderer) continue;
+                var r = snapshot[i];
+                if (r == null) continue;
                 r.SetPropertyBlock(null);
             }
         }
@@ -207,9 +210,12 @@ namespace AbyssGame
             _edgeCol = edgeCol;
 
             VfxTierRules rules = VfxQualitySystem.CurrentRules;
-            _alphaScale = rules.transparencyAlphaScale;
+            _alphaScale = rules.transparencyAlphaScale * 0.52f;
 
-            UpdateCrescentMesh(Mathf.Max(0.9f, radius), Mathf.Clamp(arcDeg, 40f, 340f), Mathf.Clamp(width, 0.25f, 1.6f), reverse);
+            // Compact 52% scale slash crescent so weapon swings stay crisp without hiding Boss or floor telegraphs
+            float compactRadius = Mathf.Clamp(radius * 0.54f, 0.72f, 2.05f);
+            float compactWidth = Mathf.Clamp(width * 0.50f, 0.16f, 0.62f);
+            UpdateCrescentMesh(compactRadius, Mathf.Clamp(arcDeg, 40f, 340f), compactWidth, reverse);
 
             if (_mf == null)
             {
@@ -231,19 +237,19 @@ namespace AbyssGame
                 if (shader != null)
                     _mat = new Material(shader);
                 else
-                    _mat = CharacterVisualFactory.MakeTransparentMat(new Color(edgeCol.r, edgeCol.g, edgeCol.b, 0.72f), coreCol * 2f);
+                    _mat = CharacterVisualFactory.MakeTransparentMat(new Color(edgeCol.r, edgeCol.g, edgeCol.b, 0.45f), coreCol * 1.15f);
                 _mr.sharedMaterial = _mat;
             }
 
             if (_mat != null)
             {
-                if (_mat.HasProperty("_MainColor")) _mat.SetColor("_MainColor", coreCol);
-                if (_mat.HasProperty("_EdgeColor")) _mat.SetColor("_EdgeColor", edgeCol);
+                if (_mat.HasProperty("_MainColor")) _mat.SetColor("_MainColor", coreCol * 0.85f);
+                if (_mat.HasProperty("_EdgeColor")) _mat.SetColor("_EdgeColor", edgeCol * 0.85f);
                 if (_mat.HasProperty("_Progress")) _mat.SetFloat("_Progress", 0f);
-                if (_mat.HasProperty("_Opacity")) _mat.SetFloat("_Opacity", 0.95f * _alphaScale);
+                if (_mat.HasProperty("_Opacity")) _mat.SetFloat("_Opacity", 0.52f * _alphaScale);
             }
 
-            transform.localScale = Vector3.one * 0.88f;
+            transform.localScale = Vector3.one * 0.86f;
         }
 
         private void UpdateCrescentMesh(float outerR, float arcDeg, float width, bool reverse)
@@ -401,10 +407,10 @@ namespace AbyssGame
             _mpb.Clear();
             _mpb.SetColor("_BaseColor", bright);
             _mpb.SetColor("_Color", bright);
-            _mpb.SetColor("_EmissionColor", bright * 3.0f);
+            _mpb.SetColor("_EmissionColor", bright * 1.30f);
 
-            int baseCount = heavyOrCrit ? 8 : 5;
-            _activeCount = Mathf.Clamp(Mathf.RoundToInt(baseCount * rules.particleCountMultiplier), 2, MaxPooledSparks);
+            int baseCount = heavyOrCrit ? 5 : 3;
+            _activeCount = Mathf.Clamp(Mathf.RoundToInt(baseCount * rules.particleCountMultiplier), 2, 7);
 
             for (int i = 0; i < MaxPooledSparks; i++)
             {
@@ -413,31 +419,31 @@ namespace AbyssGame
                 if (!active) continue;
 
                 Vector3 dir = Quaternion.Euler(
-                    Random.Range(-52f, 52f),
-                    Random.Range(-65f, 65f),
+                    Random.Range(-48f, 48f),
+                    Random.Range(-60f, 60f),
                     0f) * Vector3.forward;
 
-                float spd = Random.Range(4.5f, heavyOrCrit ? 11.5f : 8.2f);
-                _vels[i] = transform.TransformDirection(dir) * spd + Vector3.up * Random.Range(1.2f, 3.2f);
+                float spd = Random.Range(3.6f, heavyOrCrit ? 8.2f : 6.0f);
+                _vels[i] = transform.TransformDirection(dir) * spd + Vector3.up * Random.Range(0.9f, 2.2f);
 
                 _sparks[i].position = transform.position;
                 _sparks[i].rotation = Quaternion.LookRotation(_vels[i].normalized);
-                _sparks[i].localScale = new Vector3(0.035f, 0.035f, heavyOrCrit ? 0.34f : 0.22f);
+                _sparks[i].localScale = new Vector3(0.022f, 0.022f, heavyOrCrit ? 0.22f : 0.14f);
                 if (_sparkRenderers[i] != null)
                     _sparkRenderers[i].SetPropertyBlock(_mpb);
             }
 
-            _ringActive = rules.enableShockwaveRings || heavyOrCrit;
+            _ringActive = rules.enableShockwaveRings && heavyOrCrit;
             if (_ring != null)
             {
                 _ring.gameObject.SetActive(_ringActive);
                 if (_ringActive)
                 {
                     _ring.localPosition = Vector3.zero;
-                    _ring.localScale = new Vector3(0.22f, 0.01f, 0.22f);
+                    _ring.localScale = new Vector3(0.16f, 0.01f, 0.16f);
                     if (_ringRenderer != null)
                     {
-                        _mpb.SetColor("_BaseColor", new Color(bright.r, bright.g, bright.b, 0.62f * rules.transparencyAlphaScale));
+                        _mpb.SetColor("_BaseColor", new Color(bright.r, bright.g, bright.b, 0.36f * rules.transparencyAlphaScale));
                         _ringRenderer.SetPropertyBlock(_mpb);
                     }
                 }
@@ -463,7 +469,7 @@ namespace AbyssGame
 
             if (_ringActive && _ring != null)
             {
-                float r = Mathf.Lerp(0.22f, _heavy ? 1.85f : 1.05f, Mathf.Sqrt(u));
+                float r = Mathf.Lerp(0.16f, _heavy ? 1.02f : 0.62f, Mathf.Sqrt(u));
                 _ring.localScale = new Vector3(r, 0.01f, r);
             }
 

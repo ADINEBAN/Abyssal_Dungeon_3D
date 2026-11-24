@@ -24,6 +24,7 @@ namespace AbyssGame
     /// - Tank (Skeleton Warrior, Dark Knight, Crystal Golem): Protects Elite/Mage allies with Guard Link shield & taunting slams.
     /// - Elite Monsters: Dynamic Elite Affixes (Vampiric, Molten, Stormcaller, FrozenPulse).
     /// </summary>
+    [DefaultExecutionOrder(-15)]
     [RequireComponent(typeof(ActorUnit))]
     public class MonsterAI : MonoBehaviour
     {
@@ -79,7 +80,9 @@ namespace AbyssGame
 
             float dt = Time.deltaTime;
             _stateTimer -= dt;
-            _specialCd -= dt * (_self.IsEnraged ? 1.38f : 1.0f);
+            // Progressive floor special-skill frequency (up to +45% faster on deep floors)
+            float floorSpecialRate = 1f + Mathf.Min(0.45f, Mathf.Max(0, _self.Level - 1) * 0.035f);
+            _specialCd -= dt * floorSpecialRate * (_self.IsEnraged ? 1.35f : 1.0f);
             if (Blackboard.BackstabBonusReadyTimer > 0f)
                 Blackboard.BackstabBonusReadyTimer -= dt;
 
@@ -227,7 +230,7 @@ namespace AbyssGame
                         if (_self != null && !_self.IsDead && !_self.IsStaggered)
                         {
                             GameAudio.I.PlaySfx(GameSfx.Explosion, 0.85f);
-                            _self.DealCircleDamage(slamPos, 4.4f, _self.EffectiveAttack() * 1.75f, StatusType.Stun, 1.1f, 0f, new Color(1f, 0.25f, 0.2f));
+                            _self.DealCircleDamage(slamPos, 4.4f, _self.EffectiveAttack() * 1.95f, StatusType.Stun, 1.1f, 0f, new Color(1f, 0.25f, 0.2f), heavyTelegraph: true);
                         }
                     });
                 }
@@ -249,7 +252,7 @@ namespace AbyssGame
                     GameAudio.I.PlaySfx(GameSfx.Dodge, 0.9f);
                     Vector3 impactPos = transform.position + chargeDir * (boxSize.z * 0.72f);
                     _self.MoveWorld(chargeDir * (boxSize.z * 0.65f));
-                    _self.DealCircleDamage(impactPos, 2.6f, _self.EffectiveAttack() * 1.75f, StatusType.Stun, 0.8f, 0f, new Color(1f, 0.22f, 0.15f));
+                    _self.DealCircleDamage(impactPos, 2.6f, _self.EffectiveAttack() * 1.85f, StatusType.Stun, 0.8f, 0f, new Color(1f, 0.22f, 0.15f), heavyTelegraph: true);
                 }, boxSize, Quaternion.LookRotation(chargeDir));
                 return;
             }
@@ -354,7 +357,7 @@ namespace AbyssGame
                     CharacterVisualFactory.SpawnGroundTelegraph(p, 3.6f, 1.25f, new Color(1f, 0.16f, 0.18f), () =>
                     {
                         if (_self != null && !_self.IsDead && !_self.IsStaggered)
-                            _self.DealCircleDamage(p, 3.6f, _self.EffectiveAttack() * 1.9f, StatusType.Slow, 2.5f, 0f, new Color(0.85f, 0.18f, 0.95f));
+                            _self.DealCircleDamage(p, 3.6f, _self.EffectiveAttack() * 1.95f, StatusType.Slow, 2.5f, 0f, new Color(0.85f, 0.18f, 0.95f), heavyTelegraph: true);
                     });
                     return;
                 }
@@ -371,7 +374,7 @@ namespace AbyssGame
                         {
                             if (backMult > 1.05f)
                                 CharacterVisualFactory.SpawnFloatingText(_self.transform.position + Vector3.up * 2.1f, "ĐÁNH LÉN SAU LƯNG!", new Color(1f, 0.32f, 0.25f), 0.95f);
-                            _self.DealCircleDamage(p, 3.0f, _self.EffectiveAttack() * 1.65f * backMult, StatusType.Burn, 3.5f, _self.EffectiveAttack() * 0.22f, new Color(1f, 0.28f, 0.15f));
+                            _self.DealCircleDamage(p, 3.0f, _self.EffectiveAttack() * 1.75f * backMult, StatusType.Burn, 3.5f, _self.EffectiveAttack() * 0.22f, new Color(1f, 0.28f, 0.15f), heavyTelegraph: true);
                         }
                     });
                     return;
@@ -397,7 +400,7 @@ namespace AbyssGame
                         {
                             if (_self == null || _self.IsDead || _self.IsStaggered) return;
                             GameAudio.I.PlaySfx(GameSfx.Attack, 0.85f);
-                            _self.DealCircleDamage(volleyTarget, 3.2f, _self.EffectiveAttack() * 1.45f, StatusType.Poison, 3.5f, _self.EffectiveAttack() * 0.18f, new Color(0.48f, 0.92f, 0.28f));
+                            _self.DealCircleDamage(volleyTarget, 3.2f, _self.EffectiveAttack() * 1.55f, StatusType.Poison, 3.5f, _self.EffectiveAttack() * 0.18f, new Color(0.48f, 0.92f, 0.28f), heavyTelegraph: true);
                         });
                     }
                     else
@@ -417,7 +420,7 @@ namespace AbyssGame
                     CharacterVisualFactory.SpawnGroundTelegraph(slamPt, 3.0f, 1.15f, new Color(1f, 0.22f, 0.15f), () =>
                     {
                         if (_self != null && !_self.IsDead && !_self.IsStaggered)
-                            _self.DealCircleDamage(slamPt, 3.0f, _self.EffectiveAttack() * 1.45f, StatusType.Slow, 2.2f, 0f, new Color(0.95f, 0.35f, 0.25f));
+                            _self.DealCircleDamage(slamPt, 3.0f, _self.EffectiveAttack() * 1.55f, StatusType.Slow, 2.2f, 0f, new Color(0.95f, 0.35f, 0.25f), heavyTelegraph: true);
                     });
                     return;
                 }
@@ -430,7 +433,7 @@ namespace AbyssGame
                     CharacterVisualFactory.SpawnGroundTelegraph(targetGround, 2.8f, 1.20f, new Color(1f, 0.18f, 0.25f), () =>
                     {
                         if (_self != null && !_self.IsDead && !_self.IsStaggered)
-                            _self.DealCircleDamage(targetGround, 2.8f, _self.EffectiveAttack() * 1.45f, StatusType.Curse, 4.5f, 0f, new Color(0.75f, 0.22f, 1f));
+                            _self.DealCircleDamage(targetGround, 2.8f, _self.EffectiveAttack() * 1.55f, StatusType.Curse, 4.5f, 0f, new Color(0.75f, 0.22f, 1f), heavyTelegraph: true);
                     });
                     return;
                 }
@@ -450,7 +453,7 @@ namespace AbyssGame
                     CharacterVisualFactory.SpawnGroundTelegraph(rootCenter, 3.6f, 1.15f, new Color(1f, 0.25f, 0.18f), () =>
                     {
                         if (_self != null && !_self.IsDead && !_self.IsStaggered)
-                            _self.DealCircleDamage(rootCenter, 3.6f, _self.EffectiveAttack() * 1.45f, StatusType.Slow, 3.2f, 0f, new Color(0.35f, 0.85f, 0.3f));
+                            _self.DealCircleDamage(rootCenter, 3.6f, _self.EffectiveAttack() * 1.55f, StatusType.Slow, 3.2f, 0f, new Color(0.35f, 0.85f, 0.3f), heavyTelegraph: true);
                     });
                     return;
                 }

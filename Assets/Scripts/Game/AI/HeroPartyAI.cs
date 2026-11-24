@@ -19,6 +19,7 @@ namespace AbyssGame
     /// - Never clumps or blindly tails the player during combat.
     /// - Only regroups around the player when the room is completely cleared of monsters.
     /// </summary>
+    [DefaultExecutionOrder(-15)]
     [RequireComponent(typeof(ActorUnit))]
     public class HeroPartyAI : MonoBehaviour
     {
@@ -27,6 +28,7 @@ namespace AbyssGame
 
         private ActorUnit _self;
         private float _thinkTimer;
+        private float _hazardReactionTimer;
         private float _strafeSign = 1f;
         private Vector3 _formationOffset;
         private float _preferredOrbitAngle;
@@ -178,13 +180,22 @@ namespace AbyssGame
                 }
             }
 
-            if (!inDanger) return false;
+            if (!inDanger)
+            {
+                _hazardReactionTimer = 0f;
+                return false;
+            }
+
+            // Human-like reaction delay (0.42s) so AI companions reposition intelligently yet still take real HP damage
+            // if caught in fast/overlapping Boss red AoEs instead of robotically dodging 100% of attacks.
+            _hazardReactionTimer += Time.deltaTime;
+            if (_hazardReactionTimer < 0.42f) return false;
 
             Vector3 escapeDir = FindBestClearDirection(transform.position, combinedEscape.normalized);
-            if (imminentDanger && _self.TryDodge(escapeDir))
+            if (imminentDanger && _self.DodgeCd <= 0f && Random.value < 0.45f && _self.TryDodge(escapeDir))
                 return true;
 
-            SteerInDirection(escapeDir, 1.12f);
+            SteerInDirection(escapeDir, 0.92f);
             return true;
         }
 
@@ -407,24 +418,24 @@ namespace AbyssGame
             }
 
             int cid = _self.HeroClass.id;
-            if (cid == 9) // Cleric (Arthur)
+            if (cid == 9) // Cleric (Arthur): tactical healing when allies drop below 62% HP so combat damage sticks
             {
-                if (weakPct < 0.74f && _self.TryUseSkill(1, transform.position)) return true; // Group Heal
-                if ((anyDebuffed || weakPct < 0.84f) && _self.TryUseSkill(2, transform.position)) return true; // Purify + Shield
+                if (weakPct < 0.62f && _self.TryUseSkill(1, transform.position)) return true; // Group Heal
+                if ((anyDebuffed || weakPct < 0.72f) && _self.TryUseSkill(2, transform.position)) return true; // Purify + Shield
             }
             else if (cid == 8) // Druid
             {
-                if (weakPct < 0.76f && weakest != null && _self.TryUseSkill(1, weakest.transform.position)) return true; // Regrowth
-                if (weakPct < 0.58f && _self.TryUseSkill(3, transform.position)) return true; // Nature's Wrath
+                if (weakPct < 0.64f && weakest != null && _self.TryUseSkill(1, weakest.transform.position)) return true; // Regrowth
+                if (weakPct < 0.48f && _self.TryUseSkill(3, transform.position)) return true; // Nature's Wrath
             }
             else if (cid == 7) // Monk
             {
-                if (weakPct < 0.70f && _self.TryUseSkill(1, transform.position)) return true; // Zen Mend
+                if (weakPct < 0.58f && _self.TryUseSkill(1, transform.position)) return true; // Zen Mend
             }
             else if (cid == 1) // Guardian
             {
-                if (weakPct < 0.86f && _self.TryUseSkill(1, transform.position)) return true; // Sanctuary party shield
-                if (weakPct < 0.78f && _self.TryUseSkill(2, transform.position)) return true; // Aegis def up
+                if (weakPct < 0.72f && _self.TryUseSkill(1, transform.position)) return true; // Sanctuary party shield
+                if (weakPct < 0.66f && _self.TryUseSkill(2, transform.position)) return true; // Aegis def up
             }
             return false;
         }

@@ -43,6 +43,13 @@ namespace AbyssalDungeon.VFX
         [Header("Configured VFX Pools")]
         public List<PoolEntry> poolEntries = new List<PoolEntry>();
 
+        /// <summary>
+        /// Global combat visibility scale multiplier (0.50 = 50% size) so skill VFX never cover Boss or red floor telegraphs on MX350.
+        /// Ground telegraphs bypass this reduction so danger radii always remain 100% accurate.
+        /// </summary>
+        public const float CombatVfxScaleMultiplier = 0.50f;
+        private const int MaxActivePerKey = 8;
+
         private readonly Dictionary<string, GameObject> _keyToPrefab = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Queue<GameObject>> _inactivePools = new Dictionary<string, Queue<GameObject>>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, List<GameObject>> _activeInstances = new Dictionary<string, List<GameObject>>(StringComparer.OrdinalIgnoreCase);
@@ -121,6 +128,20 @@ namespace AbyssalDungeon.VFX
                         RegisterPrefab(p.name, p, 2);
                     }
                 }
+            }
+
+            // Prewarm Damage Floating Text & high-frequency combat VFX pools so combat triggers 0 Instantiate/GC spikes
+            AbyssGame.GameObjectPool.PrewarmCombatPools(36, 12, 10, 12);
+        }
+
+        public void SpawnFloatingText(Vector3 worldPos, string text, Color color, float scale = 1f)
+        {
+            InitializePools();
+            Vector3 p = worldPos + new Vector3(UnityEngine.Random.Range(-0.32f, 0.32f), 0.18f, UnityEngine.Random.Range(-0.32f, 0.32f));
+            var ft = AbyssGame.GameObjectPool.GetFloatingText(p);
+            if (ft != null)
+            {
+                ft.Init(text, color, scale);
             }
         }
 
@@ -203,7 +224,7 @@ namespace AbyssalDungeon.VFX
                 instance = queue.Dequeue();
             }
 
-            if (instance == null && activeList.Count >= 16)
+            if (instance == null && activeList.Count >= MaxActivePerKey)
             {
                 instance = activeList[0];
                 activeList.RemoveAt(0);
@@ -214,6 +235,9 @@ namespace AbyssalDungeon.VFX
                 instance = CreateNewInstance(key, prefab);
             }
 
+            bool isTelegraph = string.Equals(key, "VFX_GroundTelegraph_Rune", StringComparison.OrdinalIgnoreCase);
+            float effectiveScale = isTelegraph ? scaleMultiplier : (scaleMultiplier * CombatVfxScaleMultiplier);
+
             activeList.Add(instance);
             instance.transform.SetParent(null, false);
             instance.transform.SetPositionAndRotation(position, rotation);
@@ -222,7 +246,11 @@ namespace AbyssalDungeon.VFX
             VFXAnimatedLayerController ctrl = instance.GetComponent<VFXAnimatedLayerController>();
             if (ctrl != null)
             {
-                ctrl.OnSpawnedFromPool(scaleMultiplier, durationOverride, followTarget, Vector3.zero);
+                ctrl.OnSpawnedFromPool(effectiveScale, durationOverride, followTarget, Vector3.zero);
+            }
+            else
+            {
+                instance.transform.localScale = Vector3.one * Mathf.Max(0.1f, effectiveScale);
             }
 
             return instance;

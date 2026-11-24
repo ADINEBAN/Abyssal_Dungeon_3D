@@ -10,6 +10,7 @@ namespace AbyssGame
     /// - Turn-banking roll, Sprint forward lean, Jump stretch & Landing squash + dust burst
     /// - Directional Take-Damage hit flinch & Dodge translucent ghost afterimages.
     /// </summary>
+    [DefaultExecutionOrder(10)]
     public class CharacterMotionPolisher : MonoBehaviour
     {
         private ActorUnit _unit;
@@ -162,10 +163,10 @@ namespace AbyssGame
             float dt = Time.deltaTime;
             if (dt <= 0.0001f) return;
 
-            // 1. Measure real planar displacement from interpolated physics position to eliminate skating / foot sliding
-            Vector3 interpPos = _unit.InterpolatedPosition;
-            Vector3 delta = interpPos - _prevPos;
-            _prevPos = interpPos;
+            // 1. Measure real planar displacement directly from Update()-driven transform.position (zero FixedUpdate jitter)
+            Vector3 currPos = transform.position;
+            Vector3 delta = currPos - _prevPos;
+            _prevPos = currPos;
             Vector3 planarDelta = new Vector3(delta.x, 0f, delta.z);
             float actualPlanarSpeed = planarDelta.magnitude / dt;
 
@@ -316,12 +317,11 @@ namespace AbyssGame
                     flinchOff = _flinchLocalOffset * (_flinchTimer / 0.16f);
                 }
 
-                // Preserve base scale magnitude while applying subtle squash/stretch + sub-frame physics interpolation
+                // Preserve base scale magnitude while applying subtle squash/stretch + hit flinch (no sub-frame physics fighting)
                 if (_cachedAnim != null)
                 {
-                    Vector3 interpLocalOff = transform.InverseTransformVector(interpPos - transform.position);
                     _unit.MainVisual.transform.localRotation = Quaternion.Euler(_currentPitchX, 0f, _currentBankZ);
-                    _unit.MainVisual.transform.localPosition = interpLocalOff + flinchOff;
+                    _unit.MainVisual.transform.localPosition = flinchOff;
                     float invXz = 1f / Mathf.Sqrt(Mathf.Max(0.7f, _squashY));
                     float baseScale = Mathf.Max(0.1f, _unit.VisualBaseScale);
                     _unit.MainVisual.transform.localScale = new Vector3(baseScale * invXz, baseScale * _squashY, baseScale * invXz);

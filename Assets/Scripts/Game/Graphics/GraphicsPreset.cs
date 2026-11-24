@@ -168,7 +168,7 @@ namespace AbyssGame
         public bool enableBloom = true;
         public bool bloomHighQualityFiltering = false;
         [Range(0f, 1.5f)]
-        public float bloomIntensity = 0.55f;
+        public float bloomIntensity = 0.32f;
         public bool enableVignette = true;
         public bool enableSplitToning = true;
         public AmbientOcclusionOption ambientOcclusionOption = AmbientOcclusionOption.HalfRes;

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.EventSystems;
 
 namespace AbyssGame
@@ -9,6 +9,7 @@ namespace AbyssGame
     /// - Idle / Walk [CapsLock] / Run [WASD] / Sprint [Hold LeftShift] / Jump [V] / Dodge [Space or Tap Shift]
     /// - Target Lock-On [Tab / MMB] + Left/Right Target Cycling [~ / Alt+Q / Alt+E] + Lock-On Combat Strafe.
     /// </summary>
+    [DefaultExecutionOrder(-20)]
     [RequireComponent(typeof(ActorUnit))]
     public class HeroPlayerInput : MonoBehaviour
     {
@@ -27,7 +28,8 @@ namespace AbyssGame
         private bool _shiftExhausted;
         private float _rmbDownTime;
         private float _rmbMouseTravel;
-        private Vector3 _pendingMoveVel;
+        private Vector3 _smoothedMoveVel;
+        private Vector3 _moveVelSmoothRef;
 
         private void Awake()
         {
@@ -105,25 +107,36 @@ namespace AbyssGame
 
             Vector3 aimPoint = GetAimPointOnGround(out Vector3 aimDir);
 
-            // Capture discrete combat/evasion inputs into 180ms Action Buffer even if briefly recovering
+            // Capture discrete combat/evasion inputs into 150ms Action Buffer even if briefly recovering
             CaptureDiscreteActionsToBuffer(moveDir, aimDir, aimPoint, pointerOverUi, uiBlocking, dt, hasMove);
 
             if (!Unit.CanAct())
             {
-                _pendingMoveVel = Vector3.zero;
+                _smoothedMoveVel = Vector3.zero;
+                _moveVelSmoothRef = Vector3.zero;
+                Unit.SetPlanarMoveVelocity(Vector3.zero);
                 Unit.StopMovingAnim();
+                return;
+            }
+
+            // While mid-dodge, DodgeCoroutine drives planar velocity directly; keep input velocity synced smoothly
+            if (Unit.IsDodging)
+            {
+                _smoothedMoveVel = Vector3.zero;
+                _moveVelSmoothRef = Vector3.zero;
                 return;
             }
 
             // 1. Consume highest-priority buffered action on the exact frame Hero becomes ready
             if (_inputBuffer.HasBufferedAction && TryExecuteBufferedAction(moveDir, aimDir, aimPoint))
             {
-                _pendingMoveVel = Vector3.zero;
+                _smoothedMoveVel = Vector3.zero;
+                _moveVelSmoothRef = Vector3.zero;
                 return;
             }
 
-            // 2. Locomotion: Walk (0.52x) / Run (1.0x) / Sprint (1.38x) + Lock-On Combat Strafe
-            // Input is captured in Update(); physics movement executes in FixedUpdate().
+            // 2. Smooth Update()-driven Locomotion with SmoothDamp accel/decel & smooth turn rotation
+            Vector3 desiredVel = Vector3.zero;
             if (hasMove)
             {
                 float gaitMult = Unit.IsSprinting ? 1.38f : (Unit.IsWalking ? 0.52f : 1.0f);
@@ -137,32 +150,27 @@ namespace AbyssGame
                 }
                 else
                 {
-                    Unit.FaceDirection(moveDir, Unit.IsSprinting ? 18f : 15f);
+                    Unit.FaceDirection(moveDir, Unit.IsSprinting ? 18f : 14f);
                 }
 
-                _pendingMoveVel = moveDir.normalized * moveSpd;
+                desiredVel = moveDir.normalized * moveSpd;
             }
-            else
+
+            float smoothTime = hasMove ? 0.065f : 0.085f;
+            _smoothedMoveVel = Vector3.SmoothDamp(_smoothedMoveVel, desiredVel, ref _moveVelSmoothRef, smoothTime, 60f, dt);
+            if (!hasMove && _smoothedMoveVel.sqrMagnitude < 0.015f)
             {
-                _pendingMoveVel = Vector3.zero;
+                _smoothedMoveVel = Vector3.zero;
+                _moveVelSmoothRef = Vector3.zero;
                 Unit.StopMovingAnim();
             }
+
+            Unit.SetPlanarMoveVelocity(_smoothedMoveVel);
 
             // 3. Held Basic Attack (continuous auto-combo while holding LMB)
             if (!pointerOverUi && !uiBlocking && Input.GetMouseButton(0))
             {
                 Unit.TryBasicAttack(aimDir, aimPoint);
-            }
-        }
-
-        private void FixedUpdate()
-        {
-            if (Time.timeScale < 0.01f || Unit == null || Unit.IsDead || !Unit.CanAct())
-                return;
-
-            if (_pendingMoveVel.sqrMagnitude > 0.0001f)
-            {
-                Unit.SetFixedMoveVelocity(_pendingMoveVel);
             }
         }
 

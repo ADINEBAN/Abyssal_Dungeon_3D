@@ -104,6 +104,28 @@ namespace AbyssGame
 
         public float KillsPerMinute => RunElapsed > 3f ? (TotalKills / (RunElapsed / 60f)) : 0f;
 
+        /// <summary>Progressive floor Elite Affix chance: 18% on Floor 1 scaling up to 65% on Floor 13+.</summary>
+        public float GetFloorEliteAffixChance(int floor)
+        {
+            float baseChance = Mathf.Clamp(0.18f + Mathf.Max(0, floor - 1) * 0.036f, 0.18f, 0.65f);
+            if (PromoteBonusElite) baseChance = Mathf.Min(0.78f, baseChance + 0.12f);
+            return baseChance;
+        }
+
+        /// <summary>Progressive floor Boss cooldown multiplier: shorter cooldowns on deeper floors (down to 0.62x).</summary>
+        public static float GetFloorBossCooldownMultiplier(int floor)
+        {
+            return Mathf.Clamp(1.0f - Mathf.Max(0, floor - 1) * 0.03f, 0.62f, 1.0f);
+        }
+
+        /// <summary>Computes reinforcement Wave 2 pack size based on Floor depth, room type, and Director score.</summary>
+        public int GetWave2ReinforcementCount(int floor, RoomType roomType)
+        {
+            int floorBonus = Mathf.Clamp((floor - 1) / 4, 0, 2);
+            int baseCount = roomType == RoomType.Elite ? 4 : (roomType == RoomType.MiniBoss ? 3 : 4);
+            return Mathf.Clamp(baseCount + floorBonus + Mathf.Max(0, ExtraMonsterDelta), 3, 7);
+        }
+
         /// <summary>Called when the party clears a room and advances to the next encounter.</summary>
         public void EvaluateAndAdjustNextEncounter(int completedRoomIndex)
         {
@@ -140,30 +162,30 @@ namespace AbyssGame
 
             if (PerformanceScore >= 68f)
             {
-                HpMultiplier = Mathf.Lerp(1.15f, 1.45f, (PerformanceScore - 68f) / 27f);
-                AtkMultiplier = Mathf.Lerp(1.10f, 1.30f, (PerformanceScore - 68f) / 27f);
-                ExtraMonsterDelta = PerformanceScore >= 82f ? 2 : 1;
+                HpMultiplier = Mathf.Lerp(1.12f, 1.38f, (PerformanceScore - 68f) / 27f);
+                AtkMultiplier = Mathf.Lerp(1.08f, 1.24f, (PerformanceScore - 68f) / 27f);
+                ExtraMonsterDelta = PerformanceScore >= 82f ? 3 : 2;
                 PromoteBonusElite = true;
                 SpawnBonusHealingShrine = false;
-                LastDecision = $"[Abyss Director {PerformanceScore:0}đ] Tổ đội áp đảo → Tăng {Mathf.RoundToInt((HpMultiplier - 1f) * 100)}% sức mạnh quái & thêm Quái Tinh Anh!";
+                LastDecision = $"[Abyss Director {PerformanceScore:0}đ] Tổ đội áp đảo → Tăng {Mathf.RoundToInt((HpMultiplier - 1f) * 100)}% sức mạnh quái & thêm Đợt Tinh Anh!";
             }
             else if (PerformanceScore <= 38f)
             {
-                HpMultiplier = 0.78f;
-                AtkMultiplier = 0.80f;
-                ExtraMonsterDelta = -1;
+                HpMultiplier = 0.84f;
+                AtkMultiplier = 0.85f;
+                ExtraMonsterDelta = 0;
                 PromoteBonusElite = false;
                 SpawnBonusHealingShrine = true;
-                LastDecision = $"[Abyss Director {PerformanceScore:0}đ] Tổ đội gặp khó → Giảm 20% sức mạnh quái & triệu hồi Đài Hồi Phục hỗ trợ!";
+                LastDecision = $"[Abyss Director {PerformanceScore:0}đ] Tổ đội gặp khó → Giảm 15% sức mạnh quái & triệu hồi Đài Hồi Phục hỗ trợ!";
             }
             else
             {
                 HpMultiplier = 1.0f;
                 AtkMultiplier = 1.0f;
-                ExtraMonsterDelta = 0;
+                ExtraMonsterDelta = 1;
                 PromoteBonusElite = false;
                 SpawnBonusHealingShrine = !HasHealer;
-                LastDecision = $"[Abyss Director {PerformanceScore:0}đ] Nhịp độ cân bằng ({KillsPerMinute:0.0} quái/phút) → Giữ độ khó chuẩn.";
+                LastDecision = $"[Abyss Director {PerformanceScore:0}đ] Nhịp độ căng thẳng ({KillsPerMinute:0.0} quái/phút) → Duy trì đội hình đa tầng.";
             }
 
             // Reset room metrics

@@ -59,11 +59,11 @@ namespace AbyssGame
                 var tonemapping = p.Add<Tonemapping>(true);
                 tonemapping.mode.Override(TonemappingMode.ACES);
 
-                // 2. Controlled Bloom (lights torches, crystals & skill VFX without washing out floor telegraphs)
+                // 2. Controlled Bloom (crisp highlights without washing out Boss or red floor telegraphs on MX350)
                 var bloom = p.Add<Bloom>(true);
-                bloom.threshold.Override(0.95f);
-                bloom.intensity.Override(0.55f);
-                bloom.scatter.Override(0.64f);
+                bloom.threshold.Override(1.15f);
+                bloom.intensity.Override(0.32f);
+                bloom.scatter.Override(0.54f);
                 bloom.highQualityFiltering.Override(false);
 
                 // 3. Subtle Dark-Fantasy Vignette

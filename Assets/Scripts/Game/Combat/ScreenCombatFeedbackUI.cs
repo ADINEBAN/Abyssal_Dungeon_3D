@@ -43,6 +43,8 @@ namespace AbyssGame
         private int _cachedPoiseVal = -1;
         private int _cachedPoiseMax = -1;
         private bool _cachedPoiseStaggered;
+        private bool _cachedPoiseImmune;
+        private int _cachedPoiseImmuneSec = -1;
         private float _cachedPoiseRatio = -1f;
 
         public static ScreenCombatFeedbackUI Attach(Transform canvasRoot)
@@ -278,19 +280,29 @@ namespace AbyssGame
                     int poiseInt = Mathf.RoundToInt(focusEnemy.Poise);
                     int maxPoiseInt = Mathf.RoundToInt(focusEnemy.MaxPoise);
                     bool staggered = focusEnemy.IsStaggered;
+                    bool poiseImmune = focusEnemy.IsPoiseImmune;
+                    int immuneSec = poiseImmune ? Mathf.CeilToInt(focusEnemy.PoiseImmunityTimer) : 0;
 
                     if (focusEnemy != _cachedPoiseEnemy || poiseInt != _cachedPoiseVal ||
-                        maxPoiseInt != _cachedPoiseMax || staggered != _cachedPoiseStaggered)
+                        maxPoiseInt != _cachedPoiseMax || staggered != _cachedPoiseStaggered ||
+                        poiseImmune != _cachedPoiseImmune || immuneSec != _cachedPoiseImmuneSec)
                     {
                         _cachedPoiseEnemy = focusEnemy;
                         _cachedPoiseVal = poiseInt;
                         _cachedPoiseMax = maxPoiseInt;
                         _cachedPoiseStaggered = staggered;
+                        _cachedPoiseImmune = poiseImmune;
+                        _cachedPoiseImmuneSec = immuneSec;
 
                         if (staggered)
                         {
-                            _poiseTitleTxt.text = $"{focusEnemy.DisplayName} — [PHÁ GIÁP! 200% SÁT THƯƠNG]";
+                            _poiseTitleTxt.text = $"{focusEnemy.DisplayName} — [PHÁ GIÁP! 140% SÁT THƯƠNG]";
                             _poiseTitleTxt.color = new Color(1f, 0.42f, 0.35f);
+                        }
+                        else if (poiseImmune)
+                        {
+                            _poiseTitleTxt.text = $"{focusEnemy.DisplayName} — [BẤT KHUẤT • MIỄN PHÁ GIÁP {immuneSec}s]";
+                            _poiseTitleTxt.color = new Color(0.75f, 0.88f, 1.0f);
                         }
                         else
                         {
@@ -299,7 +311,7 @@ namespace AbyssGame
                         }
                     }
 
-                    float targetRatio = staggered ? 1f : (focusEnemy.Poise / Mathf.Max(1f, focusEnemy.MaxPoise));
+                    float targetRatio = (staggered || poiseImmune) ? 1f : (focusEnemy.Poise / Mathf.Max(1f, focusEnemy.MaxPoise));
                     if (Mathf.Abs(targetRatio - _cachedPoiseRatio) > 0.005f)
                     {
                         _cachedPoiseRatio = targetRatio;

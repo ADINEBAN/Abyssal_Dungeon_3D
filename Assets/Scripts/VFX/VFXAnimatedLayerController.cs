@@ -94,15 +94,17 @@ namespace AbyssalDungeon.VFX
                 layer2DecalTransform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             }
 
-            ApplyShaderProperties(1f, 2.7f);
+            bool isTelegraph = animationStyle == VFXAnimationStyle.GroundTelegraph;
+            ApplyShaderProperties(isTelegraph ? 0.92f : 0.56f, isTelegraph ? 1.75f : 1.25f);
             EvaluateAnimation(0f);
 
             if (layer3Particles != null)
             {
                 var main = layer3Particles.main;
-                if (main.maxParticles > 45)
+                int maxCap = isTelegraph ? 18 : 20;
+                if (main.maxParticles > maxCap)
                 {
-                    main.maxParticles = 45;
+                    main.maxParticles = maxCap;
                 }
                 layer3Particles.Clear(true);
                 layer3Particles.Play(true);
@@ -155,28 +157,33 @@ namespace AbyssalDungeon.VFX
         {
             float dt = Time.deltaTime;
 
-            float alpha = 1f;
-            float emission = 2.6f;
+            bool isTelegraph = animationStyle == VFXAnimationStyle.GroundTelegraph;
+            float baseAlphaCap = isTelegraph ? 0.92f : 0.56f;
+            float baseEmission = isTelegraph ? 1.75f : 1.25f;
+            float introEmission = isTelegraph ? 2.15f : 1.55f;
+
+            float alpha = baseAlphaCap;
+            float emission = baseEmission;
             if (!isLooping)
             {
                 if (t < 0.12f)
                 {
                     float intro = t / 0.12f;
-                    alpha = Mathf.Clamp01(intro);
-                    emission = Mathf.Lerp(3.6f, 2.6f, intro);
+                    alpha = Mathf.Clamp01(intro) * baseAlphaCap;
+                    emission = Mathf.Lerp(introEmission, baseEmission, intro);
                 }
-                else if (t > 0.68f)
+                else if (t > 0.65f)
                 {
-                    float outro = (t - 0.68f) / 0.32f;
-                    alpha = Mathf.Clamp01(1f - outro * outro);
-                    emission = Mathf.Lerp(2.6f, 0.6f, outro);
+                    float outro = (t - 0.65f) / 0.35f;
+                    alpha = Mathf.Clamp01(1f - outro * outro) * baseAlphaCap;
+                    emission = Mathf.Lerp(baseEmission, 0.35f, outro);
                 }
             }
             else
             {
-                float pulse = 0.90f + 0.10f * Mathf.Sin(_elapsed * 4.5f);
-                alpha = pulse;
-                emission = 2.3f + 0.35f * Mathf.Sin(_elapsed * 4.5f);
+                float pulse = 0.88f + 0.12f * Mathf.Sin(_elapsed * 4.5f);
+                alpha = pulse * baseAlphaCap;
+                emission = baseEmission * (0.90f + 0.12f * Mathf.Sin(_elapsed * 4.5f));
             }
 
             ApplyShaderProperties(alpha, emission);

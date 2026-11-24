@@ -37,7 +37,7 @@ namespace AbyssGame
             switch (level)
             {
                 case VfxQualityOption.Low:
-                    baseMult = densityOverride > 0f ? densityOverride : 0.35f;
+                    baseMult = densityOverride > 0f ? densityOverride : 0.30f;
                     return new VfxTierRules
                     {
                         qualityLevel = VfxQualityOption.Low,
@@ -48,12 +48,12 @@ namespace AbyssGame
                         enableShockwaveRings = false,
                         enableSecondarySparks = false,
                         maxSlashRibbonLayers = 1,
-                        transparencyAlphaScale = 0.78f,
+                        transparencyAlphaScale = 0.68f,
                         preserveCombatTelegraphs = true
                     };
 
                 case VfxQualityOption.Medium:
-                    baseMult = densityOverride > 0f ? densityOverride : 0.65f;
+                    baseMult = densityOverride > 0f ? densityOverride : 0.52f;
                     return new VfxTierRules
                     {
                         qualityLevel = VfxQualityOption.Medium,
@@ -64,7 +64,7 @@ namespace AbyssGame
                         enableShockwaveRings = true,
                         enableSecondarySparks = false,
                         maxSlashRibbonLayers = 1,
-                        transparencyAlphaScale = 0.88f,
+                        transparencyAlphaScale = 0.78f,
                         preserveCombatTelegraphs = true
                     };
 

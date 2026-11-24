@@ -988,12 +988,13 @@ namespace AbyssGame
         {
             string key = PickPooledVfxKeyForColor(color, radius);
             Vector3 groundPos = new Vector3(pos.x, Mathf.Max(0.02f, pos.y - 0.45f), pos.z);
-            float scale = Mathf.Clamp(radius / 2.0f, 0.55f, 1.85f);
-            GameObject pooled = AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn(key, groundPos, Quaternion.identity, null, scale, Mathf.Max(0.75f, duration * 2.0f));
+            // VFXPoolManager already applies CombatVfxScaleMultiplier (0.50x), keep burst crisp & compact
+            float scale = Mathf.Clamp(radius / 2.2f, 0.45f, 1.35f);
+            GameObject pooled = AbyssalDungeon.VFX.VFXPoolManager.Instance.Spawn(key, groundPos, Quaternion.identity, null, scale, Mathf.Max(0.55f, duration * 1.45f));
             if (pooled != null) return;
 
             var fx = GameObjectPool.GetBurst(pos);
-            fx.Init(color, radius, duration);
+            fx.Init(color, radius * 0.52f, duration);
         }
 
         private static string PickPooledVfxKeyForColor(Color c, float radius)
@@ -1022,9 +1023,7 @@ namespace AbyssGame
 
         public static void SpawnFloatingText(Vector3 worldPos, string text, Color color, float scale = 1f)
         {
-            Vector3 p = worldPos + new Vector3(UnityEngine.Random.Range(-0.35f, 0.35f), 0.2f, UnityEngine.Random.Range(-0.35f, 0.35f));
-            var ft = GameObjectPool.GetFloatingText(p);
-            ft.Init(text, color, scale);
+            AbyssalDungeon.VFX.VFXPoolManager.Instance.SpawnFloatingText(worldPos, text, color, scale);
         }
     }
 
@@ -1159,7 +1158,7 @@ namespace AbyssGame
                 if (_outerRingMat.HasProperty("_ZWrite")) _outerRingMat.SetInt("_ZWrite", 0);
                 if (_outerRingMat.HasProperty("_BaseMap")) _outerRingMat.SetTexture("_BaseMap", _telegraphRingTex);
                 _outerRingMat.mainTexture = _telegraphRingTex;
-                _outerRingMat.renderQueue = 3015;
+                _outerRingMat.renderQueue = 3035;
             }
 
             if (_innerFillMat == null)
@@ -1175,7 +1174,7 @@ namespace AbyssGame
                 if (_innerFillMat.HasProperty("_ZWrite")) _innerFillMat.SetInt("_ZWrite", 0);
                 if (_innerFillMat.HasProperty("_BaseMap")) _innerFillMat.SetTexture("_BaseMap", _telegraphFillTex);
                 _innerFillMat.mainTexture = _telegraphFillTex;
-                _innerFillMat.renderQueue = 3014;
+                _innerFillMat.renderQueue = 3034;
             }
         }
 

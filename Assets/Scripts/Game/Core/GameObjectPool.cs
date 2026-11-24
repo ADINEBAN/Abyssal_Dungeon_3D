@@ -19,6 +19,34 @@ namespace AbyssGame
         public static int TotalPooledInstances =>
             _floatingTextPool.Count + _burstPool.Count + _slashArcPool.Count + _sparkBurstPool.Count;
 
+        public static void PrewarmCombatPools(int floatingTexts = 36, int bursts = 12, int slashArcs = 10, int sparkBursts = 12)
+        {
+            while (_floatingTextPool.Count < floatingTexts)
+            {
+                var go = new GameObject("PooledFloatingText");
+                go.SetActive(false);
+                _floatingTextPool.Push(go.AddComponent<FloatingCombatText>());
+            }
+            while (_burstPool.Count < bursts)
+            {
+                var go = new GameObject("PooledVfxBurst");
+                go.SetActive(false);
+                _burstPool.Push(go.AddComponent<ExpandingBurstFx>());
+            }
+            while (_slashArcPool.Count < slashArcs)
+            {
+                var go = new GameObject("PooledVfxSlashArc");
+                go.SetActive(false);
+                _slashArcPool.Push(go.AddComponent<SlashArcRibbonFx>());
+            }
+            while (_sparkBurstPool.Count < sparkBursts)
+            {
+                var go = new GameObject("PooledVfxHitSparks");
+                go.SetActive(false);
+                _sparkBurstPool.Push(go.AddComponent<DirectionalSparkBurstFx>());
+            }
+        }
+
         public static FloatingCombatText GetFloatingText(Vector3 pos)
         {
             while (_floatingTextPool.Count > 0)

@@ -30,8 +30,8 @@ namespace AbyssGame
         {
             _defaultColor = accent;
             _trail = gameObject.AddComponent<TrailRenderer>();
-            _trail.time = 0.17f;
-            _trail.minVertexDistance = 0.04f;
+            _trail.time = 0.11f;
+            _trail.minVertexDistance = 0.05f;
             _trail.numCornerVertices = 2;
             _trail.numCapVertices = 2;
             _trail.shadowCastingMode = ShadowCastingMode.Off;
@@ -39,9 +39,10 @@ namespace AbyssGame
             _trail.alignment = LineAlignment.View;
             _trail.emitting = false;
 
+            float compactW = width * 0.52f;
             var curve = new AnimationCurve(
-                new Keyframe(0f, width),
-                new Keyframe(0.35f, width * 0.82f),
+                new Keyframe(0f, compactW),
+                new Keyframe(0.35f, compactW * 0.78f),
                 new Keyframe(1f, 0.0f));
             _trail.widthCurve = curve;
 
@@ -50,14 +51,14 @@ namespace AbyssGame
             if (sh != null)
             {
                 _mat = new Material(sh);
-                _mat.SetColor("_MainColor", Color.Lerp(accent, Color.white, 0.45f));
-                _mat.SetColor("_EdgeColor", accent);
+                _mat.SetColor("_MainColor", Color.Lerp(accent, Color.white, 0.35f) * 0.85f);
+                _mat.SetColor("_EdgeColor", accent * 0.85f);
                 _mat.SetFloat("_Progress", 0.35f);
-                _mat.SetFloat("_Opacity", 0.92f);
+                _mat.SetFloat("_Opacity", 0.48f);
             }
             else
             {
-                _mat = CharacterVisualFactory.MakeTransparentMat(new Color(accent.r, accent.g, accent.b, 0.72f), accent * 2f);
+                _mat = CharacterVisualFactory.MakeTransparentMat(new Color(accent.r, accent.g, accent.b, 0.44f), accent * 1.15f);
             }
             _trail.sharedMaterial = _mat;
         }
