@@ -1,0 +1,55 @@
+{
+  "weapon_group": "Assassin \u2014 Dual Blades",
+  "visual_identity": {
+    "crimson_red_hdr": [
+      2.15,
+      0.2,
+      0.34,
+      1.0
+    ],
+    "obsidian_black_smoke": [
+      0.06,
+      0.04,
+      0.09,
+      0.88
+    ],
+    "shadow_purple_hdr": [
+      1.18,
+      0.26,
+      1.95,
+      1.0
+    ],
+    "poison_green_hdr": [
+      0.28,
+      1.9,
+      0.62,
+      1.0
+    ]
+  },
+  "urp_materials": [
+    {
+      "name": "M_Asn_CrimsonSlash",
+      "shader": "AbyssalDungeon/WeaponTrail",
+      "blend": "SrcAlpha One",
+      "texture": "T_Asn_CrimsonShadowSlash.png"
+    },
+    {
+      "name": "M_Asn_ShadowSmoke",
+      "shader": "Universal Render Pipeline/Particles/Unlit",
+      "blend": "SrcAlpha OneMinusSrcAlpha (True Dark Smoke!)",
+      "texture": "T_Asn_ShadowSmokeWisps.png"
+    },
+    {
+      "name": "M_Asn_BackstabCore",
+      "shader": "AbyssalDungeon/WeaponAura",
+      "blend": "SrcAlpha One",
+      "texture": "T_Asn_BackstabSigil.png"
+    },
+    {
+      "name": "M_Asn_VenomSplash",
+      "shader": "AbyssalDungeon/WeaponAura",
+      "blend": "SrcAlpha One",
+      "texture": "T_Asn_VenomSplatter.png"
+    }
+  ]
+}

@@ -17,6 +17,7 @@ namespace AbyssGame
     /// <summary>
     /// Core 3D combatant used by Local Player, AI Party Members, Summons, 10 Monster types, Mini-Boss, and 3-Phase Boss.
     /// </summary>
+    [DefaultExecutionOrder(0)]
     public class ActorUnit : MonoBehaviour
     {
         public static readonly List<ActorUnit> AllUnits = new List<ActorUnit>();
@@ -59,6 +60,8 @@ namespace AbyssGame
         public bool IsSprinting;
         public bool IsWalking;
         public float VisualBaseScale = 1f;
+        public Vector3 VisualBaseScaleVec = Vector3.one;
+        public WeaponRigController WeaponRig;
         public bool IsDead;
         public bool IsDowned;
         public float ReviveProgress;
@@ -90,6 +93,8 @@ namespace AbyssGame
         private float _poiseRegenDelay;
         private Vector3 _knockbackVel;
         private Vector3 _lungeVel;
+        private Vector3 _pendingPlanarMove;
+        private float _allyIgnoreSyncTimer;
 
         private WeaponHitboxSweep3D _hitboxSweep;
         private WeaponBladeTrail3D[] _weaponTrails;
@@ -142,7 +147,9 @@ namespace AbyssGame
 
             EnsureController(0.45f, 1.9f);
             MainVisual = CharacterVisualFactory.BuildHeroVisual(HeroClass, transform, out Anim, BuildIndex);
-            VisualBaseScale = MainVisual != null ? MainVisual.transform.localScale.x : 1f;
+            VisualBaseScaleVec = MainVisual != null ? MainVisual.transform.localScale : Vector3.one;
+            VisualBaseScale = VisualBaseScaleVec.x;
+            WeaponRig = MainVisual != null ? MainVisual.GetComponent<WeaponRigController>() : null;
             if (HeroClass.id == 8) // Druid has Bear Form mesh ready
             {
                 BearVisual = CharacterVisualFactory.BuildBearFormMesh();
@@ -169,7 +176,9 @@ namespace AbyssGame
             if (MainVisual != null) Destroy(MainVisual);
             MainVisual = CharacterVisualFactory.BuildHeroVisual(HeroClass, transform, out Anim, BuildIndex);
             MainVisual.SetActive(!InBearForm);
-            VisualBaseScale = MainVisual.transform.localScale.x;
+            VisualBaseScaleVec = MainVisual.transform.localScale;
+            VisualBaseScale = VisualBaseScaleVec.x;
+            WeaponRig = MainVisual.GetComponent<WeaponRigController>();
             RefreshWeaponTrailsCache();
             if (_motionPolisher != null) _motionPolisher.Bind(this);
         }
@@ -191,20 +200,29 @@ namespace AbyssGame
             MainVisual = CharacterVisualFactory.BuildMonsterVisual(def, IsElite || IsMiniBoss, transform, out Anim);
             if (IsMiniBoss && !IsBoss) MainVisual.transform.localScale *= 1.32f;
             else if (IsElite && def.archetype != Archetype.Elite && !IsBoss) MainVisual.transform.localScale *= 1.18f;
-            VisualBaseScale = MainVisual != null ? MainVisual.transform.localScale.x : 1f;
+            VisualBaseScaleVec = MainVisual != null ? MainVisual.transform.localScale : Vector3.one;
+            VisualBaseScale = VisualBaseScaleVec.x;
 
             float floorScale = 1f + (floor - 1) * 0.28f;
-            float tierHp = (IsMiniBoss ? 2.6f : (IsElite && def.archetype != Archetype.Elite ? 1.85f : 1f));
+            // Compounding floor + co-op party + over-level HP scaling so mobs, elites, mini-bosses & bosses stay tanky at high floors
+            float hpFloorScale = Mathf.Pow(1.36f, Mathf.Max(0, floor - 1));
+            int partyCount = GameSession.I != null ? Mathf.Max(1, GameSession.I.ActivePartyCount()) : 1;
+            float partyHpMult = 1f + (partyCount - 1) * 0.45f;
+            int playerLvl = (GameSession.I != null && GameSession.I.Profile != null) ? Mathf.Max(1, GameSession.I.Profile.level) : floor;
+            int expectedLvl = Mathf.Max(1, floor * 2 - 1);
+            float levelGapMult = playerLvl > expectedLvl ? (1f + (playerLvl - expectedLvl) * 0.12f) : 1f;
+
+            float tierHp = IsBoss ? 1.85f : (IsMiniBoss ? 4.5f : (IsElite && def.archetype != Archetype.Elite ? 2.6f : 1f));
             float tierAtk = (IsMiniBoss ? 1.35f : (IsElite && def.archetype != Archetype.Elite ? 1.22f : 1f));
 
-            MaxHp = Mathf.Round(def.hp * floorScale * tierHp * hpMult);
+            MaxHp = Mathf.Round(def.hp * hpFloorScale * partyHpMult * levelGapMult * tierHp * hpMult);
             Hp = MaxHp;
             MaxMana = 100f;
             Mana = 100f;
-            MaxPoise = IsBoss ? 360f : (IsMiniBoss ? 210f : (IsElite ? 120f : 56f));
+            MaxPoise = IsBoss ? 620f : (IsMiniBoss ? 320f : (IsElite ? 165f : 68f));
             Poise = MaxPoise;
             Atk = Mathf.Round(def.atk * floorScale * tierAtk * atkMult);
-            Def = Mathf.Round(def.def * (1f + (floor - 1) * 0.15f));
+            Def = Mathf.Round(def.def * (1f + (floor - 1) * 0.20f));
             MoveSpeed = def.speed;
             AtkSpeed = 1f / Mathf.Max(0.4f, def.attackCd);
             AttackRange = def.attackRange;
@@ -285,7 +303,23 @@ namespace AbyssGame
             Controller.radius = radius;
             Controller.height = height;
             Controller.center = new Vector3(0f, height * 0.5f, 0f);
-            Controller.stepOffset = Mathf.Min(0.4f, height * 0.25f);
+            Controller.stepOffset = Mathf.Min(0.42f, height * 0.25f);
+            Controller.skinWidth = 0.03f;
+            Controller.minMoveDistance = 0f;
+            Controller.slopeLimit = 45f;
+            SyncFriendlyControllerCollisions();
+        }
+
+        private void SyncFriendlyControllerCollisions()
+        {
+            if (Controller == null || !Controller.enabled || Team != Team.Hero) return;
+            for (int i = 0; i < AllUnits.Count; i++)
+            {
+                var u = AllUnits[i];
+                if (u == null || u == this || u.Team != Team.Hero || u.Controller == null || !u.Controller.enabled)
+                    continue;
+                Physics.IgnoreCollision(Controller, u.Controller, true);
+            }
         }
 
         public void RecalculateStats(bool refillVitals = false)
@@ -404,26 +438,36 @@ namespace AbyssGame
             root.transform.localPosition = new Vector3(0f, yOffset, 0f);
             _hpBarRoot = root.transform;
 
-            var bgMat = CharacterVisualFactory.MakeTransparentMat(new Color(0.05f, 0.05f, 0.08f, 0.82f));
-            CharacterVisualFactory.Prim(PrimitiveType.Cube, "Bg", root.transform, Vector3.zero, new Vector3(1.35f, 0.13f, 0.02f), bgMat);
+            bool isAlly = Team == Team.Hero;
+            float barW = isAlly ? 0.62f : (IsBoss ? 1.45f : (IsElite || IsMiniBoss ? 1.12f : 0.88f));
+            float barH = isAlly ? 0.052f : (IsBoss ? 0.11f : 0.078f);
 
-            var fMat = CharacterVisualFactory.MakeTransparentMat(fillColor, fillColor * 0.5f);
+            // Antique bronze outer trim + dark obsidian backing
+            var borderMat = CharacterVisualFactory.MakeTransparentMat(new Color(0.55f, 0.42f, 0.22f, 0.78f));
+            CharacterVisualFactory.Prim(PrimitiveType.Cube, "Border", root.transform, new Vector3(0f, 0f, 0.004f), new Vector3(barW + 0.05f, barH + 0.04f, 0.014f), borderMat);
+
+            var bgMat = CharacterVisualFactory.MakeTransparentMat(new Color(0.06f, 0.05f, 0.07f, 0.88f));
+            CharacterVisualFactory.Prim(PrimitiveType.Cube, "Bg", root.transform, Vector3.zero, new Vector3(barW, barH, 0.018f), bgMat);
+
+            Color tonedFill = isAlly ? new Color(0.24f, 0.64f, 0.36f, 0.92f) : fillColor;
+            var fMat = CharacterVisualFactory.MakeTransparentMat(tonedFill, tonedFill * 0.28f);
             var fillHolder = new GameObject("FillPivot");
             fillHolder.transform.SetParent(root.transform, false);
-            fillHolder.transform.localPosition = new Vector3(-0.65f, 0f, -0.01f);
-            var fillCube = CharacterVisualFactory.Prim(PrimitiveType.Cube, "Fill", fillHolder.transform, new Vector3(0.65f, 0f, 0f), new Vector3(1.3f, 0.1f, 0.025f), fMat);
+            float halfFill = barW * 0.485f;
+            fillHolder.transform.localPosition = new Vector3(-halfFill, 0f, -0.01f);
+            CharacterVisualFactory.Prim(PrimitiveType.Cube, "Fill", fillHolder.transform, new Vector3(halfFill, 0f, 0f), new Vector3(halfFill * 2f, barH * 0.78f, 0.022f), fMat);
             _hpBarFill = fillHolder.transform;
 
             var lblObj = new GameObject("Name");
             lblObj.transform.SetParent(root.transform, false);
-            lblObj.transform.localPosition = new Vector3(0f, 0.24f, 0f);
+            lblObj.transform.localPosition = new Vector3(0f, barH * 1.4f + 0.06f, 0f);
             _nameLabel = lblObj.AddComponent<TextMesh>();
             _nameLabel.text = DisplayName;
-            _nameLabel.fontSize = 36;
-            _nameLabel.characterSize = 0.055f;
+            _nameLabel.fontSize = 30;
+            _nameLabel.characterSize = isAlly ? 0.023f : 0.032f;
             _nameLabel.anchor = TextAnchor.MiddleCenter;
             _nameLabel.fontStyle = FontStyle.Bold;
-            _nameLabel.color = Team == Team.Hero ? new Color(0.75f, 1f, 0.85f) : new Color(1f, 0.85f, 0.8f);
+            _nameLabel.color = isAlly ? new Color(0.92f, 0.85f, 0.66f, 0.90f) : new Color(0.98f, 0.80f, 0.74f, 0.96f);
         }
 
         private void Update()
@@ -540,13 +584,23 @@ namespace AbyssGame
 
         private void UpdateGravityAndVisuals(float dt)
         {
+            if (Team == Team.Hero)
+            {
+                _allyIgnoreSyncTimer -= dt;
+                if (_allyIgnoreSyncTimer <= 0f)
+                {
+                    _allyIgnoreSyncTimer = 0.75f;
+                    SyncFriendlyControllerCollisions();
+                }
+            }
+
             if (Controller != null && Controller.enabled && !IsDead)
             {
-                bool groundedNow = (Controller.isGrounded || transform.position.y <= 0.03f) && _velocity.y <= 0.05f;
+                bool groundedNow = (Controller.isGrounded || transform.position.y <= 0.05f) && _velocity.y <= 0.05f;
                 if (groundedNow)
                 {
                     _coyoteTimer = 0.12f;
-                    _velocity.y = -1.2f;
+                    _velocity.y = -2.4f;
                 }
                 else
                 {
@@ -555,9 +609,10 @@ namespace AbyssGame
                 }
 
                 Vector3 planarImpulse = _knockbackVel + _lungeVel;
+                Vector3 impulseDelta = Vector3.zero;
                 if (planarImpulse.sqrMagnitude > 0.002f)
                 {
-                    Controller.Move(new Vector3(planarImpulse.x, 0f, planarImpulse.z) * dt);
+                    impulseDelta = new Vector3(planarImpulse.x, 0f, planarImpulse.z) * dt;
                     _knockbackVel = Vector3.Lerp(_knockbackVel, Vector3.zero, 1f - Mathf.Exp(-11f * dt));
                     _lungeVel = Vector3.Lerp(_lungeVel, Vector3.zero, 1f - Mathf.Exp(-15f * dt));
                 }
@@ -567,17 +622,19 @@ namespace AbyssGame
                     _lungeVel = Vector3.zero;
                 }
 
-                if (_velocity.y > 0.05f || transform.position.y > 0.02f || !Controller.isGrounded)
+                // Single unified CharacterController.Move per frame — zero double-step jitter, zero CCT teleport conflict!
+                Vector3 totalMove = _pendingPlanarMove + impulseDelta;
+                _pendingPlanarMove = Vector3.zero;
+                bool wantMove = totalMove.sqrMagnitude > 0.0000005f || !groundedNow || _velocity.y > 0.05f;
+                if (wantMove)
                 {
-                    Controller.Move(new Vector3(0f, _velocity.y * dt, 0f));
-                    if (transform.position.y < 0f && _velocity.y < 0f)
-                    {
-                        Vector3 p = transform.position;
-                        p.y = 0f;
-                        transform.position = p;
-                        _velocity.y = -1.2f;
-                    }
+                    totalMove.y = _velocity.y * dt;
+                    Controller.Move(totalMove);
                 }
+            }
+            else
+            {
+                _pendingPlanarMove = Vector3.zero;
             }
 
             if (_swingAnimTimer > 0f)
@@ -745,9 +802,9 @@ namespace AbyssGame
             if (!CanAct()) return;
             worldDelta.y = 0f;
             float mag = worldDelta.magnitude;
-            if (Controller != null && Controller.enabled && mag > 0.0001f)
+            if (Controller != null && Controller.enabled && mag > 0.00005f)
             {
-                Controller.Move(worldDelta);
+                _pendingPlanarMove += worldDelta;
             }
             if (_motionPolisher == null && Anim != null)
             {
@@ -818,12 +875,85 @@ namespace AbyssGame
                     _motionPolisher.SpawnDodgeGhost();
                     ghostsSpawned++;
                 }
+                // Feed into unified _pendingPlanarMove instead of calling Controller.Move twice per frame!
                 if (Controller != null && Controller.enabled)
-                    Controller.Move(dir * (spd * Time.deltaTime));
+                    _pendingPlanarMove += dir * (spd * Time.deltaTime);
                 t += Time.deltaTime;
                 yield return null;
             }
             IsInvincible = false;
+        }
+
+        private Vector3 GetWeaponProjectileOrigin(Vector3 aimDir)
+        {
+            Vector3 fallback = transform.position + Vector3.up * 1.25f + aimDir * 0.55f;
+            if (WeaponRig != null)
+            {
+                WeaponRig.EnsureWeaponsVisible();
+                return WeaponRig.GetProjectileSpawnWorldPos(transform.position + Vector3.up * 1.25f, aimDir);
+            }
+            return fallback;
+        }
+
+        private void GetCombatTiming(out float basicWindup, out float basicActive, out float heavyWindup, out float heavyActive, out float skillWindup)
+        {
+            if (WeaponRig != null && WeaponRig.Loadout != null)
+            {
+                basicWindup = WeaponRig.Loadout.BasicWindup;
+                basicActive = WeaponRig.Loadout.BasicActive;
+                heavyWindup = WeaponRig.Loadout.HeavyWindup;
+                heavyActive = WeaponRig.Loadout.HeavyActive;
+                skillWindup = WeaponRig.Loadout.SkillCastWindup;
+                return;
+            }
+            if (HeroClass != null)
+            {
+                switch (HeroClass.id)
+                {
+                    case 0: basicWindup = 0.09f; basicActive = 0.14f; heavyWindup = 0.16f; heavyActive = 0.18f; skillWindup = 0.14f; return; // Knight
+                    case 1: basicWindup = 0.13f; basicActive = 0.16f; heavyWindup = 0.20f; heavyActive = 0.20f; skillWindup = 0.16f; return; // Guardian
+                    case 2: basicWindup = 0.15f; basicActive = 0.18f; heavyWindup = 0.22f; heavyActive = 0.22f; skillWindup = 0.18f; return; // Berserker
+                    case 3: basicWindup = 0.05f; basicActive = 0.11f; heavyWindup = 0.11f; heavyActive = 0.14f; skillWindup = 0.10f; return; // Assassin
+                    case 4: basicWindup = 0.12f; basicActive = 0.10f; heavyWindup = 0.20f; heavyActive = 0.12f; skillWindup = 0.16f; return; // Ranger
+                    case 5: basicWindup = 0.13f; basicActive = 0.10f; heavyWindup = 0.20f; heavyActive = 0.12f; skillWindup = 0.16f; return; // Mage
+                    case 6: basicWindup = 0.12f; basicActive = 0.12f; heavyWindup = 0.18f; heavyActive = 0.15f; skillWindup = 0.16f; return; // Warlock
+                    case 7: basicWindup = 0.05f; basicActive = 0.12f; heavyWindup = 0.12f; heavyActive = 0.15f; skillWindup = 0.11f; return; // Monk
+                    case 8: basicWindup = 0.12f; basicActive = 0.12f; heavyWindup = 0.18f; heavyActive = 0.14f; skillWindup = 0.16f; return; // Druid
+                    case 9: basicWindup = 0.11f; basicActive = 0.14f; heavyWindup = 0.18f; heavyActive = 0.16f; skillWindup = 0.15f; return; // Cleric
+                }
+            }
+            basicWindup = 0.07f; basicActive = 0.12f; heavyWindup = 0.15f; heavyActive = 0.17f; skillWindup = 0.12f;
+        }
+
+        private IEnumerator DelayedRangedBasicShot(float windup, int step, bool isFinisher, Vector3 aimDir, float rawAtk, Color accent, float poiseDmg, float kbForce, float bonusCrit)
+        {
+            if (WeaponRig != null) WeaponRig.TriggerBowDraw(windup);
+            if (windup > 0.01f) yield return new WaitForSeconds(windup);
+            if (this == null || IsDead || IsDowned || IsCrowdControlled()) yield break;
+
+            if (HeroClass != null)
+            {
+                AbyssalDungeon.VFX.GnGSkillVfxDispatcher.EnsureInstance()?.PlayComboOrHeavy(
+                    HeroClass.id, step, false, transform.position, transform.rotation, accent, IsLocalPlayer);
+            }
+            PulseWeaponTrails(0.20f, accent);
+            Vector3 muzzle = GetWeaponProjectileOrigin(aimDir);
+
+            if (isFinisher)
+            {
+                for (int i = -1; i <= 1; i++)
+                {
+                    Vector3 shotDir = Quaternion.Euler(0f, i * 11f, 0f) * aimDir;
+                    SkillProjectile.Spawn(this, muzzle + shotDir * 0.12f, shotDir,
+                        24f, AttackRange + 4.5f, rawAtk * (i == 0 ? 1.0f : 0.58f), i == 0, StatusType.None, 0f, 0f,
+                        i == 0 ? 1.6f : 0f, accent, poiseDmg * 0.6f, kbForce * 0.7f, bonusCrit);
+                }
+            }
+            else
+            {
+                SkillProjectile.Spawn(this, muzzle, aimDir,
+                    21f + step * 2f, AttackRange + 4f, rawAtk, false, StatusType.None, 0f, 0f, 0f, accent, poiseDmg, kbForce, 0f);
+            }
         }
 
         public bool TryBasicAttack(Vector3 aimDir, Vector3 aimPoint)
@@ -851,9 +981,13 @@ namespace AbyssGame
             aimDir.Normalize();
             transform.rotation = Quaternion.LookRotation(aimDir);
 
-            if (_motionPolisher != null) _motionPolisher.TriggerAction("Attack");
+            if (_motionPolisher != null) _motionPolisher.TriggerComboAttack(step);
             else if (Anim != null) Anim.SetTrigger(HashAttack);
             _swingAnimTimer = isFinisher ? 0.34f : 0.24f;
+
+            Color accent = HeroClass != null
+                ? ClassSpecializationSystem.GetBuildAccentColor(HeroClass.id, BuildIndex, HeroClass.color)
+                : (MonsterDef != null ? MonsterDef.projColor : new Color(1f, 0.42f, 0.3f));
 
             // Monk passive: +4 mana per basic combo strike
             if (HeroClass != null && HeroClass.id == 7) Mana = Mathf.Min(MaxMana, Mana + 4f);
@@ -864,10 +998,8 @@ namespace AbyssGame
             float poiseDmg = Team == Team.Hero ? (step == 0 ? 18f : (step == 1 ? 24f : 38f)) : 12f;
             float kbForce = isFinisher ? 5.6f : (step == 1 ? 2.2f : 1.4f);
             float bonusCrit = isFinisher ? 0.12f : 0f;
-
-            Color accent = HeroClass != null
-                ? ClassSpecializationSystem.GetBuildAccentColor(HeroClass.id, BuildIndex, HeroClass.color)
-                : (MonsterDef != null ? MonsterDef.projColor : new Color(1f, 0.42f, 0.3f));
+            GetCombatTiming(out float basicWindup, out float basicActive, out _, out _, out _);
+            float windupScaled = Mathf.Clamp(basicWindup / Mathf.Max(0.65f, effAspd), 0.04f, 0.22f);
 
             if (IsRanged)
             {
@@ -880,24 +1012,7 @@ namespace AbyssGame
                     float pitch = 0.96f + step * 0.07f;
                     GameAudio.I.PlaySfxVaried(isFinisher ? GameSfx.ComboFinisher : GameSfx.Magic, 0.45f, 0.04f, pitch);
                 }
-                PulseWeaponTrails(0.20f, accent);
-
-                if (isFinisher)
-                {
-                    // Combo Stage 3 Ranged Finisher: 3-way empowered fan / piercing detonation!
-                    for (int i = -1; i <= 1; i++)
-                    {
-                        Vector3 shotDir = Quaternion.Euler(0f, i * 11f, 0f) * aimDir;
-                        SkillProjectile.Spawn(this, transform.position + Vector3.up * 1.25f + shotDir * 0.65f, shotDir,
-                            24f, AttackRange + 4.5f, rawAtk * (i == 0 ? 1.0f : 0.58f), i == 0, StatusType.None, 0f, 0f,
-                            i == 0 ? 1.6f : 0f, accent, poiseDmg * 0.6f, kbForce * 0.7f, bonusCrit);
-                    }
-                }
-                else
-                {
-                    SkillProjectile.Spawn(this, transform.position + Vector3.up * 1.25f + aimDir * 0.6f, aimDir,
-                        21f + step * 2f, AttackRange + 4f, rawAtk, false, StatusType.None, 0f, 0f, 0f, accent, poiseDmg, kbForce, 0f);
-                }
+                StartCoroutine(DelayedRangedBasicShot(windupScaled, step, isFinisher, aimDir, rawAtk, accent, poiseDmg, kbForce, bonusCrit));
             }
             else
             {
@@ -917,7 +1032,6 @@ namespace AbyssGame
                     float pitch = 0.94f + step * 0.08f;
                     GameAudio.I.PlaySfxVaried(isFinisher ? GameSfx.ComboFinisher : GameSfx.Attack, 0.48f, 0.05f, pitch);
                 }
-                PulseWeaponTrails(isFinisher ? 0.32f : 0.22f, accent);
 
                 float reach = AttackRange + (isFinisher ? 1.05f : 0.65f);
                 float arc = isFinisher ? 170f : 132f;
@@ -926,13 +1040,19 @@ namespace AbyssGame
 
                 var sweep = _hitboxSweep != null ? _hitboxSweep : WeaponHitboxSweep3D.EnsureOn(this);
                 sweep.BeginSweep(
-                    windupDelay: 0.06f,
-                    activeDuration: isFinisher ? 0.16f : 0.12f,
+                    windupDelay: windupScaled,
+                    activeDuration: isFinisher ? basicActive + 0.04f : basicActive,
                     reachRadius: reach,
                     arcDegrees: arc,
                     onWindupComplete: () =>
                     {
                         if (this == null || IsDead) return;
+                        PulseWeaponTrails(isFinisher ? 0.30f : 0.20f, accent);
+                        if (HeroClass != null)
+                        {
+                            AbyssalDungeon.VFX.GnGSkillVfxDispatcher.EnsureInstance()?.PlayComboOrHeavy(
+                                HeroClass.id, step, false, transform.position, transform.rotation, accent, IsLocalPlayer);
+                        }
                         Color core = isFinisher ? Color.Lerp(accent, new Color(1f, 0.95f, 0.6f), 0.55f) : Color.Lerp(accent, Color.white, 0.45f);
                         CombatFeelManager.I.SpawnSlashArc(
                             transform.position + Vector3.up * 1.08f + transform.forward * 0.25f,
@@ -976,7 +1096,7 @@ namespace AbyssGame
             aimDir.Normalize();
             transform.rotation = Quaternion.LookRotation(aimDir);
 
-            if (_motionPolisher != null) _motionPolisher.TriggerAction("Attack");
+            if (_motionPolisher != null) _motionPolisher.TriggerAction("HeavyAttack");
             else if (Anim != null) Anim.SetTrigger(HashAttack);
             _swingAnimTimer = 0.42f;
 
@@ -985,18 +1105,19 @@ namespace AbyssGame
             float rawHeavy = EffectiveAttack() * 2.15f;
             const float heavyPoise = 58f;
             const float heavyKb = 8.4f;
+            GetCombatTiming(out _, out _, out float heavyWindup, out float heavyActive, out _);
 
             if (HeroClass != null)
                 GameAudio.I.PlayWeaponAttack(HeroClass.id, 2, isHeavy: true, isFinisher: true, IsLocalPlayer ? 0.92f : 0.26f);
             else
                 GameAudio.I.PlaySfxVaried(GameSfx.HeavyAttack, 0.88f, 0.04f, 0.96f);
-            PulseWeaponTrails(0.42f, goldCore);
             if (IsLocalPlayer && OrbitCamera3D.Instance != null)
                 OrbitCamera3D.Instance.PunchFov(-2.4f, 0.26f);
 
             if (IsRanged)
             {
-                StartCoroutine(DelayedHeavyRangedShot(0.14f, aimDir, rawHeavy, accent, heavyPoise, heavyKb));
+                if (WeaponRig != null) WeaponRig.TriggerBowDraw(heavyWindup);
+                StartCoroutine(DelayedHeavyRangedShot(heavyWindup, aimDir, rawHeavy, accent, heavyPoise, heavyKb));
             }
             else
             {
@@ -1004,14 +1125,20 @@ namespace AbyssGame
                 float reach = AttackRange + 1.35f;
                 var sweep = _hitboxSweep != null ? _hitboxSweep : WeaponHitboxSweep3D.EnsureOn(this);
                 sweep.BeginSweep(
-                    windupDelay: 0.15f,
-                    activeDuration: 0.17f,
+                    windupDelay: heavyWindup,
+                    activeDuration: heavyActive,
                     reachRadius: reach,
                     arcDegrees: 150f,
                     onWindupComplete: () =>
                     {
                         if (this == null || IsDead) return;
-                        // Vertical overhead smash arc + ground shockwave!
+                        PulseWeaponTrails(0.38f, goldCore);
+                        if (HeroClass != null)
+                        {
+                            AbyssalDungeon.VFX.GnGSkillVfxDispatcher.EnsureInstance()?.PlayComboOrHeavy(
+                                HeroClass.id, 2, true, transform.position, transform.rotation, accent, IsLocalPlayer);
+                        }
+                        // Vertical overhead smash arc + ground shockwave synced to weapon impact frame!
                         CombatFeelManager.I.SpawnSlashArc(
                             transform.position + Vector3.up * 1.25f + transform.forward * 0.4f,
                             transform.rotation,
@@ -1023,7 +1150,8 @@ namespace AbyssGame
                             0.30f,
                             0.98f,
                             false);
-                        CharacterVisualFactory.SpawnBurst(transform.position + transform.forward * (reach * 0.55f) + Vector3.up * 0.15f, accent, 1.45f, 0.30f);
+                        Vector3 smashPt = WeaponRig != null ? WeaponRig.GetImpactWorldPos(transform.position + transform.forward * (reach * 0.55f) + Vector3.up * 0.15f) : (transform.position + transform.forward * (reach * 0.55f) + Vector3.up * 0.15f);
+                        CharacterVisualFactory.SpawnBurst(new Vector3(smashPt.x, transform.position.y + 0.15f, smashPt.z), accent, 1.45f, 0.30f);
                         if (IsLocalPlayer && OrbitCamera3D.Instance != null)
                             OrbitCamera3D.Instance.Shake(0.18f, 0.18f);
                     },
@@ -1039,8 +1167,15 @@ namespace AbyssGame
         {
             yield return new WaitForSeconds(delay);
             if (IsDead || IsDowned) yield break;
-            CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 1.25f + aimDir * 0.7f, accent, 0.95f, 0.22f);
-            SkillProjectile.Spawn(this, transform.position + Vector3.up * 1.25f + aimDir * 0.75f, aimDir,
+            PulseWeaponTrails(0.32f, accent);
+            if (HeroClass != null)
+            {
+                AbyssalDungeon.VFX.GnGSkillVfxDispatcher.EnsureInstance()?.PlayComboOrHeavy(
+                    HeroClass.id, 2, true, transform.position, transform.rotation, accent, IsLocalPlayer);
+            }
+            Vector3 muzzle = GetWeaponProjectileOrigin(aimDir);
+            CharacterVisualFactory.SpawnBurst(muzzle, accent, 0.95f, 0.22f);
+            SkillProjectile.Spawn(this, muzzle, aimDir,
                 27f, AttackRange + 6f, rawHeavy * 0.95f, true, StatusType.Slow, 1.8f, 0f, 2.2f, accent, poiseDmg * 0.85f, kb * 0.75f, 0.15f);
         }
 
@@ -1062,7 +1197,7 @@ namespace AbyssGame
             dir.Normalize();
             transform.rotation = Quaternion.LookRotation(dir);
 
-            if (_motionPolisher != null) _motionPolisher.TriggerAction(sk.useCastAnim ? "Cast" : "Attack");
+            if (_motionPolisher != null) _motionPolisher.TriggerSkillAction(slot, sk.useCastAnim);
             else if (Anim != null) Anim.SetTrigger(sk.useCastAnim ? HashCast : HashAttack);
             _swingAnimTimer = 0.3f;
 
@@ -1074,14 +1209,17 @@ namespace AbyssGame
             float areaMult = ClassSpecializationSystem.GetSkillAreaMultiplier(rank);
             Color fxCol = ClassSpecializationSystem.GetBuildAccentColor(HeroClass.id, BuildIndex, sk.color);
 
+            float rawPow = EffectiveAttack() * sk.power * rankPow;
+            float effRadius = sk.radius * areaMult;
+            float effRange = sk.range * areaMult;
+
+            AbyssalDungeon.VFX.GnGSkillVfxDispatcher.EnsureInstance()?.PlayClassSkill(
+                HeroClass.id, slot, sk.kind, transform.position, aimPoint, transform.rotation, fxCol, effRadius, IsLocalPlayer);
+
             PulseWeaponTrails(0.36f, fxCol);
             GameAudio.I.PlayWeaponSkill(HeroClass.id, sk, slot, IsLocalPlayer ? 0.90f : 0.24f);
             if (IsLocalPlayer && sk.ultimate && ScreenCombatFeedbackUI.Instance != null)
                 ScreenCombatFeedbackUI.Instance.NotifyCombatSurge(fxCol, 0.36f);
-
-            float rawPow = EffectiveAttack() * sk.power * rankPow;
-            float effRadius = sk.radius * areaMult;
-            float effRange = sk.range * areaMult;
 
             switch (sk.kind)
             {
@@ -1097,13 +1235,9 @@ namespace AbyssGame
                     GameAudio.I.PlaySfx(GameSfx.Magic, 0.8f);
                     int cnt = Mathf.Max(1, sk.count);
                     bool pierce = sk.pierce || (HeroClass.id == 6 && BuildIndex == 2 && slot == 0);
-                    for (int i = 0; i < cnt; i++)
-                    {
-                        float ang = cnt == 1 ? 0f : Mathf.Lerp(-22f, 22f, (float)i / (cnt - 1));
-                        Vector3 shotDir = Quaternion.Euler(0f, ang, 0f) * dir;
-                        SkillProjectile.Spawn(this, transform.position + Vector3.up * 1.25f + shotDir * 0.6f, shotDir,
-                            22f, effRange, rawPow, pierce, sk.status, sk.statusDur, EffectiveAttack() * sk.statusPower * rankPow, effRadius > 1.5f && cnt == 1 ? effRadius : 0f, fxCol);
-                    }
+                    GetCombatTiming(out _, out _, out _, out _, out float projWindup);
+                    if (WeaponRig != null) WeaponRig.TriggerBowDraw(projWindup);
+                    StartCoroutine(DelayedSkillProjectileVolley(projWindup, cnt, dir, effRange, rawPow, pierce, sk, rankPow, effRadius, fxCol));
                     break;
 
                 case SkillKind.GroundAoE:
@@ -1267,31 +1401,62 @@ namespace AbyssGame
             {
                 if (IsDead || IsDowned) yield break;
                 PulseWeaponTrails(0.22f, fxCol);
-                CombatFeelManager.I.SpawnSlashArc(
-                    transform.position + Vector3.up * 1.1f + transform.forward * 0.25f,
-                    transform.rotation,
-                    Mathf.Clamp(rad * 0.85f, 1.5f, 4.2f),
-                    Mathf.Clamp(sk.arc, 90f, 340f),
-                    (i % 2 == 0) ? -16f : 18f,
-                    Color.Lerp(fxCol, Color.white, 0.45f),
-                    fxCol,
-                    0.22f,
-                    0.78f,
-                    i % 2 == 1);
+                if (sk.arc >= 260f)
+                {
+                    CombatFeelManager.I.SpawnWhirlwindSlash(
+                        transform.position + Vector3.up * 0.45f,
+                        transform.rotation,
+                        Mathf.Clamp(rad * 0.85f, 1.6f, 4.2f),
+                        fxCol);
+                }
+                else
+                {
+                    CombatFeelManager.I.SpawnSlashArc(
+                        transform.position + Vector3.up * 1.1f + transform.forward * 0.25f,
+                        transform.rotation,
+                        Mathf.Clamp(rad * 0.85f, 1.5f, 4.2f),
+                        Mathf.Clamp(sk.arc, 90f, 340f),
+                        (i % 2 == 0) ? -16f : 18f,
+                        Color.Lerp(fxCol, Color.white, 0.45f),
+                        fxCol,
+                        0.22f,
+                        0.78f,
+                        i % 2 == 1);
+                }
                 DealConeDamage(rawPow, rad, sk.arc, sk.status, sk.statusDur, EffectiveAttack() * sk.statusPower, fxCol);
                 if (i < hits - 1) yield return new WaitForSeconds(0.11f);
+            }
+        }
+
+        private IEnumerator DelayedSkillProjectileVolley(float windup, int cnt, Vector3 dir, float effRange, float rawPow, bool pierce, SkillDef sk, float rankPow, float effRadius, Color fxCol)
+        {
+            if (windup > 0.01f) yield return new WaitForSeconds(windup);
+            if (this == null || IsDead || IsDowned) yield break;
+            Vector3 muzzle = GetWeaponProjectileOrigin(dir);
+            for (int i = 0; i < cnt; i++)
+            {
+                float ang = cnt == 1 ? 0f : Mathf.Lerp(-22f, 22f, (float)i / (cnt - 1));
+                Vector3 shotDir = Quaternion.Euler(0f, ang, 0f) * dir;
+                SkillProjectile.Spawn(this, muzzle + shotDir * 0.10f, shotDir,
+                    22f, effRange, rawPow, pierce, sk.status, sk.statusDur, EffectiveAttack() * sk.statusPower * rankPow,
+                    effRadius > 1.5f && cnt == 1 ? effRadius : 0f, fxCol);
             }
         }
 
         private IEnumerator DashAttackRoutine(Vector3 dir, float dist, float rawDmg, float hitRadius, Color col)
         {
             IsInvincible = true;
+            CombatFeelManager.I.SpawnThrustPierce(
+                transform.position + Vector3.up * 1.05f + dir * 0.45f,
+                Quaternion.LookRotation(dir),
+                col,
+                1.12f);
             var hitSet = new HashSet<ActorUnit>();
             float dur = 0.22f, t = 0f;
             float spd = dist / dur;
             while (t < dur)
             {
-                if (Controller != null && Controller.enabled) Controller.Move(dir * (spd * Time.deltaTime));
+                if (Controller != null && Controller.enabled) _pendingPlanarMove += dir * (spd * Time.deltaTime);
                 for (int i = AllUnits.Count - 1; i >= 0; i--)
                 {
                     var u = AllUnits[i];
@@ -1411,9 +1576,13 @@ namespace AbyssGame
 
             target.ReceiveHit(dmg, crit, this, isHeavyOrFinisher || backstab);
 
-            // 3D Contact Sparks & Hit-Stop Juice
+            // 3D Contact Sparks, Authentic Gold & Glory Hit Burst, Poise Shatter & Hit-Stop Juice
             Color sparkCol = HeroClass != null ? HeroClass.color : new Color(1f, 0.55f, 0.3f);
             CombatFeelManager.I.SpawnHitImpact(hitPt, pushDir, sparkCol, crit || isHeavyOrFinisher, target);
+            AbyssalDungeon.VFX.GnGSkillVfxDispatcher.EnsureInstance()?.PlayHitVfx(
+                HeroClass != null ? HeroClass.id : -1, crit || isHeavyOrFinisher, hitPt, Quaternion.LookRotation(pushDir), IsLocalPlayer);
+            if (brokeGuard)
+                CombatFeelManager.I.SpawnPoiseShatter(hitPt, new Color(1f, 0.82f, 0.28f));
 
             if (IsLocalPlayer)
             {
@@ -1428,7 +1597,17 @@ namespace AbyssGame
                         OrbitCamera3D.Instance.Shake(isHeavyOrFinisher ? 0.22f : 0.14f, 0.16f);
                 }
                 if (backstab && HeroClass != null && HeroClass.id == 3)
+                {
                     CharacterVisualFactory.SpawnFloatingText(target.transform.position + Vector3.up * 2.15f, "ĐÁNH LÉN!", new Color(0.85f, 0.45f, 1f), 0.85f);
+                    AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                        AbyssalDungeon.VFX.VFXType.Wpn_Asn_BackstabImpact,
+                        hitPt,
+                        Quaternion.LookRotation(pushDir),
+                        0.52f,
+                        null,
+                        null,
+                        1.05f);
+                }
             }
 
             if (status != StatusType.None && !target.IsDead)
@@ -1437,6 +1616,17 @@ namespace AbyssGame
                 // Mage Fire build: stronger Burn
                 if (HeroClass != null && HeroClass.id == 5 && BuildIndex == 0 && status == StatusType.Burn) sp *= 1.5f;
                 target.ApplyStatus(status, statusDur, sp, this);
+                if (status == StatusType.Poison && HeroClass != null && HeroClass.id == 3)
+                {
+                    AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                        AbyssalDungeon.VFX.VFXType.Wpn_Asn_PoisonImpact,
+                        target.transform.position + Vector3.up * 0.1f,
+                        Quaternion.LookRotation(pushDir),
+                        0.60f,
+                        null,
+                        null,
+                        1.0f);
+                }
             }
         }
 
@@ -1469,12 +1659,23 @@ namespace AbyssGame
 
             finalDmg = Mathf.Round(finalDmg);
 
-            // Absorb with Shield first
+            // Absorb with Shield first + spawn 3D Gothic Aegis barrier flash
             if (Shield > 0f)
             {
                 float absorbed = Mathf.Min(Shield, finalDmg);
                 Shield -= absorbed;
                 finalDmg -= absorbed;
+
+                Vector3 toAttacker = attacker != null ? (attacker.transform.position - transform.position) : transform.forward;
+                toAttacker.y = 0f;
+                if (toAttacker.sqrMagnitude < 0.001f) toAttacker = transform.forward;
+                toAttacker.Normalize();
+                Color shieldCol = HeroClass != null ? HeroClass.color : new Color(0.95f, 0.82f, 0.36f);
+                CombatFeelManager.I.SpawnShieldAegisBlock(
+                    transform.position + Vector3.up * 1.1f + toAttacker * 0.55f,
+                    Quaternion.LookRotation(toAttacker),
+                    shieldCol,
+                    0.95f);
             }
 
             Hp = Mathf.Max(0f, Hp - finalDmg);
@@ -1689,8 +1890,10 @@ namespace AbyssGame
         private float _speed, _maxDist, _traveled, _rawDmg, _aoeRadius, _statusDur, _statusPow;
         private float _poiseDmg, _kbForce, _bonusCrit;
         private bool _pierce;
+        private bool _isArrow;
         private StatusType _status;
         private Color _color;
+        private TrailRenderer _trail;
         private Material _trailMat;
         private readonly HashSet<ActorUnit> _hit = new HashSet<ActorUnit>();
 
@@ -1705,26 +1908,49 @@ namespace AbyssGame
             dir.Normalize();
             go.transform.rotation = Quaternion.LookRotation(dir);
 
-            var mat = CharacterVisualFactory.MakeMat(color, 0.9f, 0f, color * 2.5f);
-            CharacterVisualFactory.Prim(PrimitiveType.Sphere, "Orb", go.transform, Vector3.zero, new Vector3(0.32f, 0.32f, 0.58f), mat);
+            bool isArrow = owner != null && (
+                (owner.HeroClass != null && owner.HeroClass.id == 4) ||
+                (owner.MonsterDef != null && owner.MonsterDef.weapon == WeaponKind.Bow));
+            bool empowered = pierce || aoeRadius > 1.2f || bonusCrit > 0.05f;
 
-            var tr = go.AddComponent<TrailRenderer>();
-            tr.time = 0.14f;
-            tr.minVertexDistance = 0.08f;
-            tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            tr.receiveShadows = false;
-            tr.widthCurve = new AnimationCurve(new Keyframe(0f, 0.26f), new Keyframe(1f, 0f));
-            var tMat = CharacterVisualFactory.MakeTransparentMat(new Color(color.r, color.g, color.b, 0.65f), color * 2f);
-            tr.sharedMaterial = tMat;
+            // Spawn muzzle rune/bow release burst from pooled VFXManager
+            AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                AbyssalDungeon.VFX.VFXType.Wpn_MuzzleCastBurst,
+                startPos,
+                go.transform.rotation,
+                0.30f,
+                color,
+                null,
+                empowered ? 0.95f : 0.72f);
+
+            TrailRenderer tr = AbyssalDungeon.VFX.WeaponVfxFactory.BuildProjectile3DVisual(
+                go, isArrow, color, empowered, out Material tMat);
+            if (isArrow)
+            {
+                GameObject arrowMeshPrefab = (owner != null && owner.WeaponRig != null && owner.WeaponRig.Loadout != null && owner.WeaponRig.Loadout.ProjectileVisualPrefab != null)
+                    ? owner.WeaponRig.Loadout.ProjectileVisualPrefab
+                    : Resources.Load<GameObject>("Weapons/Prefabs/Ranger_Arrow");
+                if (arrowMeshPrefab != null)
+                {
+                    var arrowMesh = Instantiate(arrowMeshPrefab, go.transform, false);
+                    arrowMesh.name = "GothicArrowMesh";
+                    arrowMesh.transform.localPosition = new Vector3(0f, 0f, -0.42f);
+                    arrowMesh.transform.localRotation = Quaternion.identity;
+                    arrowMesh.transform.localScale = Vector3.one * (empowered ? 1.25f : 1.05f);
+                }
+            }
+            AbyssalDungeon.VFX.GnGSkillVfxDispatcher.EnsureInstance()?.AttachProjectileCore(
+                go.transform, owner, status, isArrow);
 
             var p = go.AddComponent<SkillProjectile>();
             p._owner = owner;
-            p._team = owner.Team;
+            p._team = owner != null ? owner.Team : Team.Hero;
             p._dir = dir;
             p._speed = speed;
             p._maxDist = range;
             p._rawDmg = rawDmg;
             p._pierce = pierce;
+            p._isArrow = isArrow;
             p._status = status;
             p._statusDur = statusDur;
             p._statusPow = statusPow;
@@ -1733,7 +1959,40 @@ namespace AbyssGame
             p._poiseDmg = poiseDmg;
             p._kbForce = kbForce;
             p._bonusCrit = bonusCrit;
+            p._trail = tr;
             p._trailMat = tMat;
+        }
+
+        private void TerminateCleanly()
+        {
+            // Detach child TrailRenderer on impact so ribbon decays naturally instead of snapping or leaking
+            if (_trail != null)
+            {
+                Transform tTrans = _trail.transform;
+                tTrans.SetParent(null, true);
+                _trail.emitting = false;
+                float wait = Mathf.Max(0.05f, _trail.time + 0.05f);
+                Destroy(tTrans.gameObject, wait);
+                if (_trailMat != null)
+                {
+                    Destroy(_trailMat, wait + 0.02f);
+                    _trailMat = null;
+                }
+                _trail = null;
+            }
+            Destroy(gameObject);
+        }
+
+        private void SpawnImpactBurst(Vector3 pos)
+        {
+            AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                _isArrow ? AbyssalDungeon.VFX.VFXType.Wpn_ArrowImpact : AbyssalDungeon.VFX.VFXType.Wpn_SpellImpact,
+                pos,
+                Quaternion.LookRotation(-_dir),
+                0.40f,
+                _color,
+                null,
+                _aoeRadius > 1.0f ? 1.25f : 0.92f);
         }
 
         private void OnDestroy()
@@ -1741,14 +2000,41 @@ namespace AbyssGame
             if (_trailMat != null) Destroy(_trailMat);
         }
 
+        private static readonly RaycastHit[] _wallRayHits = new RaycastHit[12];
+
+        private bool HitSolidEnvironmentWall(Vector3 origin, Vector3 dir, float dist, out Vector3 hitPoint)
+        {
+            hitPoint = origin + dir * dist;
+            int count = Physics.RaycastNonAlloc(origin, dir, _wallRayHits, dist, 1 << 0, QueryTriggerInteraction.Ignore);
+            float best = float.MaxValue;
+            bool hitWall = false;
+            for (int i = 0; i < count; i++)
+            {
+                var h = _wallRayHits[i];
+                if (h.collider == null) continue;
+                // Never treat character controllers, hurtboxes, or floor colliders as projectile-blocking walls!
+                if (h.collider.GetComponentInParent<ActorUnit>() != null) continue;
+                if (Mathf.Abs(h.normal.y) > 0.72f) continue;
+                if (h.distance < best)
+                {
+                    best = h.distance;
+                    hitPoint = h.point;
+                    hitWall = true;
+                }
+            }
+            return hitWall;
+        }
+
         private void Update()
         {
             float step = _speed * Time.deltaTime;
-            // Wall check
-            if (Physics.Raycast(transform.position, _dir, step, 1 << 0, QueryTriggerInteraction.Ignore))
+            // Wall check (ignores caster & allied CharacterControllers on Layer 0 so ranged projectiles never self-detonate!)
+            if (HitSolidEnvironmentWall(transform.position, _dir, step, out Vector3 wallHitPt))
             {
+                transform.position = wallHitPt;
+                SpawnImpactBurst(wallHitPt);
                 ExplodeIfNeeded();
-                Destroy(gameObject);
+                TerminateCleanly();
                 return;
             }
 
@@ -1764,6 +2050,7 @@ namespace AbyssGame
                 if (Vector3.Distance(transform.position, upos) <= hitR)
                 {
                     _hit.Add(u);
+                    SpawnImpactBurst(transform.position);
                     if (_aoeRadius > 0.5f && _owner != null)
                     {
                         _owner.DealCircleDamage(u.transform.position, _aoeRadius, _rawDmg, _status, _statusDur, _statusPow, _color);
@@ -1779,7 +2066,7 @@ namespace AbyssGame
 
                     if (!_pierce)
                     {
-                        Destroy(gameObject);
+                        TerminateCleanly();
                         return;
                     }
                 }
@@ -1788,7 +2075,7 @@ namespace AbyssGame
             if (_traveled >= _maxDist)
             {
                 ExplodeIfNeeded();
-                Destroy(gameObject);
+                TerminateCleanly();
             }
         }
 
@@ -1808,10 +2095,12 @@ namespace AbyssGame
 
         public static void Spawn(ActorUnit owner, Vector3 pos, float radius, float dmg, StatusType status, float dur, Color col)
         {
-            var go = new GameObject("FrostTrap");
-            go.transform.position = new Vector3(pos.x, 0.04f, pos.z);
-            var mat = CharacterVisualFactory.MakeTransparentMat(new Color(col.r, col.g, col.b, 0.48f), col);
-            CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "Ring", go.transform, Vector3.zero, new Vector3(radius * 1.2f, 0.02f, radius * 1.2f), mat);
+            var go = new GameObject("HuntingTrap_GnG");
+            go.transform.position = new Vector3(pos.x, 0.02f, pos.z);
+            ObjMeshLoader.SpawnPiece("SpikeCluster", go.transform, Vector3.zero, Quaternion.identity,
+                Vector3.one * 0.95f, PbrMaterialLibrary.WroughtIron(), addBoxCollider: false, castShadows: false);
+            AbyssalDungeon.VFX.GnGSkillVfxDispatcher.EnsureInstance()?.SpawnGnG(
+                "GnG_Archer_Trap", go.transform.position, Quaternion.identity, 1.15f, 0.85f);
             var t = go.AddComponent<PlacedTrap>();
             t._owner = owner; t._radius = radius; t._dmg = dmg; t._status = status; t._dur = dur; t._col = col;
         }

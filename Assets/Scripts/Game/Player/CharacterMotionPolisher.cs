@@ -10,6 +10,7 @@ namespace AbyssGame
     /// - Turn-banking roll, Sprint forward lean, Jump stretch & Landing squash + dust burst
     /// - Directional Take-Damage hit flinch & Dodge translucent ghost afterimages.
     /// </summary>
+    [DefaultExecutionOrder(40)]
     public class CharacterMotionPolisher : MonoBehaviour
     {
         private ActorUnit _unit;
@@ -22,13 +23,18 @@ namespace AbyssGame
         private static readonly int HashJump = Animator.StringToHash("Jump");
         private static readonly int HashHit = Animator.StringToHash("Hit");
         private static readonly int HashAttack = Animator.StringToHash("Attack");
+        private static readonly int HashHeavyAttack = Animator.StringToHash("HeavyAttack");
+        private static readonly int HashComboStep = Animator.StringToHash("ComboStep");
         private static readonly int HashCast = Animator.StringToHash("Cast");
+        private static readonly int HashSkillAlt = Animator.StringToHash("SkillAlt");
         private static readonly int HashDodge = Animator.StringToHash("Dodge");
         private static readonly int HashDead = Animator.StringToHash("IsDead");
 
         private Vector3 _prevPos;
         private float _prevYaw;
+        private float _filteredPlanarSpeed;
         private float _smoothedAnimSpeed;
+        private float _smoothedStrideMult = 1f;
         private float _currentBankZ;
         private float _currentPitchX;
         private float _squashY = 1f;
@@ -101,14 +107,44 @@ namespace AbyssGame
             int hash = 0;
             switch (action)
             {
-                case "Attack": hash = HashAttack; break;
-                case "Cast":   hash = HashCast; break;
-                case "Dodge":  hash = HashDodge; break;
-                case "Jump":   hash = HashJump; break;
-                case "Hit":    hash = HashHit; break;
+                case "Attack":      hash = HashAttack; break;
+                case "HeavyAttack": hash = HashHeavyAttack; break;
+                case "Cast":        hash = HashCast; break;
+                case "SkillAlt":    hash = HashSkillAlt; break;
+                case "Dodge":       hash = HashDodge; break;
+                case "Jump":        hash = HashJump; break;
+                case "Hit":         hash = HashHit; break;
             }
             if (hash != 0 && _validParams.Contains(hash))
                 _cachedAnim.SetTrigger(hash);
+            else if ((action == "HeavyAttack" || action == "SkillAlt") && _validParams.Contains(HashAttack))
+                _cachedAnim.SetTrigger(HashAttack);
+        }
+
+        public void TriggerComboAttack(int step)
+        {
+            if (_unit == null) return;
+            if (_unit.Anim != _cachedAnim) RebuildParameterCache();
+            if (_cachedAnim == null) return;
+
+            if (_validParams.Contains(HashComboStep))
+                _cachedAnim.SetInteger(HashComboStep, Mathf.Clamp(step, 0, 2));
+            if (_validParams.Contains(HashAttack))
+                _cachedAnim.SetTrigger(HashAttack);
+        }
+
+        public void TriggerSkillAction(int slot, bool useCastAnim)
+        {
+            if (_unit == null) return;
+            if (_unit.Anim != _cachedAnim) RebuildParameterCache();
+            if (_cachedAnim == null) return;
+
+            if (slot >= 2 && _validParams.Contains(HashSkillAlt))
+            {
+                _cachedAnim.SetTrigger(HashSkillAlt);
+                return;
+            }
+            TriggerAction(useCastAnim ? "Cast" : "Attack");
         }
 
         public void SetDeadBool(bool dead)
@@ -147,17 +183,31 @@ namespace AbyssGame
                 ? _unit.HeroClass.color
                 : new Color(0.45f, 0.85f, 1f);
 
-            var ghost = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            ghost.name = "DodgeAfterimage";
-            Destroy(ghost.GetComponent<Collider>());
-            ghost.transform.position = transform.position + Vector3.up * 0.92f;
-            ghost.transform.rotation = transform.rotation;
-            ghost.transform.localScale = new Vector3(0.62f, 0.92f, 0.48f);
+            var mgr = AbyssalDungeon.VFX.VFXManager.EnsureInstance();
+            if (mgr != null)
+            {
+                if (_unit != null && _unit.HeroClass != null && _unit.HeroClass.id == 3)
+                {
+                    mgr.SpawnVFX(
+                        AbyssalDungeon.VFX.VFXType.Wpn_Asn_DashAfterimage,
+                        transform.position,
+                        transform.rotation,
+                        0.38f,
+                        null,
+                        null,
+                        0.95f);
+                    return;
+                }
 
-            var mr = ghost.GetComponent<MeshRenderer>();
-            mr.sharedMaterial = CharacterVisualFactory.MakeTransparentMat(new Color(col.r, col.g, col.b, 0.34f), col * 1.6f);
-            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            ghost.AddComponent<FadeAndDestroyBehaviour>().Init(0.22f);
+                mgr.SpawnVFX(
+                    AbyssalDungeon.VFX.VFXType.DodgeTrail,
+                    transform.position + Vector3.up * 0.9f,
+                    transform.rotation,
+                    0.28f,
+                    col,
+                    null,
+                    0.85f);
+            }
         }
 
         private void LateUpdate()
@@ -168,11 +218,15 @@ namespace AbyssGame
             float dt = Time.deltaTime;
             if (dt <= 0.0001f) return;
 
-            // 1. Measure real planar displacement to eliminate skating / foot sliding
+            // 1. Measure & low-pass filter real planar displacement to eliminate frame-spike jitter & foot sliding
             Vector3 delta = transform.position - _prevPos;
             _prevPos = transform.position;
             Vector3 planarDelta = new Vector3(delta.x, 0f, delta.z);
-            float actualPlanarSpeed = planarDelta.magnitude / dt;
+            float rawPlanarSpeed = Mathf.Clamp(planarDelta.magnitude / dt, 0f, 18f);
+            float speedFilterRate = rawPlanarSpeed > _filteredPlanarSpeed ? 20f : 24f;
+            _filteredPlanarSpeed = Mathf.Lerp(_filteredPlanarSpeed, rawPlanarSpeed, 1f - Mathf.Exp(-speedFilterRate * dt));
+            if (rawPlanarSpeed < 0.04f && _filteredPlanarSpeed < 0.08f) _filteredPlanarSpeed = 0f;
+            float actualPlanarSpeed = _filteredPlanarSpeed;
 
             bool grounded = _unit.IsGroundedUnit;
             if (!_wasGrounded && grounded && !_unit.IsDead)
@@ -186,18 +240,18 @@ namespace AbyssGame
             // Normalized locomotion tier: 0 = Idle, 0.45 = Walk, 1.0 = Run, 1.45 = Sprint
             float baseMove = Mathf.Max(2.5f, _unit.EffectiveMoveSpeed());
             float targetNormSpeed = 0f;
-            if (!_unit.IsDead && !_unit.IsDowned && actualPlanarSpeed > 0.12f)
+            if (!_unit.IsDead && !_unit.IsDowned && actualPlanarSpeed > 0.14f)
             {
                 float ratio = actualPlanarSpeed / baseMove;
                 if (ratio < 0.68f)
-                    targetNormSpeed = Mathf.Lerp(0.15f, 0.50f, ratio / 0.68f); // Walk
+                    targetNormSpeed = Mathf.Lerp(0.18f, 0.48f, ratio / 0.68f); // Walk
                 else if (ratio <= 1.12f)
                     targetNormSpeed = Mathf.Lerp(0.55f, 1.0f, (ratio - 0.68f) / 0.44f); // Run
                 else
                     targetNormSpeed = Mathf.Clamp(1.0f + (ratio - 1.0f) * 1.15f, 1.0f, 1.48f); // Sprint
             }
 
-            float accelRate = targetNormSpeed > _smoothedAnimSpeed ? 14f : 19f;
+            float accelRate = targetNormSpeed > _smoothedAnimSpeed ? 11f : 15f;
             _smoothedAnimSpeed = Mathf.MoveTowards(_smoothedAnimSpeed, targetNormSpeed, accelRate * dt);
 
             if (_cachedAnim != null)
@@ -208,13 +262,14 @@ namespace AbyssGame
                 if (_validParams.Contains(HashGrounded))
                     _cachedAnim.SetBool(HashGrounded, grounded);
 
-                // Match stride cadence directly to ground speed so feet never slide
-                float strideMult = actualPlanarSpeed > 0.25f
-                    ? Mathf.Clamp(actualPlanarSpeed / ReferenceJogSpeed, 0.62f, 1.52f)
+                // Match stride cadence smoothly to ground speed (keep 1.0 in Idle so Idle never hitches)
+                float targetStrideMult = _smoothedAnimSpeed > 0.16f
+                    ? Mathf.Clamp(actualPlanarSpeed / ReferenceJogSpeed, 0.68f, 1.46f)
                     : 1.0f;
+                _smoothedStrideMult = Mathf.Lerp(_smoothedStrideMult, targetStrideMult, 1f - Mathf.Exp(-12f * dt));
 
                 if (_validParams.Contains(HashLocoMult))
-                    _cachedAnim.SetFloat(HashLocoMult, strideMult);
+                    _cachedAnim.SetFloat(HashLocoMult, _smoothedStrideMult);
             }
 
             // 2. Exact 1-to-1 Foot Bone Touchdown Synchronization (Local Player Audio + Surface VFX)
@@ -321,14 +376,15 @@ namespace AbyssGame
                     flinchOff = _flinchLocalOffset * (_flinchTimer / 0.16f);
                 }
 
-                // Preserve base scale magnitude while applying subtle squash/stretch
+                // Preserve exact per-class non-uniform base scale while applying subtle squash/stretch
                 if (_cachedAnim != null)
                 {
                     _unit.MainVisual.transform.localRotation = Quaternion.Euler(_currentPitchX, 0f, _currentBankZ);
                     _unit.MainVisual.transform.localPosition = flinchOff;
                     float invXz = 1f / Mathf.Sqrt(Mathf.Max(0.7f, _squashY));
-                    float baseScale = Mathf.Max(0.1f, _unit.VisualBaseScale);
-                    _unit.MainVisual.transform.localScale = new Vector3(baseScale * invXz, baseScale * _squashY, baseScale * invXz);
+                    Vector3 bs = _unit.VisualBaseScaleVec;
+                    if (bs.sqrMagnitude < 0.01f) bs = Vector3.one * Mathf.Max(0.1f, _unit.VisualBaseScale);
+                    _unit.MainVisual.transform.localScale = new Vector3(bs.x * invXz, bs.y * _squashY, bs.z * invXz);
                 }
             }
         }

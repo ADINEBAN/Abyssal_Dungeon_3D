@@ -272,18 +272,36 @@ namespace AbyssGame
 
         public static Vector3 ObstacleAvoidDir(Vector3 pos, Vector3 desiredDir)
         {
-            Vector3 origin = pos + Vector3.up * 0.7f;
-            if (!Physics.Raycast(origin, desiredDir, out RaycastHit hit, 1.5f, 1 << 0, QueryTriggerInteraction.Ignore)
-                || hit.collider.GetComponentInParent<ActorUnit>() != null)
+            desiredDir.y = 0f;
+            if (desiredDir.sqrMagnitude < 0.0001f) return Vector3.forward;
+            desiredDir.Normalize();
+
+            Vector3 origin = pos + Vector3.up * 0.72f;
+            bool IsBlocked(Vector3 d, float dist, out RaycastHit h)
+            {
+                if (Physics.Raycast(origin, d, out h, dist, 1 << 0, QueryTriggerInteraction.Ignore))
+                    return h.collider != null && h.collider.GetComponentInParent<ActorUnit>() == null;
+                return false;
+            }
+
+            if (!IsBlocked(desiredDir, 1.65f, out RaycastHit hit))
                 return desiredDir;
 
-            Vector3 left = Quaternion.Euler(0f, -48f, 0f) * desiredDir;
-            Vector3 right = Quaternion.Euler(0f, 48f, 0f) * desiredDir;
-            bool lClear = !Physics.Raycast(origin, left, 1.6f, 1 << 0, QueryTriggerInteraction.Ignore);
-            bool rClear = !Physics.Raycast(origin, right, 1.6f, 1 << 0, QueryTriggerInteraction.Ignore);
-            if (lClear && !rClear) return left;
-            if (rClear && !lClear) return right;
-            return (left + Vector3.Cross(Vector3.up, hit.normal)).normalized;
+            // 5-ray steering fan (+/- 34 deg, +/- 70 deg) for smooth pillar/cover/doorway navigation without corner-trapping
+            float[] angles = { -34f, 34f, -70f, 70f };
+            for (int i = 0; i < angles.Length; i++)
+            {
+                Vector3 cand = Quaternion.Euler(0f, angles[i], 0f) * desiredDir;
+                if (!IsBlocked(cand, 1.85f, out _))
+                    return cand;
+            }
+
+            // Wall-tangent slide fallback
+            Vector3 slide = Vector3.ProjectOnPlane(desiredDir, hit.normal);
+            slide.y = 0f;
+            if (slide.sqrMagnitude > 0.01f)
+                return slide.normalized;
+            return Vector3.Cross(Vector3.up, hit.normal).normalized;
         }
     }
 }

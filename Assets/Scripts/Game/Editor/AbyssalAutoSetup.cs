@@ -28,8 +28,8 @@ namespace AbyssGame.EditorTools
         private const string BossPrefabMarker = "Assets/Resources/Models/Enemies/Boss_AbyssalKnight.prefab";
         private const string Phase1PrefabMarker = "Assets/Resources/EnvironmentKit/GothicPillar.prefab";
         private const string Phase4ClassMarker = "Assets/Resources/Classes/CD_Knight.asset";
-        private const string PbrV3Marker = "Assets/Resources/Models/ExportedPbrV3FaceMarker.txt";
-        private const string GothicUIV4Marker = "Assets/Resources/UI/GothicUIV4Marker.txt";
+        private const string PbrV3Marker = "Assets/Resources/Models/GnGFullComboMapV5Marker.txt";
+        private const string GothicUIV4Marker = "Assets/Resources/UI/GloomyGothicUIV5Marker.txt";
 
         static AbyssalAutoSetup()
         {
@@ -48,8 +48,8 @@ namespace AbyssGame.EditorTools
         private static void AutoRunIfNeeded()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-            if (SessionState.GetBool("AbyssalAutoSetup_GothicUI_v4", false) && File.Exists(PbrV3Marker) && File.Exists(GothicUIV4Marker)) return;
-            SessionState.SetBool("AbyssalAutoSetup_GothicUI_v4", true);
+            if (SessionState.GetBool("AbyssalAutoSetup_GloomyGnG_v5", false) && File.Exists(PbrV3Marker) && File.Exists(GothicUIV4Marker)) return;
+            SessionState.SetBool("AbyssalAutoSetup_GloomyGnG_v5", true);
 
             bool hasPbrV3 = File.Exists(PbrV3Marker);
             bool hasGothicUIV4 = File.Exists(GothicUIV4Marker);
@@ -337,36 +337,57 @@ namespace AbyssGame.EditorTools
             foreach (string cls in classes)
             {
                 string ctrlPath = $"Assets/Resources/Animators/HeroAnimator_{cls}.controller";
+                AnimationClip idle = ModelImportSetup.LoadHeroClip(cls, "Idle");
+                AnimationClip run = ModelImportSetup.LoadHeroClip(cls, "Run");
+                AnimationClip walk = ModelImportSetup.LoadHeroClip(cls, "Walk") ?? run;
+                AnimationClip atk1 = ModelImportSetup.LoadHeroClip(cls, "Attack");
+                AnimationClip atk2 = ModelImportSetup.LoadHeroClip(cls, "Attack2") ?? atk1;
+                AnimationClip atk3 = ModelImportSetup.LoadHeroClip(cls, "Attack3") ?? atk2;
+                AnimationClip heavy = ModelImportSetup.LoadHeroClip(cls, "HeavyAttack") ?? atk3;
+                AnimationClip cast = ModelImportSetup.LoadHeroClip(cls, "Cast");
+                AnimationClip skillAlt = ModelImportSetup.LoadHeroClip(cls, "SkillAlt") ?? cast;
+                AnimationClip lobbyIdle = ModelImportSetup.LoadHeroClip(cls, "LobbyIdle") ?? idle;
+
                 var ctrl = CreateUnitAnimatorController(
                     ctrlPath,
-                    clipIdle:   ModelImportSetup.LoadHeroClip(cls, "Idle"),
-                    clipWalk:   ModelImportSetup.LoadHeroClip(cls, "Run"),
-                    clipRun:    ModelImportSetup.LoadHeroClip(cls, "Run"),
-                    clipSprint: clipSprint != null ? clipSprint : ModelImportSetup.LoadHeroClip(cls, "Run"),
-                    clipAttack: ModelImportSetup.LoadHeroClip(cls, "Attack"),
-                    clipCast:   ModelImportSetup.LoadHeroClip(cls, "Cast"),
-                    clipDodge:  clipDodge,
-                    clipJump:   ModelImportSetup.LoadHeroClip(cls, "Jump"),
-                    clipHit:    clipHit,
-                    clipDeath:  clipDeath,
-                    walkTimeScale: 0.65f);
+                    clipIdle:      idle,
+                    clipWalk:      walk,
+                    clipRun:       run,
+                    clipSprint:    clipSprint != null ? clipSprint : run,
+                    clipAttack:    atk1,
+                    clipCast:      cast,
+                    clipDodge:     clipDodge,
+                    clipJump:      ModelImportSetup.LoadHeroClip(cls, "Jump"),
+                    clipHit:       clipHit,
+                    clipDeath:     clipDeath,
+                    walkTimeScale: 0.92f,
+                    clipAttack2:   atk2,
+                    clipAttack3:   atk3,
+                    clipHeavy:     heavy,
+                    clipSkillAlt:  skillAlt,
+                    clipLobbyIdle: lobbyIdle);
                 dict[cls] = ctrl;
             }
 
             // Also save default HeroAnimator.controller (Knight stance) for backwards compatibility
             CreateUnitAnimatorController(
                 "Assets/Resources/Animators/HeroAnimator.controller",
-                clipIdle:   ModelImportSetup.LoadHeroClip("Knight", "Idle"),
-                clipWalk:   ModelImportSetup.LoadHeroClip("Knight", "Run"),
-                clipRun:    ModelImportSetup.LoadHeroClip("Knight", "Run"),
-                clipSprint: clipSprint,
-                clipAttack: ModelImportSetup.LoadHeroClip("Knight", "Attack"),
-                clipCast:   ModelImportSetup.LoadHeroClip("Knight", "Cast"),
-                clipDodge:  clipDodge,
-                clipJump:   ModelImportSetup.LoadHeroClip("Knight", "Jump"),
-                clipHit:    clipHit,
-                clipDeath:  clipDeath,
-                walkTimeScale: 0.65f);
+                clipIdle:      ModelImportSetup.LoadHeroClip("Knight", "Idle"),
+                clipWalk:      ModelImportSetup.LoadHeroClip("Knight", "Walk") ?? ModelImportSetup.LoadHeroClip("Knight", "Run"),
+                clipRun:       ModelImportSetup.LoadHeroClip("Knight", "Run"),
+                clipSprint:    clipSprint,
+                clipAttack:    ModelImportSetup.LoadHeroClip("Knight", "Attack"),
+                clipCast:      ModelImportSetup.LoadHeroClip("Knight", "Cast"),
+                clipDodge:     clipDodge,
+                clipJump:      ModelImportSetup.LoadHeroClip("Knight", "Jump"),
+                clipHit:       clipHit,
+                clipDeath:     clipDeath,
+                walkTimeScale: 0.92f,
+                clipAttack2:   ModelImportSetup.LoadHeroClip("Knight", "Attack2"),
+                clipAttack3:   ModelImportSetup.LoadHeroClip("Knight", "Attack3"),
+                clipHeavy:     ModelImportSetup.LoadHeroClip("Knight", "HeavyAttack"),
+                clipSkillAlt:  ModelImportSetup.LoadHeroClip("Knight", "SkillAlt"),
+                clipLobbyIdle: ModelImportSetup.LoadHeroClip("Knight", "LobbyIdle"));
 
             return dict;
         }
@@ -430,7 +451,12 @@ namespace AbyssGame.EditorTools
             AnimationClip clipJump,
             AnimationClip clipHit,
             AnimationClip clipDeath,
-            float walkTimeScale)
+            float walkTimeScale,
+            AnimationClip clipAttack2 = null,
+            AnimationClip clipAttack3 = null,
+            AnimationClip clipHeavy = null,
+            AnimationClip clipSkillAlt = null,
+            AnimationClip clipLobbyIdle = null)
         {
             if (File.Exists(assetPath)) AssetDatabase.DeleteAsset(assetPath);
 
@@ -438,8 +464,12 @@ namespace AbyssGame.EditorTools
             ctrl.AddParameter(new AnimatorControllerParameter { name = "Speed", type = AnimatorControllerParameterType.Float, defaultFloat = 0f });
             ctrl.AddParameter(new AnimatorControllerParameter { name = "LocoSpeedMult", type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
             ctrl.AddParameter(new AnimatorControllerParameter { name = "IsGrounded", type = AnimatorControllerParameterType.Bool, defaultBool = true });
+            ctrl.AddParameter(new AnimatorControllerParameter { name = "ComboStep", type = AnimatorControllerParameterType.Int, defaultInt = 0 });
+            ctrl.AddParameter(new AnimatorControllerParameter { name = "InLobby", type = AnimatorControllerParameterType.Bool, defaultBool = false });
             ctrl.AddParameter("Attack", AnimatorControllerParameterType.Trigger);
+            ctrl.AddParameter("HeavyAttack", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Cast", AnimatorControllerParameterType.Trigger);
+            ctrl.AddParameter("SkillAlt", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Dodge", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Jump", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Hit", AnimatorControllerParameterType.Trigger);
@@ -468,8 +498,38 @@ namespace AbyssGame.EditorTools
             tree.children = childMotions.ToArray();
             sm.defaultState = locoState;
 
-            AddActionState(sm, locoState, "Attack", clipAttack, "Attack", 0.85f);
+            // Authentic Gold and Glory CareerChoices Lobby Showcase Pose
+            if (clipLobbyIdle != null)
+            {
+                var lobbySt = sm.AddState("LobbyShowcase");
+                lobbySt.motion = clipLobbyIdle;
+                var toLobby = locoState.AddTransition(lobbySt);
+                toLobby.hasExitTime = false;
+                toLobby.duration = 0.15f;
+                toLobby.AddCondition(AnimatorConditionMode.If, 0f, "InLobby");
+                toLobby.AddCondition(AnimatorConditionMode.Less, 0.10f, "Speed");
+
+                var outLobby = lobbySt.AddTransition(locoState);
+                outLobby.hasExitTime = false;
+                outLobby.duration = 0.15f;
+                outLobby.AddCondition(AnimatorConditionMode.IfNot, 0f, "InLobby");
+            }
+
+            // 3-Stage Authentic Gold and Glory Weapon Combo Chain (ComboStep = 0, 1, 2)
+            if (clipAttack2 != null || clipAttack3 != null)
+            {
+                AddComboAttackState(sm, locoState, "Attack",  clipAttack,  0, 0.84f);
+                AddComboAttackState(sm, locoState, "Attack2", clipAttack2 != null ? clipAttack2 : clipAttack, 1, 0.84f);
+                AddComboAttackState(sm, locoState, "Attack3", clipAttack3 != null ? clipAttack3 : (clipAttack2 ?? clipAttack), 2, 0.88f);
+            }
+            else
+            {
+                AddActionState(sm, locoState, "Attack", clipAttack, "Attack", 0.85f);
+            }
+
+            AddActionState(sm, locoState, "HeavyAttack", clipHeavy != null ? clipHeavy : (clipAttack3 ?? clipAttack), "HeavyAttack", 0.88f);
             AddActionState(sm, locoState, "Cast", clipCast != null ? clipCast : clipAttack, "Cast", 0.85f);
+            AddActionState(sm, locoState, "SkillAlt", clipSkillAlt != null ? clipSkillAlt : (clipCast ?? clipAttack), "SkillAlt", 0.86f);
             AddActionState(sm, locoState, "Dodge", clipDodge != null ? clipDodge : clipRun, "Dodge", 0.82f);
 
             var jumpState = sm.AddState("Jump");
@@ -541,6 +601,25 @@ namespace AbyssGame.EditorTools
             back.hasExitTime = true;
             back.exitTime = exitTime;
             back.duration = 0.14f;
+        }
+
+        private static void AddComboAttackState(AnimatorStateMachine sm, AnimatorState loco, string stateName, AnimationClip clip, int comboStep, float exitTime)
+        {
+            var st = sm.AddState(stateName);
+            st.motion = clip;
+
+            var anyTo = sm.AddAnyStateTransition(st);
+            anyTo.hasExitTime = false;
+            anyTo.duration = 0.06f;
+            anyTo.canTransitionToSelf = true;
+            anyTo.AddCondition(AnimatorConditionMode.If, 0f, "Attack");
+            anyTo.AddCondition(AnimatorConditionMode.Equals, comboStep, "ComboStep");
+            anyTo.AddCondition(AnimatorConditionMode.IfNot, 0f, "IsDead");
+
+            var back = st.AddTransition(loco);
+            back.hasExitTime = true;
+            back.exitTime = exitTime;
+            back.duration = 0.12f;
         }
 
         // =====================================================================
@@ -906,6 +985,7 @@ namespace AbyssGame.EditorTools
             UniformWidthBottomZero,
             UniformHeightCentered,
             UniformWidthCentered,
+            UniformMaxDimCentered,
             FixedScalePreservePivot
         }
 
@@ -942,8 +1022,17 @@ namespace AbyssGame.EditorTools
                 ("AbyssalPortal",               $"{envDir}/Env_AbyssalPortal.prefab",         Quaternion.identity,          new Vector3(3.80f, 4.20f, 3.80f), EnvNormMode.UniformHeightBottomZero, 4.60f, "Portal"),
                 ("EscapeFloorPortal",           $"{envDir}/Env_EscapeFloorPortal.prefab",     Quaternion.identity,          new Vector3(3.20f, 0.35f, 3.20f), EnvNormMode.UniformWidthBottomZero,  0f,    null),
 
-                // 3D Equipment Drop Pickups & Elite Crown Banner
-                ("Weap_Knight_RunicLongsword",  $"{wpnDir}/Wpn_KnightSword.prefab",           Quaternion.Euler(270f, 0f, 0f), new Vector3(0.35f, 1.05f, 0.35f), EnvNormMode.UniformHeightCentered,   0f,    null),
+                // Authentic Gold and Glory Crypt, Sanctuary & Cathedral Props
+                ("FloorTile_GnG",               $"{envDir}/Env_DungeonFloorAlt.prefab",       Quaternion.identity,          new Vector3(4.00f, 0.18f, 4.00f), EnvNormMode.FitXYZTopZero,           0f,    null),
+                ("StoneCoffin_GnG",             $"{envDir}/Env_StoneCoffin.prefab",           Quaternion.identity,          new Vector3(2.25f, 1.05f, 1.15f), EnvNormMode.UniformWidthBottomZero,  0f,    null),
+                ("CandleGroup_GnG",             $"{envDir}/Env_CandleGroup.prefab",           Quaternion.identity,          new Vector3(0.65f, 0.58f, 0.65f), EnvNormMode.UniformHeightBottomZero, 0.75f, null),
+                ("RitualTable_GnG",             $"{envDir}/Env_RitualTable.prefab",           Quaternion.identity,          new Vector3(2.10f, 1.05f, 1.10f), EnvNormMode.UniformWidthBottomZero,  0f,    null),
+                ("HangingChain_GnG",            $"{envDir}/Env_HangingChain.prefab",          Quaternion.identity,          new Vector3(0.35f, 2.20f, 0.35f), EnvNormMode.UniformHeightBottomZero, 0.65f, null),
+                ("KnightStatue_GnG",            $"{envDir}/Env_KnightStatue.prefab",          Quaternion.identity,          new Vector3(1.65f, 3.65f, 1.65f), EnvNormMode.UniformHeightBottomZero, 1.95f, null),
+                ("GothicChandelier_GnG",        $"{envDir}/Env_GothicChandelier.prefab",      Quaternion.identity,          new Vector3(1.85f, 1.45f, 1.85f), EnvNormMode.UniformWidthBottomZero,  0f,    null),
+
+                // 3D Equipment Drop Pickups & Elite Crown Banner (UniformMaxDimCentered prevents 17x thin-blade scaling!)
+                ("Weap_Knight_RunicLongsword",  $"{wpnDir}/Wpn_KnightSword.prefab",           Quaternion.Euler(35f, 0f, 35f), new Vector3(0.92f, 0.92f, 0.92f), EnvNormMode.UniformMaxDimCentered, 0f,    null),
                 ("Equip_Armor_Cuirass",         $"{envDir}/Loot_ArmorBox.prefab",             Quaternion.identity,          new Vector3(0.75f, 0.55f, 0.75f), EnvNormMode.UniformWidthCentered,    0f,    null),
                 ("Equip_Helmet_Gothic",         $"{envDir}/Loot_Helm.prefab",                 Quaternion.identity,          new Vector3(0.55f, 0.58f, 0.55f), EnvNormMode.UniformHeightCentered,   0f,    null),
                 ("Equip_Ring_Signet",           $"{envDir}/Loot_GemRing.prefab",              Quaternion.identity,          new Vector3(0.45f, 0.25f, 0.45f), EnvNormMode.UniformWidthCentered,    0f,    null),
@@ -1007,6 +1096,13 @@ namespace AbyssGame.EditorTools
                             sy = sx;
                             sz = sx;
                             break;
+
+                        case EnvNormMode.UniformMaxDimCentered:
+                            float dMax = Mathf.Max(0.08f, Mathf.Max(b.size.x, Mathf.Max(b.size.y, b.size.z)));
+                            sx = p.targetSize.x / dMax;
+                            sy = sx;
+                            sz = sx;
+                            break;
                     }
 
                     // Apply world-axis scaling via an intermediate holder when preRot is non-identity
@@ -1029,7 +1125,7 @@ namespace AbyssGame.EditorTools
                         float dy;
                         if (p.mode == EnvNormMode.FitXYZTopZero)
                             dy = -b2.max.y;
-                        else if (p.mode == EnvNormMode.UniformHeightCentered || p.mode == EnvNormMode.UniformWidthCentered)
+                        else if (p.mode == EnvNormMode.UniformHeightCentered || p.mode == EnvNormMode.UniformWidthCentered || p.mode == EnvNormMode.UniformMaxDimCentered)
                             dy = -b2.center.y;
                         else
                             dy = -b2.min.y;

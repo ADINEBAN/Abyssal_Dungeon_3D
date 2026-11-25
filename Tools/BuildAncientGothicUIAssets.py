@@ -302,19 +302,19 @@ def build_gothic_panel(
     ny = yy / float(h - 1)
     nx = xx / float(w - 1)
 
-    # Radial vignette for ancient depth
-    vignette = 1.0 - 0.32 * np.clip(np.sqrt((nx - 0.5) ** 2 + (ny - 0.5) ** 2) * 1.35, 0.0, 1.0)
+    # Radial vignette for gloomy gothic depth
+    vignette = 1.0 - 0.44 * np.clip(np.sqrt((nx - 0.5) ** 2 + (ny - 0.5) ** 2) * 1.42, 0.0, 1.0)
 
     arr = np.zeros((h, w, 4), dtype=np.float32)
     for c in range(3):
         grad = bg_top[c] * (1.0 - ny) + bg_bot[c] * ny
-        tex_mod = (noise - 0.5) * (18.0 if texture_kind == "leather" else 24.0)
+        tex_mod = (noise - 0.5) * (12.0 if texture_kind == "leather" else 16.0)
         if texture_kind == "grid_iron":
-            grid = ((np.sin(xx * (2 * math.pi / 32.0)) ** 2) + (np.sin(yy * (2 * math.pi / 32.0)) ** 2)) * 4.5
-            tex_mod += grid - 4.5
+            grid = ((np.sin(xx * (2 * math.pi / 32.0)) ** 2) + (np.sin(yy * (2 * math.pi / 32.0)) ** 2)) * 3.5
+            tex_mod += grid - 3.5
         elif texture_kind == "runic":
             dist = np.sqrt((xx - w * 0.5) ** 2 + (yy - h * 0.5) ** 2)
-            ring = np.exp(-((dist - w * 0.33) ** 2) / 18.0) * 18.0 + np.exp(-((dist - w * 0.24) ** 2) / 12.0) * 12.0
+            ring = np.exp(-((dist - w * 0.33) ** 2) / 18.0) * 11.0 + np.exp(-((dist - w * 0.24) ** 2) / 12.0) * 8.0
             tex_mod += ring
         arr[:, :, c] = np.clip((grad + tex_mod) * vignette, 0, 255)
     arr[:, :, 3] = alpha
@@ -322,34 +322,34 @@ def build_gothic_panel(
     img = Image.fromarray(arr.astype(np.uint8))
     draw = ImageDraw.Draw(img)
 
-    # 1. Outer Dark Forged Iron Shadow & Chiselled Stone Bevel (0..4px)
-    draw.rectangle([0, 0, w - 1, h - 1], outline=(8, 6, 4, 255), width=2)
+    # 1. Outer Soot-Black Shadow & Forged Iron Bevel (0..4px)
+    draw.rectangle([0, 0, w - 1, h - 1], outline=(4, 4, 6, 255), width=2)
     draw.rectangle([2, 2, w - 3, h - 3], outline=outer_rim + (255,), width=2)
 
-    # 2. Primary Heavy Antique Gold / Bronze Architectural Frame (4..8px)
+    # 2. Tarnished Dark Iron / Weathered Antique Bronze Architectural Frame (4..8px)
     draw.rectangle([4, 4, w - 5, h - 5], outline=mid_gold + (255,), width=3)
-    draw.line([(5, 5), (w - 6, 5)], fill=highlight_gold + (255,), width=2)
-    draw.line([(5, 5), (5, h - 6)], fill=highlight_gold + (220,), width=1)
+    draw.line([(5, 5), (w - 6, 5)], fill=highlight_gold + (235,), width=1)
+    draw.line([(5, 5), (5, h - 6)], fill=highlight_gold + (185,), width=1)
 
-    # 3. Recessed Ancient Stone Channel with Wrought-Iron Rivet Studs (8..14px)
-    draw.rectangle([7, 7, w - 8, h - 8], outline=(14, 10, 7, 255), width=6)
-    draw.rectangle([9, 9, w - 10, h - 10], outline=(outer_rim[0] + 18, outer_rim[1] + 14, outer_rim[2] + 10, 230), width=2)
+    # 3. Recessed Crypt Stone Channel with Cold Iron Rivet Studs (8..14px)
+    draw.rectangle([7, 7, w - 8, h - 8], outline=(7, 7, 10, 255), width=6)
+    draw.rectangle([9, 9, w - 10, h - 10], outline=(outer_rim[0] + 12, outer_rim[1] + 12, outer_rim[2] + 16, 235), width=2)
 
-    # Edge rivets along the recessed channel (inside 32px border zone and along midpoints)
+    # Edge rivets along the recessed channel
     for pos in (22, 48, 88, w // 2, w - 89, w - 49, w - 23):
         if 18 <= pos <= w - 19:
             for ry in (10, h - 11):
-                draw.ellipse([pos - 2, ry - 2, pos + 2, ry + 2], fill=highlight_gold + (235,), outline=(18, 12, 8, 255))
+                draw.ellipse([pos - 2, ry - 2, pos + 2, ry + 2], fill=highlight_gold + (210,), outline=(8, 8, 12, 255))
             for rx in (10, w - 11):
-                draw.ellipse([rx - 2, pos - 2, rx + 2, pos + 2], fill=highlight_gold + (235,), outline=(18, 12, 8, 255))
+                draw.ellipse([rx - 2, pos - 2, rx + 2, pos + 2], fill=highlight_gold + (210,), outline=(8, 8, 12, 255))
 
-    # 4. Inner Engraved Bronze Moulding & Gothic Filigree Hairline (14..20px)
+    # 4. Inner Engraved Tarnished Bronze Moulding & Shadow Groove (14..20px)
     draw.rectangle([13, 13, w - 14, h - 14], outline=inner_bronze + (255,), width=2)
-    draw.line([(14, 14), (w - 15, 14)], fill=highlight_gold + (195,), width=1)
-    draw.rectangle([16, 16, w - 17, h - 17], outline=(12, 8, 6, 235), width=2)
+    draw.line([(14, 14), (w - 15, 14)], fill=highlight_gold + (160,), width=1)
+    draw.rectangle([16, 16, w - 17, h - 17], outline=(6, 6, 9, 242), width=2)
 
     if ornate_level >= 2:
-        draw.rectangle([19, 19, w - 20, h - 20], outline=(inner_bronze[0], inner_bronze[1], inner_bronze[2], 190), width=1)
+        draw.rectangle([19, 19, w - 20, h - 20], outline=(inner_bronze[0], inner_bronze[1], inner_bronze[2], 165), width=1)
 
     # 5. Corner Gothic Filigree & Rivets (inside the 32px 9-slice border zone)
     draw_corner_filigree(draw, w, h, 4, mid_gold + (255,), highlight_gold + (255,), ornate_level=max(2, ornate_level))
@@ -362,87 +362,87 @@ def build_all_panels():
     ensure_folder_meta(pdir)
     b9 = (32, 32, 32, 32)
 
-    # 1. UI_Panel_Standard: Dark Forged Iron & Warm Umber + Double Bronze Border
+    # GLOOMY DARK GOTHIC PALETTE: Soot-Obsidian, Crypt Slate, Cold Forged Iron & Tarnished Old Bronze
+    # 1. UI_Panel_Standard: Soot-Black Slate & Cold Iron Rim
     p_std = build_gothic_panel(
         256,
-        bg_top=(34, 25, 18), bg_bot=(20, 14, 10),
-        outer_rim=(58, 43, 30), mid_gold=(162, 118, 58),
-        inner_bronze=(112, 80, 40), highlight_gold=(218, 178, 96),
-        ornate_level=1, texture_kind="leather", alpha=244
+        bg_top=(18, 17, 23), bg_bot=(9, 9, 13),
+        outer_rim=(36, 35, 46), mid_gold=(118, 92, 50),
+        inner_bronze=(74, 58, 34), highlight_gold=(176, 142, 82),
+        ornate_level=1, texture_kind="leather", alpha=246
     )
     save_ui_png(p_std, os.path.join(pdir, "UI_Panel_Standard.png"), b9)
 
-    # 2. UI_Panel_Ornate: Antique Gold Filigree & Deep Espresso Leather
+    # 2. UI_Panel_Ornate: Gloomy Obsidian Crypt Tablet & Tarnished Antique Gold Filigree
     p_orn = build_gothic_panel(
         256,
-        bg_top=(42, 29, 20), bg_bot=(22, 15, 10),
-        outer_rim=(76, 54, 32), mid_gold=(214, 174, 86),
-        inner_bronze=(154, 112, 52), highlight_gold=(248, 218, 130),
-        ornate_level=3, texture_kind="leather", alpha=248
+        bg_top=(21, 19, 27), bg_bot=(10, 9, 14),
+        outer_rim=(44, 40, 54), mid_gold=(156, 122, 62),
+        inner_bronze=(98, 74, 38), highlight_gold=(208, 172, 98),
+        ornate_level=3, texture_kind="leather", alpha=250
     )
     save_ui_png(p_orn, os.path.join(pdir, "UI_Panel_Ornate.png"), b9)
 
-    # 3. UI_Panel_Inventory: Forged Dark Iron Grid Reliquary
+    # 3. UI_Panel_Inventory: Cold Forged Iron Reliquary Grid
     p_inv = build_gothic_panel(
         256,
-        bg_top=(28, 21, 16), bg_bot=(16, 12, 9),
-        outer_rim=(64, 48, 34), mid_gold=(188, 146, 72),
-        inner_bronze=(130, 94, 46), highlight_gold=(235, 198, 112),
-        ornate_level=2, texture_kind="grid_iron", alpha=248
+        bg_top=(15, 15, 21), bg_bot=(8, 8, 12),
+        outer_rim=(38, 38, 50), mid_gold=(132, 104, 56),
+        inner_bronze=(82, 64, 36), highlight_gold=(186, 152, 88),
+        ornate_level=2, texture_kind="grid_iron", alpha=250
     )
     save_ui_png(p_inv, os.path.join(pdir, "UI_Panel_Inventory.png"), b9)
 
-    # 4. UI_Panel_Character: Warm Aged Parchment-Leather & Burnished Gold
+    # 4. UI_Panel_Character: Shadowed Crypt Basalt & Weathered Bronze
     p_chr = build_gothic_panel(
         256,
-        bg_top=(46, 33, 22), bg_bot=(26, 18, 12),
-        outer_rim=(78, 56, 34), mid_gold=(206, 164, 78),
-        inner_bronze=(146, 106, 50), highlight_gold=(244, 212, 124),
-        ornate_level=3, texture_kind="leather", alpha=248
+        bg_top=(20, 18, 25), bg_bot=(9, 8, 13),
+        outer_rim=(42, 39, 52), mid_gold=(148, 116, 58),
+        inner_bronze=(92, 70, 36), highlight_gold=(198, 164, 92),
+        ornate_level=3, texture_kind="leather", alpha=250
     )
     save_ui_png(p_chr, os.path.join(pdir, "UI_Panel_Character.png"), b9)
 
-    # 5. UI_Panel_SkillTree: Ancient Obsidian & Engraved Rune Tablet
+    # 5. UI_Panel_SkillTree: Abyssal Void Obsidian & Faint Rune Ring
     p_skl = build_gothic_panel(
         256,
-        bg_top=(26, 19, 14), bg_bot=(14, 10, 8),
-        outer_rim=(68, 50, 32), mid_gold=(198, 156, 74),
-        inner_bronze=(138, 98, 44), highlight_gold=(242, 208, 118),
-        ornate_level=3, texture_kind="runic", alpha=250
+        bg_top=(16, 14, 24), bg_bot=(8, 7, 13),
+        outer_rim=(44, 38, 58), mid_gold=(142, 110, 58),
+        inner_bronze=(88, 66, 36), highlight_gold=(194, 158, 90),
+        ornate_level=3, texture_kind="runic", alpha=252
     )
     save_ui_png(p_skl, os.path.join(pdir, "UI_Panel_SkillTree.png"), b9)
 
-    # 6. UI_Panel_Lobby: Gothic Heraldic Command Panel
+    # 6. UI_Panel_Lobby: Gloomy Sanctuary Command Slab
     p_lob = build_gothic_panel(
         256,
-        bg_top=(38, 27, 19), bg_bot=(20, 14, 10),
-        outer_rim=(70, 50, 32), mid_gold=(192, 150, 72),
-        inner_bronze=(134, 96, 46), highlight_gold=(236, 200, 112),
-        ornate_level=2, texture_kind="leather", alpha=246
+        bg_top=(19, 18, 25), bg_bot=(9, 9, 14),
+        outer_rim=(40, 38, 50), mid_gold=(140, 108, 56),
+        inner_bronze=(86, 66, 36), highlight_gold=(192, 156, 88),
+        ornate_level=2, texture_kind="leather", alpha=248
     )
     save_ui_png(p_lob, os.path.join(pdir, "UI_Panel_Lobby.png"), b9)
 
-    # 7. UI_Panel_Notification: Ornate Relic Scroll Banner
+    # 7. UI_Panel_Notification: Dark Iron & Ember Banner
     p_not = build_gothic_panel(
         256,
-        bg_top=(48, 34, 22), bg_bot=(28, 19, 12),
-        outer_rim=(82, 58, 34), mid_gold=(218, 178, 88),
-        inner_bronze=(158, 114, 52), highlight_gold=(250, 222, 136),
-        ornate_level=2, texture_kind="leather", alpha=242
+        bg_top=(24, 20, 28), bg_bot=(11, 10, 15),
+        outer_rim=(48, 42, 56), mid_gold=(164, 128, 64),
+        inner_bronze=(104, 78, 40), highlight_gold=(216, 180, 104),
+        ornate_level=2, texture_kind="leather", alpha=246
     )
     save_ui_png(p_not, os.path.join(pdir, "UI_Panel_Notification.png"), b9)
 
-    # 8. UI_Panel_Dialog: Heavy Ancient Tome / Modal Frame
+    # 8. UI_Panel_Dialog: Heavy Crypt Mausoleum Modal Frame
     p_dlg = build_gothic_panel(
         256,
-        bg_top=(32, 22, 15), bg_bot=(16, 11, 8),
-        outer_rim=(84, 60, 36), mid_gold=(222, 182, 92),
-        inner_bronze=(164, 118, 56), highlight_gold=(252, 226, 142),
-        ornate_level=3, texture_kind="leather", alpha=252
+        bg_top=(17, 16, 23), bg_bot=(8, 8, 12),
+        outer_rim=(48, 44, 58), mid_gold=(168, 132, 68),
+        inner_bronze=(108, 82, 42), highlight_gold=(220, 184, 108),
+        ornate_level=3, texture_kind="leather", alpha=253
     )
     save_ui_png(p_dlg, os.path.join(pdir, "UI_Panel_Dialog.png"), b9)
 
-    # Also update legacy Assets/Resources/UI/panel_frame.png so any legacy call gets the ornate gothic frame
     save_ui_png(p_orn, os.path.join(RES_UI, "panel_frame.png"), b9)
 
 
@@ -511,57 +511,57 @@ def build_all_buttons():
     ensure_folder_meta(bdir)
     b9 = (24, 20, 24, 20)
 
-    # 1. Primary Button: Burnished Antique Gold & Bronze
+    # 1. Primary Button: Burnished Tarnished Bronze & Dark Blood-Amber
     b_pri = build_gothic_button(
         256, 80,
-        top_col=(118, 82, 34), bot_col=(62, 41, 16),
-        border_col=(224, 184, 92), highlight_col=(252, 228, 148),
-        inner_col=(168, 126, 58), ornate=True, rune_glow=False
+        top_col=(74, 48, 22), bot_col=(30, 19, 9),
+        border_col=(186, 146, 74), highlight_col=(228, 194, 118),
+        inner_col=(124, 92, 42), ornate=True, rune_glow=False
     )
     save_ui_png(b_pri, os.path.join(bdir, "Btn_Primary.png"), b9)
 
-    # 2. Secondary Button: Forged Dark Iron & Warm Umber with Bronze Rim
+    # 2. Secondary Button: Cold Forged Gunmetal Iron & Obsidian Slate with Tarnished Rim
     b_sec = build_gothic_button(
         256, 80,
-        top_col=(52, 38, 27), bot_col=(28, 20, 14),
-        border_col=(164, 122, 62), highlight_col=(216, 176, 98),
-        inner_col=(112, 82, 42), ornate=True, rune_glow=False
+        top_col=(28, 27, 36), bot_col=(13, 12, 18),
+        border_col=(122, 98, 56), highlight_col=(172, 142, 86),
+        inner_col=(74, 62, 40), ornate=True, rune_glow=False
     )
     save_ui_png(b_sec, os.path.join(bdir, "Btn_Secondary.png"), b9)
 
-    # 3. Danger Button: Deep Blood-Crimson & Antique Bronze
+    # 3. Danger Button: Dried Blood-Crimson & Blackened Iron
     b_dng = build_gothic_button(
         256, 80,
-        top_col=(104, 26, 24), bot_col=(52, 12, 12),
-        border_col=(208, 112, 74), highlight_col=(246, 168, 128),
-        inner_col=(148, 62, 46), ornate=True, rune_glow=False
+        top_col=(76, 16, 18), bot_col=(32, 7, 9),
+        border_col=(172, 82, 60), highlight_col=(218, 128, 98),
+        inner_col=(112, 42, 34), ornate=True, rune_glow=False
     )
     save_ui_png(b_dng, os.path.join(bdir, "Btn_Danger.png"), b9)
 
-    # 4. Disabled Button: Weathered Dark Iron
+    # 4. Disabled Button: Dead Ash Iron
     b_dis = build_gothic_button(
         256, 80,
-        top_col=(34, 30, 27), bot_col=(22, 19, 17),
-        border_col=(82, 72, 62), highlight_col=(108, 96, 84),
-        inner_col=(58, 50, 44), ornate=False, rune_glow=False
+        top_col=(22, 21, 26), bot_col=(12, 12, 15),
+        border_col=(58, 56, 64), highlight_col=(78, 76, 86),
+        inner_col=(40, 38, 44), ornate=False, rune_glow=False
     )
     save_ui_png(b_dis, os.path.join(bdir, "Btn_Disabled.png"), b9)
 
-    # 5. Selected Button: Illuminated Golden Rune Plate
+    # 5. Selected Button: Illuminated Gothic Relic Plate
     b_sel = build_gothic_button(
         256, 80,
-        top_col=(142, 100, 38), bot_col=(78, 52, 18),
-        border_col=(246, 212, 114), highlight_col=(255, 242, 178),
-        inner_col=(198, 154, 72), ornate=True, rune_glow=True
+        top_col=(88, 60, 26), bot_col=(38, 24, 11),
+        border_col=(212, 174, 88), highlight_col=(244, 214, 138),
+        inner_col=(148, 112, 50), ornate=True, rune_glow=True
     )
     save_ui_png(b_sel, os.path.join(bdir, "Btn_Selected.png"), b9)
 
-    # 6. Tab Button: Gothic Arch Header Plate
+    # 6. Tab Button: Gloomy Crypt Arch Header Plate
     b_tab = build_gothic_button(
         256, 80,
-        top_col=(64, 46, 30), bot_col=(32, 22, 15),
-        border_col=(188, 144, 72), highlight_col=(238, 202, 118),
-        inner_col=(132, 96, 48), ornate=True, rune_glow=False, tab_arch=True
+        top_col=(34, 31, 42), bot_col=(15, 14, 20),
+        border_col=(138, 108, 58), highlight_col=(188, 154, 92),
+        inner_col=(88, 70, 40), ornate=True, rune_glow=False, tab_arch=True
     )
     save_ui_png(b_tab, os.path.join(bdir, "Btn_Tab.png"), b9)
 
@@ -594,12 +594,12 @@ def build_decor_and_bars():
 
     # 2. Bar_Frame_Gothic.png (256x36, 9-sliced)
     bw, bh = 256, 36
-    bimg = Image.new("RGBA", (bw, bh), (14, 10, 8, 238))
+    bimg = Image.new("RGBA", (bw, bh), (8, 8, 12, 244))
     bdraw = ImageDraw.Draw(bimg)
-    bdraw.rectangle([0, 0, bw - 1, bh - 1], outline=(10, 7, 5, 255), width=1)
-    bdraw.rectangle([1, 1, bw - 2, bh - 2], outline=(172, 130, 64, 255), width=2)
-    bdraw.line([(3, 2), (bw - 4, 2)], fill=(232, 194, 106, 220), width=1)
-    bdraw.rectangle([3, 3, bw - 4, bh - 4], outline=(24, 17, 12, 255), width=2)
+    bdraw.rectangle([0, 0, bw - 1, bh - 1], outline=(4, 4, 6, 255), width=1)
+    bdraw.rectangle([1, 1, bw - 2, bh - 2], outline=(132, 102, 54, 255), width=2)
+    bdraw.line([(3, 2), (bw - 4, 2)], fill=(188, 152, 86, 205), width=1)
+    bdraw.rectangle([3, 3, bw - 4, bh - 4], outline=(14, 13, 19, 255), width=2)
     save_ui_png(bimg, os.path.join(ddir, "Bar_Frame_Gothic.png"), (12, 8, 12, 8))
 
     # 3. Bar_Fill_Gothic.png (128x28)
@@ -626,10 +626,10 @@ def build_decor_and_bars():
     # 4. Slot_Frame_Gothic.png (128x128, 9-sliced)
     slot = build_gothic_panel(
         128,
-        bg_top=(24, 18, 13), bg_bot=(14, 10, 7),
-        outer_rim=(62, 46, 30), mid_gold=(186, 144, 70),
-        inner_bronze=(126, 90, 44), highlight_gold=(236, 198, 110),
-        ornate_level=2, texture_kind="leather", alpha=248
+        bg_top=(16, 15, 21), bg_bot=(8, 8, 12),
+        outer_rim=(38, 36, 48), mid_gold=(136, 106, 56),
+        inner_bronze=(84, 64, 36), highlight_gold=(188, 154, 88),
+        ornate_level=2, texture_kind="leather", alpha=250
     )
     save_ui_png(slot, os.path.join(ddir, "Slot_Frame_Gothic.png"), (20, 20, 20, 20))
 
@@ -1080,7 +1080,7 @@ def upgrade_class_portraits_and_backgrounds():
                 except Exception as e:
                     print("Portrait frame warning:", fn, e)
 
-    # Also copy an authentic dark gothic sanctuary background from ExportedProject for menu_background & lobby_background
+    # Also copy an authentic gloomy dark gothic sanctuary background from ExportedProject for menu_background & lobby_background
     exp_bg1 = os.path.join(EXP_UI, "Texture", "UILobby_DawnSanctuary", "ui_dawnsanctuary_mainbg02_BG.png")
     exp_bg2 = os.path.join(EXP_UI, "Texture", "UICamp", "ui_camp_bg_mainbg01.png")
     for src, dst_name in [(exp_bg1, "menu_background.png"), (exp_bg2, "lobby_background.png")]:
@@ -1088,11 +1088,14 @@ def upgrade_class_portraits_and_backgrounds():
         if os.path.exists(src):
             try:
                 im = Image.open(src).convert("RGBA")
-                # Warm dark-brown & antique-gold color grading
+                w_bg, h_bg = im.size
+                yy_b, xx_b = np.mgrid[0:h_bg, 0:w_bg].astype(np.float32)
+                vig = 1.0 - 0.55 * np.clip(np.hypot((xx_b / w_bg) - 0.5, (yy_b / h_bg) - 0.5) * 1.45, 0.0, 1.0)
                 arr = np.asarray(im, dtype=np.float32)
-                arr[:, :, 0] = np.clip(arr[:, :, 0] * 0.82 + 14, 0, 255)
-                arr[:, :, 1] = np.clip(arr[:, :, 1] * 0.68 + 8, 0, 255)
-                arr[:, :, 2] = np.clip(arr[:, :, 2] * 0.50 + 4, 0, 255)
+                # Gloomy obsidian-slate & faint candlelight grading
+                arr[:, :, 0] = np.clip((arr[:, :, 0] * 0.46 + 6) * vig, 0, 255)
+                arr[:, :, 1] = np.clip((arr[:, :, 1] * 0.44 + 6) * vig, 0, 255)
+                arr[:, :, 2] = np.clip((arr[:, :, 2] * 0.54 + 10) * vig, 0, 255)
                 arr[:, :, 3] = 255
                 save_ui_png(Image.fromarray(arr.astype(np.uint8)), dst)
             except Exception as e:
@@ -1296,20 +1299,20 @@ def build_ornate_cathedral_floor_pbr_textures():
     height = np.where(gold_inlay, 0.92 + grain * 0.25, height)
     height = np.clip(height, 0.0, 1.0)
 
-    # Albedo RGB: Warm weathered Gothic limestone/basalt flagstones + antique bronze-gold inlays
-    stone_r = np.where(border_band, 108.0, 92.0) + grain * 95.0
-    stone_g = np.where(border_band, 96.0, 82.0) + grain * 85.0
-    stone_b = np.where(border_band, 84.0, 74.0) + grain * 75.0
+    # Albedo RGB: Gloomy weathered dark basalt/slate flagstones + tarnished bronze-iron inlays
+    stone_r = np.where(border_band, 76.0, 62.0) + grain * 65.0
+    stone_g = np.where(border_band, 74.0, 60.0) + grain * 62.0
+    stone_b = np.where(border_band, 80.0, 66.0) + grain * 66.0
 
-    mortar_r, mortar_g, mortar_b = 24.0, 20.0, 18.0
+    mortar_r, mortar_g, mortar_b = 14.0, 14.0, 18.0
     alb_r = mortar_r + (stone_r - mortar_r) * slab_bevel
     alb_g = mortar_g + (stone_g - mortar_g) * slab_bevel
     alb_b = mortar_b + (stone_b - mortar_b) * slab_bevel
 
-    # Antique gold inlay color
-    gold_r = 198.0 + grain * 60.0
-    gold_g = 154.0 + grain * 48.0
-    gold_b = 76.0 + grain * 28.0
+    # Tarnished aged bronze inlay color (subtle, never hotel-yellow)
+    gold_r = 128.0 + grain * 42.0
+    gold_g = 102.0 + grain * 34.0
+    gold_b = 62.0 + grain * 22.0
 
     final_r = np.clip(np.where(gold_inlay, gold_r, alb_r), 0, 255).astype(np.uint8)
     final_g = np.clip(np.where(gold_inlay, gold_g, alb_g), 0, 255).astype(np.uint8)
@@ -1355,9 +1358,8 @@ def main():
     build_decor_and_bars()
     build_all_icons()
     upgrade_class_portraits_and_backgrounds()
-    build_ornate_gothic_brick_pbr_textures()
-    build_ornate_cathedral_floor_pbr_textures()
-    print("Successfully built Ancient Gothic UI Asset Kit & Ornate Gothic Brick/Floor PBR Textures!")
+    # Keep authentic Gold and Glory PBR stone/floor textures from ExtractRealGnGEnvironmentPbr.py
+    print("Successfully built Ancient Gothic UI Asset Kit!")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.Rendering;
+using AbyssalDungeon.VFX;
 
 namespace AbyssGame
 {
@@ -77,32 +78,37 @@ namespace AbyssGame
 
         public static BiomeAtmosphereData GetBuiltIn(DungeonBiome biome)
         {
+            // Clean neutral key/ambient light + warm medieval torchlight across all biomes so characters & stone walls
+            // retain crisp, natural colors with strong figure-ground separation (zero purple/green/cyan skin wash!).
+            Color warmTorchLight = new Color(1.00f, 0.64f, 0.26f);
+            Color warmTorchCore = new Color(1.00f, 0.90f, 0.56f);
+
             switch (biome)
             {
-                case DungeonBiome.ForgottenTemple: // Matches Reference Image 4 (warm sandstone + cool slate clerestory shafts)
+                case DungeonBiome.ForgottenTemple:
                     return new BiomeAtmosphereData
                     {
                         biome = biome,
                         vietnameseTitle = "Đền Thờ Lãng Quên (Forgotten Temple)",
                         ambienceClipName = "amb_forgotten_temple",
-                        skyAmbient = new Color(0.28f, 0.31f, 0.40f),
-                        equatorAmbient = new Color(0.22f, 0.20f, 0.24f),
-                        groundAmbient = new Color(0.11f, 0.09f, 0.08f),
-                        fogColor = new Color(0.13f, 0.14f, 0.19f),
-                        fogStart = 18f,
-                        fogEnd = 66f,
-                        cameraBgColor = new Color(0.08f, 0.09f, 0.13f),
-                        sunColor = new Color(0.84f, 0.88f, 0.98f),
-                        sunIntensity = 1.18f,
-                        sunEuler = new Vector3(46f, -38f, 0f),
-                        torchLightColor = new Color(1.00f, 0.62f, 0.22f),
-                        torchCoreColor = new Color(1.00f, 0.88f, 0.52f),
-                        mistColor = new Color(0.42f, 0.46f, 0.58f, 0.22f),
-                        particleColor = new Color(0.95f, 0.86f, 0.68f, 0.45f),
+                        skyAmbient = new Color(0.42f, 0.42f, 0.46f),
+                        equatorAmbient = new Color(0.32f, 0.30f, 0.32f),
+                        groundAmbient = new Color(0.21f, 0.20f, 0.20f),
+                        fogColor = new Color(0.09f, 0.10f, 0.12f),
+                        fogStart = 32f,
+                        fogEnd = 96f,
+                        cameraBgColor = new Color(0.05f, 0.06f, 0.08f),
+                        sunColor = new Color(0.98f, 0.94f, 0.88f),
+                        sunIntensity = 1.44f,
+                        sunEuler = new Vector3(48f, -38f, 0f),
+                        torchLightColor = warmTorchLight,
+                        torchCoreColor = warmTorchCore,
+                        mistColor = new Color(0.38f, 0.40f, 0.46f, 0.18f),
+                        particleColor = new Color(0.95f, 0.86f, 0.68f, 0.42f),
                         particleRiseSpeed = 0.18f,
                         particleSize = 0.09f,
-                        wallStoneTint = new Color(0.86f, 0.78f, 0.68f),
-                        floorStoneTint = new Color(0.80f, 0.73f, 0.65f),
+                        wallStoneTint = new Color(0.92f, 0.89f, 0.85f),
+                        floorStoneTint = new Color(0.92f, 0.89f, 0.85f),
                         preferMossyStone = false
                     };
 
@@ -112,24 +118,24 @@ namespace AbyssGame
                         biome = biome,
                         vietnameseTitle = "Ngục Cổ Đá Đen (Ancient Dungeon)",
                         ambienceClipName = "amb_ancient_dungeon",
-                        skyAmbient = new Color(0.20f, 0.22f, 0.30f),
-                        equatorAmbient = new Color(0.16f, 0.16f, 0.21f),
-                        groundAmbient = new Color(0.08f, 0.08f, 0.10f),
-                        fogColor = new Color(0.08f, 0.09f, 0.14f),
-                        fogStart = 16f,
-                        fogEnd = 60f,
-                        cameraBgColor = new Color(0.05f, 0.06f, 0.10f),
-                        sunColor = new Color(0.72f, 0.78f, 0.95f),
-                        sunIntensity = 0.95f,
+                        skyAmbient = new Color(0.38f, 0.39f, 0.44f),
+                        equatorAmbient = new Color(0.30f, 0.29f, 0.32f),
+                        groundAmbient = new Color(0.20f, 0.19f, 0.20f),
+                        fogColor = new Color(0.08f, 0.09f, 0.11f),
+                        fogStart = 32f,
+                        fogEnd = 94f,
+                        cameraBgColor = new Color(0.04f, 0.05f, 0.07f),
+                        sunColor = new Color(0.96f, 0.95f, 0.94f),
+                        sunIntensity = 1.40f,
                         sunEuler = new Vector3(50f, -32f, 0f),
-                        torchLightColor = new Color(1.00f, 0.56f, 0.18f),
-                        torchCoreColor = new Color(1.00f, 0.85f, 0.45f),
-                        mistColor = new Color(0.32f, 0.36f, 0.48f, 0.25f),
-                        particleColor = new Color(0.82f, 0.78f, 0.72f, 0.40f),
+                        torchLightColor = warmTorchLight,
+                        torchCoreColor = warmTorchCore,
+                        mistColor = new Color(0.34f, 0.36f, 0.42f, 0.18f),
+                        particleColor = new Color(0.88f, 0.84f, 0.76f, 0.38f),
                         particleRiseSpeed = 0.14f,
                         particleSize = 0.08f,
-                        wallStoneTint = new Color(0.74f, 0.73f, 0.78f),
-                        floorStoneTint = new Color(0.68f, 0.68f, 0.74f),
+                        wallStoneTint = new Color(0.90f, 0.89f, 0.90f),
+                        floorStoneTint = new Color(0.88f, 0.87f, 0.88f),
                         preferMossyStone = false
                     };
 
@@ -139,24 +145,24 @@ namespace AbyssGame
                         biome = biome,
                         vietnameseTitle = "Pháo Đài Ngầm Sắt Nung (Underground Fortress)",
                         ambienceClipName = "amb_underground_fortress",
-                        skyAmbient = new Color(0.24f, 0.18f, 0.18f),
-                        equatorAmbient = new Color(0.19f, 0.14f, 0.14f),
-                        groundAmbient = new Color(0.10f, 0.06f, 0.05f),
-                        fogColor = new Color(0.13f, 0.08f, 0.08f),
-                        fogStart = 16f,
-                        fogEnd = 58f,
-                        cameraBgColor = new Color(0.08f, 0.04f, 0.05f),
-                        sunColor = new Color(0.95f, 0.76f, 0.62f),
-                        sunIntensity = 1.02f,
-                        sunEuler = new Vector3(44f, -28f, 0f),
-                        torchLightColor = new Color(1.00f, 0.44f, 0.12f),
-                        torchCoreColor = new Color(1.00f, 0.82f, 0.38f),
-                        mistColor = new Color(0.45f, 0.28f, 0.22f, 0.22f),
-                        particleColor = new Color(1.00f, 0.52f, 0.16f, 0.68f),
-                        particleRiseSpeed = 0.62f,
+                        skyAmbient = new Color(0.30f, 0.28f, 0.28f),
+                        equatorAmbient = new Color(0.23f, 0.21f, 0.21f),
+                        groundAmbient = new Color(0.12f, 0.10f, 0.10f),
+                        fogColor = new Color(0.09f, 0.08f, 0.08f),
+                        fogStart = 34f,
+                        fogEnd = 100f,
+                        cameraBgColor = new Color(0.06f, 0.05f, 0.05f),
+                        sunColor = new Color(0.97f, 0.92f, 0.88f),
+                        sunIntensity = 1.22f,
+                        sunEuler = new Vector3(46f, -28f, 0f),
+                        torchLightColor = new Color(1.00f, 0.58f, 0.22f),
+                        torchCoreColor = warmTorchCore,
+                        mistColor = new Color(0.40f, 0.34f, 0.30f, 0.18f),
+                        particleColor = new Color(1.00f, 0.62f, 0.24f, 0.60f),
+                        particleRiseSpeed = 0.55f,
                         particleSize = 0.075f,
-                        wallStoneTint = new Color(0.66f, 0.62f, 0.64f),
-                        floorStoneTint = new Color(0.60f, 0.58f, 0.60f),
+                        wallStoneTint = new Color(0.80f, 0.78f, 0.77f),
+                        floorStoneTint = new Color(0.70f, 0.68f, 0.68f),
                         preferMossyStone = false
                     };
 
@@ -166,24 +172,24 @@ namespace AbyssGame
                         biome = biome,
                         vietnameseTitle = "Hang Động Vực Thẳm Cổ Ngữ (Abyssal Cave)",
                         ambienceClipName = "amb_abyssal_cave",
-                        skyAmbient = new Color(0.20f, 0.16f, 0.32f),
-                        equatorAmbient = new Color(0.15f, 0.12f, 0.24f),
-                        groundAmbient = new Color(0.07f, 0.05f, 0.12f),
-                        fogColor = new Color(0.09f, 0.06f, 0.17f),
-                        fogStart = 15f,
-                        fogEnd = 56f,
-                        cameraBgColor = new Color(0.05f, 0.03f, 0.11f),
-                        sunColor = new Color(0.72f, 0.62f, 1.00f),
-                        sunIntensity = 0.92f,
-                        sunEuler = new Vector3(48f, -42f, 0f),
-                        torchLightColor = new Color(0.62f, 0.36f, 1.00f),
-                        torchCoreColor = new Color(0.86f, 0.72f, 1.00f),
-                        mistColor = new Color(0.38f, 0.24f, 0.62f, 0.28f),
-                        particleColor = new Color(0.68f, 0.45f, 1.00f, 0.60f),
-                        particleRiseSpeed = 0.28f,
-                        particleSize = 0.09f,
-                        wallStoneTint = new Color(0.64f, 0.60f, 0.76f),
-                        floorStoneTint = new Color(0.58f, 0.55f, 0.70f),
+                        skyAmbient = new Color(0.29f, 0.29f, 0.34f),
+                        equatorAmbient = new Color(0.22f, 0.22f, 0.25f),
+                        groundAmbient = new Color(0.11f, 0.10f, 0.12f),
+                        fogColor = new Color(0.07f, 0.07f, 0.10f),
+                        fogStart = 35f,
+                        fogEnd = 104f,
+                        cameraBgColor = new Color(0.05f, 0.05f, 0.08f),
+                        sunColor = new Color(0.95f, 0.94f, 0.96f),
+                        sunIntensity = 1.22f,
+                        sunEuler = new Vector3(48f, -40f, 0f),
+                        torchLightColor = warmTorchLight,
+                        torchCoreColor = warmTorchCore,
+                        mistColor = new Color(0.36f, 0.34f, 0.44f, 0.18f),
+                        particleColor = new Color(0.76f, 0.58f, 1.00f, 0.52f),
+                        particleRiseSpeed = 0.26f,
+                        particleSize = 0.085f,
+                        wallStoneTint = new Color(0.82f, 0.80f, 0.83f),
+                        floorStoneTint = new Color(0.72f, 0.71f, 0.74f),
                         preferMossyStone = false
                     };
 
@@ -193,24 +199,24 @@ namespace AbyssGame
                         biome = biome,
                         vietnameseTitle = "Điện Tinh Thể Aether (Crystal Chamber)",
                         ambienceClipName = "amb_crystal_chamber",
-                        skyAmbient = new Color(0.18f, 0.28f, 0.38f),
-                        equatorAmbient = new Color(0.14f, 0.22f, 0.30f),
-                        groundAmbient = new Color(0.06f, 0.10f, 0.15f),
-                        fogColor = new Color(0.07f, 0.14f, 0.22f),
-                        fogStart = 18f,
-                        fogEnd = 64f,
-                        cameraBgColor = new Color(0.04f, 0.09f, 0.15f),
-                        sunColor = new Color(0.66f, 0.90f, 1.00f),
-                        sunIntensity = 1.08f,
-                        sunEuler = new Vector3(52f, -35f, 0f),
-                        torchLightColor = new Color(0.24f, 0.82f, 1.00f),
-                        torchCoreColor = new Color(0.75f, 0.98f, 1.00f),
-                        mistColor = new Color(0.24f, 0.58f, 0.78f, 0.26f),
-                        particleColor = new Color(0.38f, 0.92f, 1.00f, 0.65f),
-                        particleRiseSpeed = 0.34f,
+                        skyAmbient = new Color(0.29f, 0.32f, 0.36f),
+                        equatorAmbient = new Color(0.22f, 0.24f, 0.26f),
+                        groundAmbient = new Color(0.11f, 0.12f, 0.13f),
+                        fogColor = new Color(0.07f, 0.09f, 0.12f),
+                        fogStart = 36f,
+                        fogEnd = 108f,
+                        cameraBgColor = new Color(0.04f, 0.06f, 0.09f),
+                        sunColor = new Color(0.94f, 0.96f, 0.98f),
+                        sunIntensity = 1.24f,
+                        sunEuler = new Vector3(50f, -35f, 0f),
+                        torchLightColor = warmTorchLight,
+                        torchCoreColor = warmTorchCore,
+                        mistColor = new Color(0.34f, 0.44f, 0.52f, 0.18f),
+                        particleColor = new Color(0.45f, 0.90f, 1.00f, 0.55f),
+                        particleRiseSpeed = 0.30f,
                         particleSize = 0.085f,
-                        wallStoneTint = new Color(0.68f, 0.78f, 0.86f),
-                        floorStoneTint = new Color(0.62f, 0.72f, 0.82f),
+                        wallStoneTint = new Color(0.82f, 0.84f, 0.86f),
+                        floorStoneTint = new Color(0.73f, 0.75f, 0.78f),
                         preferMossyStone = false
                     };
 
@@ -220,24 +226,24 @@ namespace AbyssGame
                         biome = biome,
                         vietnameseTitle = "Thánh Điện Rừng Nguyền Rủa (Cursed Forest)",
                         ambienceClipName = "amb_cursed_forest",
-                        skyAmbient = new Color(0.16f, 0.26f, 0.20f),
-                        equatorAmbient = new Color(0.12f, 0.20f, 0.16f),
-                        groundAmbient = new Color(0.06f, 0.09f, 0.06f),
-                        fogColor = new Color(0.07f, 0.13f, 0.10f),
-                        fogStart = 15f,
-                        fogEnd = 56f,
-                        cameraBgColor = new Color(0.04f, 0.08f, 0.06f),
-                        sunColor = new Color(0.70f, 0.92f, 0.78f),
-                        sunIntensity = 0.96f,
+                        skyAmbient = new Color(0.29f, 0.32f, 0.30f),
+                        equatorAmbient = new Color(0.22f, 0.24f, 0.22f),
+                        groundAmbient = new Color(0.11f, 0.12f, 0.11f),
+                        fogColor = new Color(0.07f, 0.09f, 0.08f),
+                        fogStart = 35f,
+                        fogEnd = 104f,
+                        cameraBgColor = new Color(0.04f, 0.06f, 0.05f),
+                        sunColor = new Color(0.95f, 0.96f, 0.92f),
+                        sunIntensity = 1.22f,
                         sunEuler = new Vector3(46f, -30f, 0f),
-                        torchLightColor = new Color(0.38f, 0.95f, 0.52f),
-                        torchCoreColor = new Color(0.82f, 1.00f, 0.80f),
-                        mistColor = new Color(0.24f, 0.48f, 0.34f, 0.28f),
-                        particleColor = new Color(0.48f, 0.98f, 0.55f, 0.58f),
+                        torchLightColor = warmTorchLight,
+                        torchCoreColor = warmTorchCore,
+                        mistColor = new Color(0.32f, 0.40f, 0.35f, 0.18f),
+                        particleColor = new Color(0.55f, 0.95f, 0.62f, 0.50f),
                         particleRiseSpeed = 0.22f,
-                        particleSize = 0.095f,
-                        wallStoneTint = new Color(0.74f, 0.82f, 0.72f),
-                        floorStoneTint = new Color(0.68f, 0.76f, 0.66f),
+                        particleSize = 0.09f,
+                        wallStoneTint = new Color(0.82f, 0.84f, 0.80f),
+                        floorStoneTint = new Color(0.74f, 0.76f, 0.72f),
                         preferMossyStone = true
                     };
 
@@ -247,24 +253,24 @@ namespace AbyssGame
                         biome = DungeonBiome.BossArena,
                         vietnameseTitle = "Đại Thánh Đường Thẳm Sâu (Boss Arena)",
                         ambienceClipName = "amb_boss_arena",
-                        skyAmbient = new Color(0.24f, 0.15f, 0.28f),
-                        equatorAmbient = new Color(0.18f, 0.11f, 0.22f),
-                        groundAmbient = new Color(0.09f, 0.05f, 0.10f),
-                        fogColor = new Color(0.10f, 0.05f, 0.14f),
-                        fogStart = 20f,
-                        fogEnd = 74f,
-                        cameraBgColor = new Color(0.06f, 0.03f, 0.09f),
-                        sunColor = new Color(0.88f, 0.72f, 0.96f),
-                        sunIntensity = 1.12f,
-                        sunEuler = new Vector3(44f, -36f, 0f),
-                        torchLightColor = new Color(0.86f, 0.28f, 1.00f),
-                        torchCoreColor = new Color(1.00f, 0.76f, 1.00f),
-                        mistColor = new Color(0.46f, 0.18f, 0.58f, 0.28f),
-                        particleColor = new Color(0.95f, 0.36f, 0.82f, 0.65f),
-                        particleRiseSpeed = 0.48f,
+                        skyAmbient = new Color(0.30f, 0.29f, 0.33f),
+                        equatorAmbient = new Color(0.23f, 0.22f, 0.25f),
+                        groundAmbient = new Color(0.11f, 0.10f, 0.12f),
+                        fogColor = new Color(0.08f, 0.07f, 0.10f),
+                        fogStart = 38f,
+                        fogEnd = 115f,
+                        cameraBgColor = new Color(0.05f, 0.04f, 0.07f),
+                        sunColor = new Color(0.96f, 0.94f, 0.94f),
+                        sunIntensity = 1.25f,
+                        sunEuler = new Vector3(46f, -36f, 0f),
+                        torchLightColor = warmTorchLight,
+                        torchCoreColor = warmTorchCore,
+                        mistColor = new Color(0.38f, 0.32f, 0.42f, 0.18f),
+                        particleColor = new Color(0.95f, 0.68f, 0.36f, 0.58f),
+                        particleRiseSpeed = 0.42f,
                         particleSize = 0.09f,
-                        wallStoneTint = new Color(0.72f, 0.66f, 0.78f),
-                        floorStoneTint = new Color(0.66f, 0.60f, 0.74f),
+                        wallStoneTint = new Color(0.82f, 0.80f, 0.82f),
+                        floorStoneTint = new Color(0.72f, 0.70f, 0.73f),
                         preferMossyStone = false
                     };
             }
@@ -284,7 +290,9 @@ namespace AbyssGame
         private BiomeAtmosphereData _target;
         private float _blend = 1f;
         private Light _dirLight;
+        private GameObject _envAtmoRoot;
         private ParticleSystem _envParticles;
+        private ParticleSystem[] _envAtmoSystems;
 
         public static BiomeAtmosphereController EnsureOnScene(Transform parent = null)
         {
@@ -395,10 +403,10 @@ namespace AbyssGame
                 ApplyInterpolated(LerpData(_from, _target, Mathf.SmoothStep(0f, 1f, _blend)));
             }
 
-            if (_envParticles != null && Camera.main != null)
+            if (_envAtmoRoot != null && Camera.main != null)
             {
                 Vector3 cp = Camera.main.transform.position + Camera.main.transform.forward * 7f;
-                _envParticles.transform.position = new Vector3(cp.x, Mathf.Max(1.8f, cp.y), cp.z);
+                _envAtmoRoot.transform.position = new Vector3(cp.x, Mathf.Max(1.8f, cp.y), cp.z);
             }
         }
 
@@ -446,21 +454,37 @@ namespace AbyssGame
 
         private void BuildEnvironmentalParticleEmitter()
         {
+            var mgr = VFXManager.EnsureInstance();
+            if (mgr != null)
+            {
+                _envAtmoRoot = mgr.SpawnLoopingVFX(VFXType.Env_AtmosphericParticles, transform, Vector3.zero, Quaternion.identity);
+                if (_envAtmoRoot != null)
+                {
+                    _envAtmoRoot.name = "AmbientDustEmberParticles";
+                    _envAtmoSystems = _envAtmoRoot.GetComponentsInChildren<ParticleSystem>(true);
+                    if (_envAtmoSystems != null && _envAtmoSystems.Length > 0)
+                        _envParticles = _envAtmoSystems[0];
+                    return;
+                }
+            }
+
+            // Fallback if VFXManager unavailable
             var pGo = new GameObject("AmbientDustEmberParticles");
             pGo.transform.SetParent(transform, false);
+            _envAtmoRoot = pGo;
             _envParticles = pGo.AddComponent<ParticleSystem>();
 
             var main = _envParticles.main;
             main.loop = true;
             main.playOnAwake = true;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 140;
+            main.maxParticles = 120;
             main.startLifetime = new ParticleSystem.MinMaxCurve(3.5f, 6.5f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.05f, 0.22f);
             main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.12f);
 
             var emission = _envParticles.emission;
-            emission.rateOverTime = 24f;
+            emission.rateOverTime = 20f;
 
             var shape = _envParticles.shape;
             shape.shapeType = ParticleSystemShapeType.Box;
@@ -479,21 +503,38 @@ namespace AbyssGame
             psr.sharedMaterial = PbrMaterialLibrary.SoftAdditiveParticleMaterial();
             psr.shadowCastingMode = ShadowCastingMode.Off;
             psr.receiveShadows = false;
+            _envAtmoSystems = new[] { _envParticles };
         }
 
         private void UpdateParticleStyle(BiomeAtmosphereData d)
         {
-            if (_envParticles == null) return;
-            var main = _envParticles.main;
-            main.startColor = d.particleColor;
-            main.startSize = new ParticleSystem.MinMaxCurve(d.particleSize * 0.65f, d.particleSize * 1.35f);
+            if (_envAtmoSystems == null) return;
+            for (int i = 0; i < _envAtmoSystems.Length; i++)
+            {
+                var ps = _envAtmoSystems[i];
+                if (ps == null) continue;
+                var main = ps.main;
+                main.startColor = i == 0
+                    ? d.particleColor
+                    : new Color(Mathf.Lerp(d.particleColor.r, 0.55f, 0.5f), Mathf.Lerp(d.particleColor.g, 0.50f, 0.5f), Mathf.Lerp(d.particleColor.b, 0.48f, 0.5f), 0.45f);
+                main.startSize = new ParticleSystem.MinMaxCurve(d.particleSize * 0.7f, d.particleSize * 1.45f);
 
-            var vel = _envParticles.velocityOverLifetime;
-            vel.enabled = true;
-            vel.space = ParticleSystemSimulationSpace.World;
-            vel.x = new ParticleSystem.MinMaxCurve(-0.18f, 0.18f);
-            vel.y = new ParticleSystem.MinMaxCurve(d.particleRiseSpeed * 0.5f, d.particleRiseSpeed * 1.4f);
-            vel.z = new ParticleSystem.MinMaxCurve(-0.18f, 0.18f);
+                var vel = ps.velocityOverLifetime;
+                vel.enabled = true;
+                vel.space = ParticleSystemSimulationSpace.World;
+                var zeroTwoConst = new ParticleSystem.MinMaxCurve(0f, 0f);
+                vel.x = new ParticleSystem.MinMaxCurve(-0.18f, 0.18f);
+                vel.y = new ParticleSystem.MinMaxCurve(d.particleRiseSpeed * 0.45f, d.particleRiseSpeed * 1.35f);
+                vel.z = new ParticleSystem.MinMaxCurve(-0.18f, 0.18f);
+                vel.orbitalX = zeroTwoConst;
+                vel.orbitalY = zeroTwoConst;
+                vel.orbitalZ = zeroTwoConst;
+                vel.orbitalOffsetX = zeroTwoConst;
+                vel.orbitalOffsetY = zeroTwoConst;
+                vel.orbitalOffsetZ = zeroTwoConst;
+                vel.radial = zeroTwoConst;
+                vel.speedModifier = new ParticleSystem.MinMaxCurve(1f, 1f);
+            }
         }
     }
 }

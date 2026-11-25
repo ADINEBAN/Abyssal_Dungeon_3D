@@ -70,17 +70,17 @@ namespace AbyssGame
             vignette.intensity.Override(0.27f);
             vignette.smoothness.Override(0.42f);
 
-            // 4. Crisp Contrast & Exposure
+            // 4. Crisp Contrast & Exposure (neutral true-color character lighting)
             var colorAdj = profile.Add<ColorAdjustments>(true);
-            colorAdj.postExposure.Override(0.14f);
-            colorAdj.contrast.Override(14f);
-            colorAdj.saturation.Override(5f);
+            colorAdj.postExposure.Override(0.18f);
+            colorAdj.contrast.Override(12f);
+            colorAdj.saturation.Override(4f);
 
-            // 5. Split-Toning: Cool Slate-Blue Shadows + Warm Torchlit Sandstone Midtones (Reference Image 4)
+            // 5. Balanced Neutral Shadows + Warm Torchlit Midtones (prevents purple/blue color cast on character faces)
             var smh = profile.Add<ShadowsMidtonesHighlights>(true);
-            smh.shadows.Override(new Vector4(0.88f, 0.92f, 1.06f, 0f));
-            smh.midtones.Override(new Vector4(1.03f, 0.99f, 0.95f, 0f));
-            smh.highlights.Override(new Vector4(1.04f, 1.01f, 0.96f, 0f));
+            smh.shadows.Override(new Vector4(0.97f, 0.97f, 1.00f, 0f));
+            smh.midtones.Override(new Vector4(1.02f, 1.00f, 0.98f, 0f));
+            smh.highlights.Override(new Vector4(1.03f, 1.01f, 0.98f, 0f));
 
             volume.sharedProfile = profile;
             if (GraphicsManager.Instance != null)

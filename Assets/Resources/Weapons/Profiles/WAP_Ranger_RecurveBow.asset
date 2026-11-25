@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 106a5a255160aea4d87457e44ac0010e, type: 3}
+  m_Name: WAP_Ranger_RecurveBow
+  m_EditorClassIdentifier: 
+  WeaponId: Ranger_RecurveBow
+  WeaponPrefab: {fileID: 6687831316737110902, guid: c5eb968e16c5ad249a355d18d95436cb,
+    type: 3}
+  GripType: 3
+  PrimaryHandBone: LH_WP
+  FallbackHandBones:
+  - Bip001 L Hand
+  - LeftHand
+  SecondaryHandBone: Bip001 R Hand
+  IsFloatingRelic: 0
+  LocalPosition: {x: 0, y: -0.005, z: 0.016}
+  LocalRotation: {x: 304, y: 270, z: 354}
+  LocalScale: {x: 0.85, y: 0.85, z: 0.85}
+  GripOffset: {x: 0, y: 0, z: 0}
+  HasBladeTrail: 0
+  TipSocketName: VfxTrailSocket
+  ProjectileSocketName: ProjectileSpawn
+  ImpactSocketName: ProjectileSpawn
+  FallbackTipLocalOffset: {x: 0, y: 0.04, z: 0.38}
+  TrailWidth: 0.18
+  AuraScale: 0

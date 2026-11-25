@@ -1,0 +1,406 @@
+{
+  "project": "Abyssal_Dungeon_3D",
+  "art_direction": "Ancient Gothic Dark Fantasy",
+  "weapons": [
+    {
+      "name": "Knight_Longsword",
+      "class": "Knight",
+      "group": "Sword_Shield",
+      "batch": 1,
+      "triangles": 552,
+      "meshes": [
+        "KnightSword_Blade",
+        "KnightSword_GuardPommel",
+        "KnightSword_Grip",
+        "KnightSword_RuneDetail"
+      ],
+      "sockets": [
+        "Knight_Longsword",
+        "GripPoint",
+        "PrimaryAttach",
+        "GuardPoint",
+        "BladeStart",
+        "BladeTip",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Knight/Sword_Shield/Blender/Knight_Longsword.blend",
+      "fbx": "Assets/Art/Weapons/Batch1/Knight_Longsword.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Knight/Sword_Shield/Previews/Knight_Longsword_Preview.png"
+    },
+    {
+      "name": "Knight_HeaterShield",
+      "class": "Knight",
+      "group": "Sword_Shield",
+      "batch": 1,
+      "triangles": 428,
+      "meshes": [
+        "KnightShield_Body",
+        "KnightShield_GoldCrest",
+        "KnightShield_RuneDetail",
+        "KnightShield_BackGrip"
+      ],
+      "sockets": [
+        "Knight_HeaterShield",
+        "GripPoint",
+        "PrimaryAttach",
+        "ForearmAttach",
+        "ShieldFrontCenter"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Knight/Sword_Shield/Blender/Knight_HeaterShield.blend",
+      "fbx": "Assets/Art/Weapons/Batch1/Knight_HeaterShield.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Knight/Sword_Shield/Previews/Knight_HeaterShield_Preview.png"
+    },
+    {
+      "name": "Berserker_Greatsword",
+      "class": "Berserker",
+      "group": "Greatsword",
+      "batch": 1,
+      "triangles": 680,
+      "meshes": [
+        "BerserkerGS_Blade",
+        "BerserkerGS_GuardPommel",
+        "BerserkerGS_Grip",
+        "BerserkerGS_RuneDetail"
+      ],
+      "sockets": [
+        "Berserker_Greatsword",
+        "GripPoint",
+        "PrimaryAttach",
+        "SecondaryGripPoint",
+        "GuardPoint",
+        "BladeStart",
+        "BladeTip",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Berserker/Greatsword/Blender/Berserker_Greatsword.blend",
+      "fbx": "Assets/Art/Weapons/Batch1/Berserker_Greatsword.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Berserker/Greatsword/Previews/Berserker_Greatsword_Preview.png"
+    },
+    {
+      "name": "Ranger_RecurveBow",
+      "class": "Ranger",
+      "group": "Bow",
+      "batch": 1,
+      "triangles": 448,
+      "meshes": [
+        "RangerBow_Limbs",
+        "RangerBow_GothicTrim",
+        "RangerBow_Grip",
+        "RangerBow_RuneDetail",
+        "BowString_Upper",
+        "BowString_Lower"
+      ],
+      "sockets": [
+        "Ranger_RecurveBow",
+        "UpperLimbTip",
+        "LowerLimbTip",
+        "ArrowNock",
+        "GripPoint",
+        "PrimaryAttach",
+        "ProjectileSpawn",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Ranger/Bow/Blender/Ranger_RecurveBow.blend",
+      "fbx": "Assets/Art/Weapons/Batch1/Ranger_RecurveBow.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Ranger/Bow/Previews/Ranger_RecurveBow_Preview.png"
+    },
+    {
+      "name": "Ranger_Arrow",
+      "class": "Ranger",
+      "group": "Bow",
+      "batch": 1,
+      "triangles": 140,
+      "meshes": [
+        "RangerArrow_Shaft",
+        "RangerArrow_Broadhead",
+        "RangerArrow_Collar",
+        "RangerArrow_Fletching"
+      ],
+      "sockets": [
+        "Ranger_Arrow",
+        "NockPoint",
+        "ArrowTip"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Ranger/Bow/Blender/Ranger_Arrow.blend",
+      "fbx": "Assets/Art/Weapons/Batch1/Ranger_Arrow.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Ranger/Bow/Previews/Ranger_Arrow_Preview.png"
+    },
+    {
+      "name": "Guardian_HeavyMace",
+      "class": "Guardian",
+      "group": "Mace_Shield",
+      "batch": 2,
+      "triangles": 496,
+      "meshes": [
+        "GuardianMace_Head",
+        "GuardianMace_GoldTrim",
+        "GuardianMace_Grip",
+        "GuardianMace_RuneDetail"
+      ],
+      "sockets": [
+        "Guardian_HeavyMace",
+        "GripPoint",
+        "PrimaryAttach",
+        "ImpactPoint",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Guardian/Mace_Shield/Blender/Guardian_HeavyMace.blend",
+      "fbx": "Assets/Art/Weapons/Batch2/Guardian_HeavyMace.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Guardian/Mace_Shield/Previews/Guardian_HeavyMace_Preview.png"
+    },
+    {
+      "name": "Guardian_TowerShield",
+      "class": "Guardian",
+      "group": "Mace_Shield",
+      "batch": 2,
+      "triangles": 452,
+      "meshes": [
+        "GuardianShield_Body",
+        "GuardianShield_GoldBastion",
+        "GuardianShield_RuneDetail",
+        "GuardianShield_BackGrip"
+      ],
+      "sockets": [
+        "Guardian_TowerShield",
+        "GripPoint",
+        "PrimaryAttach",
+        "ForearmAttach",
+        "ShieldFrontCenter"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Guardian/Mace_Shield/Blender/Guardian_TowerShield.blend",
+      "fbx": "Assets/Art/Weapons/Batch2/Guardian_TowerShield.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Guardian/Mace_Shield/Previews/Guardian_TowerShield_Preview.png"
+    },
+    {
+      "name": "Assassin_DaggerR",
+      "class": "Assassin",
+      "group": "Dual_Blades",
+      "batch": 2,
+      "triangles": 280,
+      "meshes": [
+        "Assassin_DaggerR_Blade",
+        "Assassin_DaggerR_GuardPommel",
+        "Assassin_DaggerR_Grip",
+        "Assassin_DaggerR_RuneDetail"
+      ],
+      "sockets": [
+        "Assassin_DaggerR",
+        "GripPoint",
+        "PrimaryAttach",
+        "BladeTip",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Assassin/Dual_Blades/Blender/Assassin_DaggerR.blend",
+      "fbx": "Assets/Art/Weapons/Batch2/Assassin_DaggerR.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Assassin/Dual_Blades/Previews/Assassin_DaggerR_Preview.png"
+    },
+    {
+      "name": "Assassin_DaggerL",
+      "class": "Assassin",
+      "group": "Dual_Blades",
+      "batch": 2,
+      "triangles": 292,
+      "meshes": [
+        "Assassin_DaggerL_Blade",
+        "Assassin_DaggerL_GuardPommel",
+        "Assassin_DaggerL_Grip",
+        "Assassin_DaggerL_RuneDetail"
+      ],
+      "sockets": [
+        "Assassin_DaggerL",
+        "GripPoint",
+        "PrimaryAttach",
+        "BladeTip",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Assassin/Dual_Blades/Blender/Assassin_DaggerL.blend",
+      "fbx": "Assets/Art/Weapons/Batch2/Assassin_DaggerL.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Assassin/Dual_Blades/Previews/Assassin_DaggerL_Preview.png"
+    },
+    {
+      "name": "Mage_ArcaneStaff",
+      "class": "Mage",
+      "group": "Staff",
+      "batch": 2,
+      "triangles": 648,
+      "meshes": [
+        "MageStaff_Shaft",
+        "MageStaff_GothicCrown",
+        "MageStaff_ArcaneCrystal"
+      ],
+      "sockets": [
+        "Mage_ArcaneStaff",
+        "GripPoint",
+        "PrimaryAttach",
+        "MagicEmitSocket",
+        "ProjectileSpawn",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Mage/Staff/Blender/Mage_ArcaneStaff.blend",
+      "fbx": "Assets/Art/Weapons/Batch2/Mage_ArcaneStaff.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Mage/Staff/Previews/Mage_ArcaneStaff_Preview.png"
+    },
+    {
+      "name": "Warlock_RitualSword",
+      "class": "Warlock",
+      "group": "Book_Sword",
+      "batch": 3,
+      "triangles": 236,
+      "meshes": [
+        "WarlockSword_Blade",
+        "WarlockSword_GuardPommel",
+        "WarlockSword_Grip",
+        "WarlockSword_RuneDetail"
+      ],
+      "sockets": [
+        "Warlock_RitualSword",
+        "GripPoint",
+        "PrimaryAttach",
+        "BladeTip",
+        "MagicEmitSocket",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Warlock/Book_Sword/Blender/Warlock_RitualSword.blend",
+      "fbx": "Assets/Art/Weapons/Batch3/Warlock_RitualSword.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Warlock/Book_Sword/Previews/Warlock_RitualSword_Preview.png"
+    },
+    {
+      "name": "Warlock_Grimoire",
+      "class": "Warlock",
+      "group": "Book_Sword",
+      "batch": 3,
+      "triangles": 380,
+      "meshes": [
+        "WarlockGrimoire_Cover",
+        "WarlockGrimoire_Pages",
+        "WarlockGrimoire_Clasps",
+        "WarlockGrimoire_RuneSigil"
+      ],
+      "sockets": [
+        "Warlock_Grimoire",
+        "GripPoint",
+        "PrimaryAttach",
+        "MagicEmitSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Warlock/Book_Sword/Blender/Warlock_Grimoire.blend",
+      "fbx": "Assets/Art/Weapons/Batch3/Warlock_Grimoire.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Warlock/Book_Sword/Previews/Warlock_Grimoire_Preview.png"
+    },
+    {
+      "name": "Monk_GauntletR",
+      "class": "Monk",
+      "group": "Gloves",
+      "batch": 3,
+      "triangles": 284,
+      "meshes": [
+        "Monk_GauntletR_Armor",
+        "Monk_GauntletR_BrassKnuckles",
+        "Monk_GauntletR_Straps",
+        "Monk_GauntletR_RuneDetail"
+      ],
+      "sockets": [
+        "Monk_GauntletR",
+        "GripPoint",
+        "PrimaryAttach",
+        "ImpactPoint",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Monk/Gloves/Blender/Monk_GauntletR.blend",
+      "fbx": "Assets/Art/Weapons/Batch3/Monk_GauntletR.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Monk/Gloves/Previews/Monk_GauntletR_Preview.png"
+    },
+    {
+      "name": "Monk_GauntletL",
+      "class": "Monk",
+      "group": "Gloves",
+      "batch": 3,
+      "triangles": 284,
+      "meshes": [
+        "Monk_GauntletL_Armor",
+        "Monk_GauntletL_BrassKnuckles",
+        "Monk_GauntletL_Straps",
+        "Monk_GauntletL_RuneDetail"
+      ],
+      "sockets": [
+        "Monk_GauntletL",
+        "GripPoint",
+        "PrimaryAttach",
+        "ImpactPoint",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Monk/Gloves/Blender/Monk_GauntletL.blend",
+      "fbx": "Assets/Art/Weapons/Batch3/Monk_GauntletL.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Monk/Gloves/Previews/Monk_GauntletL_Preview.png"
+    },
+    {
+      "name": "Druid_NatureStaff",
+      "class": "Druid",
+      "group": "Staff",
+      "batch": 3,
+      "triangles": 388,
+      "meshes": [
+        "DruidStaff_GnarledWood",
+        "DruidStaff_BronzeBindings",
+        "DruidStaff_NatureHeartstone"
+      ],
+      "sockets": [
+        "Druid_NatureStaff",
+        "GripPoint",
+        "PrimaryAttach",
+        "MagicEmitSocket",
+        "ProjectileSpawn",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Druid/Staff/Blender/Druid_NatureStaff.blend",
+      "fbx": "Assets/Art/Weapons/Batch3/Druid_NatureStaff.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Druid/Staff/Previews/Druid_NatureStaff_Preview.png"
+    },
+    {
+      "name": "Cleric_HolyHammer",
+      "class": "Cleric",
+      "group": "Hammer_Shield",
+      "batch": 3,
+      "triangles": 332,
+      "meshes": [
+        "ClericHammer_Head",
+        "ClericHammer_GoldReliquary",
+        "ClericHammer_Grip",
+        "ClericHammer_HolyRune"
+      ],
+      "sockets": [
+        "Cleric_HolyHammer",
+        "GripPoint",
+        "PrimaryAttach",
+        "ImpactPoint",
+        "MagicEmitSocket",
+        "VfxTrailSocket"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Cleric/Hammer_Shield/Blender/Cleric_HolyHammer.blend",
+      "fbx": "Assets/Art/Weapons/Batch3/Cleric_HolyHammer.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Cleric/Hammer_Shield/Previews/Cleric_HolyHammer_Preview.png"
+    },
+    {
+      "name": "Cleric_RelicShield",
+      "class": "Cleric",
+      "group": "Hammer_Shield",
+      "batch": 3,
+      "triangles": 668,
+      "meshes": [
+        "ClericShield_Body",
+        "ClericShield_SunburstGold",
+        "ClericShield_HolyCore",
+        "ClericShield_BackGrip"
+      ],
+      "sockets": [
+        "Cleric_RelicShield",
+        "GripPoint",
+        "PrimaryAttach",
+        "ForearmAttach",
+        "ShieldFrontCenter"
+      ],
+      "blend": "VFX_Blender_Production/02_Weapons/Cleric/Hammer_Shield/Blender/Cleric_RelicShield.blend",
+      "fbx": "Assets/Art/Weapons/Batch3/Cleric_RelicShield.fbx",
+      "preview": "VFX_Blender_Production/02_Weapons/Cleric/Hammer_Shield/Previews/Cleric_RelicShield_Preview.png"
+    }
+  ]
+}

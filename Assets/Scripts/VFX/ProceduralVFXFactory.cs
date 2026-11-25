@@ -6,6 +6,11 @@ namespace AbyssalDungeon.VFX
     {
         public static GameObject CreateVFXPrefab(VFXType type)
         {
+            if (EnvironmentVfxFactory.IsEnvironmentVfx(type))
+                return EnvironmentVfxFactory.CreateEnvironmentVfx(type);
+            if (WeaponVfxFactory.IsWeaponVfx(type))
+                return WeaponVfxFactory.CreateWeaponVfx(type);
+
             GameObject go = new GameObject($"VFX_{type}");
             ParticleSystem ps = go.AddComponent<ParticleSystem>();
             var main = ps.main;
@@ -57,6 +62,31 @@ namespace AbyssalDungeon.VFX
             if (urpParticle == null) urpParticle = Shader.Find("Particles/Standard Unlit");
             var mat = new Material(urpParticle);
             mat.enableInstancing = true;
+
+            // Load matching rich VFX texture for the effect
+            Texture2D tex = null;
+            if (type == VFXType.Hit || type == VFXType.CriticalHit)
+            {
+                tex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_EmberSpark");
+                if (tex == null) tex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_StarFlare");
+                renderer.renderMode = ParticleSystemRenderMode.Stretch;
+                renderer.lengthScale = 2.4f;
+                renderer.velocityScale = 0.16f;
+            }
+            else if (type == VFXType.Fire || type == VFXType.Burn)
+            {
+                tex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_FlameWisp");
+            }
+            else if (type == VFXType.Magic)
+            {
+                tex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_NovaWave");
+            }
+
+            if (tex != null)
+            {
+                mat.mainTexture = tex;
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+            }
             renderer.sharedMaterial = mat;
 
             go.AddComponent<AbyssGame.ScalableVfxResponder>();
@@ -109,9 +139,32 @@ namespace AbyssalDungeon.VFX
         private static void CreateHitVFX(ParticleSystem ps)
         {
             var main = ps.main;
-            main.startColor = Color.white;
-            main.startSpeed = 10f;
-            main.startLifetime = 0.2f;
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 1f, 0.95f, 1f), new Color(1f, 0.65f, 0.2f, 1f));
+            main.startSpeed = new ParticleSystem.MinMaxCurve(6f, 15f);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.12f, 0.25f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.15f, 0.35f);
+
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 45f;
+            shape.radius = 0.05f;
+
+            var emission = ps.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 22) });
+
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0f)));
+        }
+
+        private static void CreateCriticalHitVFX(ParticleSystem ps)
+        {
+            var main = ps.main;
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 1f, 0.6f, 1f), new Color(1f, 0.25f, 0.05f, 1f));
+            main.startSpeed = new ParticleSystem.MinMaxCurve(10f, 24f);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.35f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.25f, 0.55f);
 
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
@@ -119,23 +172,11 @@ namespace AbyssalDungeon.VFX
 
             var emission = ps.emission;
             emission.rateOverTime = 0f;
-            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 15) });
-        }
+            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 40) });
 
-        private static void CreateCriticalHitVFX(ParticleSystem ps)
-        {
-            var main = ps.main;
-            main.startColor = Color.yellow;
-            main.startSpeed = 15f;
-            main.startLifetime = 0.3f;
-            main.startSize = 0.5f;
-
-            var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Sphere;
-
-            var emission = ps.emission;
-            emission.rateOverTime = 0f;
-            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 30) });
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0f)));
         }
 
         private static void CreateHealVFX(ParticleSystem ps)
@@ -210,7 +251,12 @@ namespace AbyssalDungeon.VFX
 
             var velocity = ps.velocityOverLifetime;
             velocity.enabled = true;
-            velocity.orbitalZ = 5f;
+            velocity.x = new ParticleSystem.MinMaxCurve(0f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f);
+            velocity.orbitalX = new ParticleSystem.MinMaxCurve(0f);
+            velocity.orbitalY = new ParticleSystem.MinMaxCurve(0f);
+            velocity.orbitalZ = new ParticleSystem.MinMaxCurve(5f);
 
             var emission = ps.emission;
             emission.rateOverTime = 100f;

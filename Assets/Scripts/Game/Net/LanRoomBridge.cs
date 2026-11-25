@@ -59,6 +59,7 @@ namespace AbyssGame
 
         public bool IsHosting { get; private set; }
         public bool IsConnectedClient { get; private set; }
+        public static bool IsLanActive => _inst != null && (_inst.IsHosting || _inst.IsConnectedClient);
         public int LocalSlotIndex { get; private set; } = 0;
         public string StatusText = "Chế độ: Tổ đội Local + AI Hunter (Sẵn sàng)";
 

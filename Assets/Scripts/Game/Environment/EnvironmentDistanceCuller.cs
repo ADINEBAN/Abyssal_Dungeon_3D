@@ -68,11 +68,8 @@ namespace AbyssGame
                 if (l == null) continue;
                 if (l.type == LightType.Point || l.type == LightType.Spot)
                 {
-                    // Point lights never cast realtime shadows on Low/Medium/High
-                    bool allowAddShadow = GraphicsManager.Instance != null &&
-                                          GraphicsManager.Instance.ActivePreset != null &&
-                                          GraphicsManager.Instance.ActivePreset.enableAdditionalLightShadows;
-                    l.shadows = allowAddShadow ? LightShadows.Soft : LightShadows.None;
+                    // Never force cubemap shadows on all dungeon torches (prevents URP shadow atlas overflow & preserves 60 FPS on iGPU)
+                    l.shadows = LightShadows.None;
                     _scenePointLights.Add(l);
                 }
             }

@@ -19,6 +19,7 @@ namespace AbyssGame
     /// - Zero-wall-clip SphereCastNonAlloc with asymmetric collision spring (fast snap-in, smooth ease-out)
     /// - Sampled harmonic/Perlin trauma shake + dynamic Sprint/Dodge FOV kick + persistent Zoom & Invert-Y.
     /// </summary>
+    [DefaultExecutionOrder(100)]
     public class OrbitCamera3D : MonoBehaviour
     {
         public static OrbitCamera3D Instance { get; private set; }
@@ -55,6 +56,8 @@ namespace AbyssGame
         private float _noiseTime;
 
         private readonly RaycastHit[] _camHits = new RaycastHit[16];
+        private ActorUnit _cachedHero;
+        private Transform _cachedHeroTransform;
 
         private void Awake()
         {
@@ -169,7 +172,8 @@ namespace AbyssGame
 
             _orbitDistance = Mathf.Lerp(_orbitDistance, Distance, 1f - Mathf.Exp(-14f * dt));
 
-            // 1. Pivot SmoothDamp + Teleport Guard + Planar Look-Ahead
+            // 1. Frame-rate-synchronized Pivot Tracking (uses simulation deltaTime while playing so camera never fights CharacterController!)
+            float followDt = simDt > 0.0001f ? Mathf.Min(0.05f, simDt) : dt;
             Vector3 targetPos = Target.position;
             if (!_pivotInitialized || Vector3.Distance(targetPos, _lastTargetPos) > 6.5f)
             {
@@ -194,23 +198,19 @@ namespace AbyssGame
                 toLock.y = 0f;
                 desiredLookAhead = Vector3.ClampMagnitude(toLock * 0.14f, 0.95f);
             }
-            else if (planarVel.sqrMagnitude > 0.4f)
+            else if (planarVel.sqrMagnitude > 0.35f)
             {
-                desiredLookAhead = Vector3.ClampMagnitude(planarVel * 0.085f, 0.58f);
+                desiredLookAhead = Vector3.ClampMagnitude(planarVel * 0.075f, 0.50f);
             }
-            _lookAheadOffset = Vector3.SmoothDamp(_lookAheadOffset, desiredLookAhead, ref _lookAheadVel, 0.20f, 12f, dt);
+            _lookAheadOffset = Vector3.SmoothDamp(_lookAheadOffset, desiredLookAhead, ref _lookAheadVel, 0.18f, 12f, followDt);
 
             Vector3 rawAnchor = targetPos + PivotOffset + _lookAheadOffset;
-            Vector3 curXz = new Vector3(_smoothedPivot.x, 0f, _smoothedPivot.z);
-            Vector3 dstXz = new Vector3(rawAnchor.x, 0f, rawAnchor.z);
-
-            // Subtle 4cm micro-deadzone when stationary prevents camera micro-jitter
-            if (planarVel.sqrMagnitude > 0.05f || Vector3.Distance(curXz, dstXz) > 0.04f)
-            {
-                curXz = Vector3.SmoothDamp(curXz, dstXz, ref _pivotVelXz, 0.052f, 60f, dt);
-            }
-            float newPivotY = Mathf.SmoothDamp(_smoothedPivot.y, rawAnchor.y, ref _pivotVelY, 0.085f, 40f, dt);
-            _smoothedPivot = new Vector3(curXz.x, newPivotY, curXz.z);
+            float xzBlend = 1f - Mathf.Exp(-28f * followDt);
+            float yBlend = 1f - Mathf.Exp(-18f * followDt);
+            _smoothedPivot = new Vector3(
+                Mathf.Lerp(_smoothedPivot.x, rawAnchor.x, xzBlend),
+                Mathf.Lerp(_smoothedPivot.y, rawAnchor.y, yBlend),
+                Mathf.Lerp(_smoothedPivot.z, rawAnchor.z, xzBlend));
 
             // 2. Soft Target Lock-On Framing (over-the-shoulder toward locked enemy)
             if (isLockedOn && lockSys.LockedTarget != null && Time.timeScale > 0.01f)
@@ -280,7 +280,12 @@ namespace AbyssGame
             // 5. Dynamic FOV (Sprint speed sensation + Dodge FOV punch + Boss Lock focus)
             if (_cam != null)
             {
-                ActorUnit hero = Target.GetComponent<ActorUnit>();
+                if (_cachedHeroTransform != Target)
+                {
+                    _cachedHeroTransform = Target;
+                    _cachedHero = Target != null ? Target.GetComponent<ActorUnit>() : null;
+                }
+                ActorUnit hero = _cachedHero;
                 float sprintFov = (hero != null && hero.IsSprinting) ? 4.5f : 0f;
                 float lockFov = (isLockedOn && lockSys.LockedTarget != null && lockSys.LockedTarget.IsBoss) ? -1.8f : 0f;
                 _fovKick = Mathf.SmoothDamp(_fovKick, 0f, ref _fovKickVel, 0.18f, 40f, dt);
@@ -331,6 +336,7 @@ namespace AbyssGame
     /// - Idle / Walk [CapsLock] / Run [WASD] / Sprint [Hold LeftShift] / Jump [V] / Dodge [Space or Tap Shift]
     /// - Target Lock-On [Tab / MMB] + Left/Right Target Cycling [~ / Alt+Q / Alt+E] + Lock-On Combat Strafe.
     /// </summary>
+    [DefaultExecutionOrder(-30)]
     [RequireComponent(typeof(ActorUnit))]
     public class HeroPlayerInput : MonoBehaviour
     {
@@ -341,6 +347,7 @@ namespace AbyssGame
         public IWorldInteractable NearestInteractable { get; private set; }
 
         public static System.Action OnToggleInventory;
+        public static System.Action OnToggleSkills;
         public static System.Action OnTogglePause;
 
         private HeroInputBuffer _inputBuffer;
@@ -371,6 +378,10 @@ namespace AbyssGame
             if (Input.GetKeyDown(KeyCode.I) || Input.GetKeyDown(KeyCode.C))
             {
                 OnToggleInventory?.Invoke();
+            }
+            if (Input.GetKeyDown(KeyCode.K))
+            {
+                OnToggleSkills?.Invoke();
             }
 
             if (Time.timeScale < 0.01f || Unit == null || Unit.IsDead) return;
@@ -575,11 +586,11 @@ namespace AbyssGame
                 }
             }
 
-            // Skills 1..4 (ignore Alt+Q / Alt+E which cycle Lock-On targets)
+            // Skills 1..4 (ignore Alt+Q / Alt+E which cycle Lock-On targets; Skill 2 supports [2], [Z], [Mouse4], [Ctrl+W])
             bool holdAlt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
             if ((!holdAlt && Input.GetKeyDown(KeyCode.Q)) || Input.GetKeyDown(KeyCode.Alpha1))
                 TryOrBufferSkill(0, aimPoint);
-            if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Z) || (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.W)))
+            if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Z) || Input.GetKeyDown(KeyCode.Mouse4) || (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.W)))
                 TryOrBufferSkill(1, aimPoint);
             if ((!holdAlt && Input.GetKeyDown(KeyCode.E)) || Input.GetKeyDown(KeyCode.Alpha3))
                 TryOrBufferSkill(2, aimPoint);

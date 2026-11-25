@@ -436,8 +436,18 @@ namespace AbyssGame
 
         private void PickNewPatrolPoint()
         {
-            Vector2 rnd = Random.insideUnitCircle * Mathf.Min(5.5f, RoomHalfExtent * 0.6f);
-            _patrolPoint = SpawnHome + new Vector3(rnd.x, 0f, rnd.y);
+            float maxR = Mathf.Min(5.2f, RoomHalfExtent * 0.55f);
+            for (int i = 0; i < 6; i++)
+            {
+                Vector2 rnd = Random.insideUnitCircle * maxR;
+                Vector3 cand = SpawnHome + new Vector3(rnd.x, 0f, rnd.y);
+                if (!Physics.CheckSphere(cand + Vector3.up * 0.9f, 0.75f, 1 << 0, QueryTriggerInteraction.Ignore))
+                {
+                    _patrolPoint = cand;
+                    return;
+                }
+            }
+            _patrolPoint = SpawnHome;
         }
     }
 }

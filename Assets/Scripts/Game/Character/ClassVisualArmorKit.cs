@@ -103,40 +103,69 @@ namespace AbyssGame
             }
             visualRoot.transform.localScale = bodyScale;
 
-            // Authentic ExportedProject 3D Hero Rigs already include full PBR armor & mounted 3D weapons on RH_WP / LH_WP.
+            // Authentic ExportedProject 3D Hero Rigs: bind unified data-driven WeaponRigController (Phase 2)
             Transform exportedRig = visualRoot.transform.Find("Rig");
             if (exportedRig != null)
             {
-                Transform rWeaponSocket = rHand != null ? rHand : visualRoot.transform;
-                Transform lWeaponSocket = lHand != null ? lHand : visualRoot.transform;
-                Transform mainWpn = rHand != null ? rHand.Find("SignatureMainWeapon") : null;
-                Transform offWpn = lHand != null ? lHand.Find("SignatureOffhand") : null;
+                var weaponRig = WeaponRigController.BindToHero(visualRoot, cls, accent);
+                bool handledByProfile = weaponRig != null && weaponRig.Loadout != null;
 
-                if (!cls.ranged || cls.id == 5 || cls.id == 6 || cls.id == 8)
+                if (!handledByProfile)
                 {
-                    float bladeLen = cls.id == 2 ? 1.18f : (cls.id == 5 || cls.id == 8 ? 0.95f : (cls.id == 7 ? 0.22f : 0.72f));
-                    float trailWidth = cls.id == 2 ? 0.54f : 0.34f;
-                    WeaponBladeTrail3D.Attach(
-                        mainWpn != null ? mainWpn : rWeaponSocket,
-                        new Vector3(0f, bladeLen * 0.55f, bladeLen * 0.45f),
-                        trailWidth,
-                        accent);
-                }
+                    Transform rWeaponSocket = rHand != null ? rHand : visualRoot.transform;
+                    Transform lWeaponSocket = lHand != null ? lHand : visualRoot.transform;
+                    Transform mainWpn = rHand != null ? rHand.Find("SignatureMainWeapon") : null;
+                    Transform offWpn = lHand != null ? lHand.Find("SignatureOffhand") : null;
 
-                if (cls.id == 3 || cls.id == 7) // Dual-wield Assassin & Monk offhand trail
-                {
-                    WeaponBladeTrail3D.Attach(
-                        offWpn != null ? offWpn : lWeaponSocket,
-                        new Vector3(0f, 0.28f, 0.22f),
-                        0.26f,
-                        accent);
-                }
+                    if (!cls.ranged || cls.id == 5 || cls.id == 6 || cls.id == 8)
+                    {
+                        Vector3 mainTipLocal;
+                        float trailWidth;
+                        Color mainTrailCol = accent;
+                        switch (cls.id)
+                        {
+                            case 0: mainTipLocal = new Vector3(0f, 0f, 1.18f); trailWidth = 0.28f; break;
+                            case 1: mainTipLocal = new Vector3(0f, 0f, 0.58f); trailWidth = 0.30f; break;
+                            case 2: mainTipLocal = new Vector3(0f, 0f, 1.42f); trailWidth = 0.48f; break;
+                            case 3:
+                                mainTipLocal = new Vector3(0f, 0f, 0.52f);
+                                trailWidth = 0.20f;
+                                mainTrailCol = new Color(0.95f, 0.14f, 0.28f, 1f);
+                                break;
+                            case 5: mainTipLocal = new Vector3(0f, 0f, 0.80f); trailWidth = 0.26f; break;
+                            case 6: mainTipLocal = new Vector3(0f, 0f, 0.44f); trailWidth = 0.24f; break;
+                            case 7: mainTipLocal = new Vector3(0f, 0f, 0.16f); trailWidth = 0.24f; break;
+                            case 8: mainTipLocal = new Vector3(0f, 0f, 0.74f); trailWidth = 0.30f; break;
+                            case 9: mainTipLocal = new Vector3(0f, 0f, 0.58f); trailWidth = 0.30f; break;
+                            default: mainTipLocal = new Vector3(0f, 0f, 0.72f); trailWidth = 0.28f; break;
+                        }
 
-                Transform warlockBook = visualRoot.transform.Find("WarlockFloatingGrimoire");
-                if (warlockBook != null && warlockBook.GetComponent<ClassRelicFloatAnimator>() == null)
-                {
-                    var floatAnim = warlockBook.gameObject.AddComponent<ClassRelicFloatAnimator>();
-                    floatAnim.OrbitMode = true;
+                        Transform mainTarget = mainWpn != null ? mainWpn : rWeaponSocket;
+                        WeaponBladeTrail3D.Attach(mainTarget, mainTipLocal, trailWidth, mainTrailCol);
+                        AbyssalDungeon.VFX.WeaponVfxFactory.AttachSmartWeaponAura(
+                            mainTarget, mainTrailCol, cls.id == 2 ? 1.35f : (cls.id == 3 ? 0.72f : 0.95f));
+                    }
+                    else if (cls.id == 4 && offWpn != null)
+                    {
+                        AbyssalDungeon.VFX.WeaponVfxFactory.AttachSmartWeaponAura(offWpn, accent, 0.78f);
+                    }
+
+                    if (cls.id == 3 || cls.id == 7)
+                    {
+                        Transform offTarget = offWpn != null ? offWpn : lWeaponSocket;
+                        Vector3 offTipLocal = cls.id == 3 ? new Vector3(0f, 0f, 0.52f) : new Vector3(0f, 0f, 0.16f);
+                        float offWidth = cls.id == 3 ? 0.19f : 0.24f;
+                        Color offTrailCol = cls.id == 3 ? new Color(0.55f, 0.20f, 0.96f, 1f) : accent;
+                        WeaponBladeTrail3D.Attach(offTarget, offTipLocal, offWidth, offTrailCol);
+                        AbyssalDungeon.VFX.WeaponVfxFactory.AttachSmartWeaponAura(offTarget, offTrailCol, cls.id == 3 ? 0.70f : 0.82f);
+                    }
+
+                    Transform warlockBook = visualRoot.transform.Find("WarlockFloatingGrimoire");
+                    if (warlockBook != null && warlockBook.GetComponent<ClassRelicFloatAnimator>() == null)
+                    {
+                        var floatAnim = warlockBook.gameObject.AddComponent<ClassRelicFloatAnimator>();
+                        floatAnim.OrbitMode = true;
+                    }
                 }
 
                 Transform existingRing = visualRoot.transform.Find("ClassRing");
@@ -208,6 +237,7 @@ namespace AbyssGame
             if (cls.id == 0)
             {
                 WeaponBladeTrail3D.Attach(rSocket, new Vector3(0f, 0.72f, 0.10f), 0.38f, accent);
+                AbyssalDungeon.VFX.WeaponVfxFactory.AttachSmartWeaponAura(rSocket, accent, 0.95f);
             }
             else
             {
@@ -225,6 +255,8 @@ namespace AbyssGame
                         float trailW = cls.id == 2 ? 0.56f : 0.32f;
                         WeaponBladeTrail3D.Attach(wGo.transform, new Vector3(0f, tipY, 0f), trailW, accent);
                     }
+                    AbyssalDungeon.VFX.WeaponVfxFactory.AttachSmartWeaponAura(
+                        wGo.transform, accent, cls.id == 2 ? 1.35f : 0.92f);
                 }
 
                 if (!string.IsNullOrEmpty(offhandId))
@@ -247,9 +279,10 @@ namespace AbyssGame
                     var offGo = ObjMeshLoader.SpawnPiece(offhandId, offSocket, offPos, offRot, Vector3.one, offMat, false, true);
                     offGo.name = "SignatureOffhand";
 
-                    if (cls.id == 3 || cls.id == 7) // Dual-wield Assassin & Monk left-hand weapon trail!
+                    if (cls.id == 3 || cls.id == 7) // Dual-wield Assassin & Monk left-hand weapon trail + aura!
                     {
                         WeaponBladeTrail3D.Attach(offGo.transform, new Vector3(0f, 0.36f, 0f), 0.26f, accent);
+                        AbyssalDungeon.VFX.WeaponVfxFactory.AttachSmartWeaponAura(offGo.transform, accent, 0.82f);
                     }
                 }
             }

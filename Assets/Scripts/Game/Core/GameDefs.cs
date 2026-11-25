@@ -33,7 +33,7 @@ namespace AbyssGame
     public enum WeaponKind { None, SwordShield, GreatSword, Daggers, Bow, Staff, Wand, Fists, Mace, TowerShield, Claws }
     public enum ModelKind { Kachujin, Paladin, Vanguard, Golem, Treant }
     public enum Archetype { Melee, Ranged, Mage, Tank, Assassin, Elite, MiniBoss, Boss }
-    public enum RoomType { Entrance, Combat, Elite, Puzzle, MiniBoss, Boss }
+    public enum RoomType { Entrance, Combat, Elite, Puzzle, MiniBoss, Boss, Treasure }
 
     public class SkillDef
     {
@@ -337,18 +337,18 @@ namespace AbyssGame
             };
 
             // ---------------- Monsters ----------------
-            AddEnemy(new EnemyDef { id = "Goblin", name = "Goblin", archetype = Archetype.Melee, hp = 300, atk = 26, def = 10, speed = 4.4f, detect = 14, attackRange = 2.0f, attackCd = 1.4f, exp = 20, gold = 8, model = ModelKind.Kachujin, tint = new Color(0.45f, 0.85f, 0.35f), scale = 0.72f, weapon = WeaponKind.Daggers, accessory = "ears" });
-            AddEnemy(new EnemyDef { id = "GoblinArcher", name = "Goblin Archer", archetype = Archetype.Ranged, hp = 230, atk = 28, def = 5, speed = 4.0f, detect = 18, attackRange = 13f, attackCd = 2.0f, exp = 25, gold = 10, model = ModelKind.Kachujin, tint = new Color(0.6f, 0.75f, 0.3f), scale = 0.72f, weapon = WeaponKind.Bow, accessory = "ears", projColor = new Color(0.9f, 0.8f, 0.4f) });
-            AddEnemy(new EnemyDef { id = "Skeleton", name = "Skeleton", archetype = Archetype.Melee, hp = 360, atk = 30, def = 15, speed = 3.6f, detect = 14, attackRange = 2.2f, attackCd = 1.6f, exp = 25, gold = 12, model = ModelKind.Vanguard, tint = new Color(0.92f, 0.9f, 0.8f), scale = 0.95f, weapon = WeaponKind.SwordShield, accessory = "skull" });
-            AddEnemy(new EnemyDef { id = "SkeletonWarrior", name = "Skeleton Warrior", archetype = Archetype.Tank, hp = 650, atk = 34, def = 30, speed = 3.2f, detect = 14, attackRange = 2.4f, attackCd = 1.9f, exp = 40, gold = 20, model = ModelKind.Paladin, tint = new Color(0.85f, 0.83f, 0.72f), scale = 1.0f, weapon = WeaponKind.None, accessory = "skull" });
-            AddEnemy(new EnemyDef { id = "SkeletonMage", name = "Skeleton Mage", archetype = Archetype.Mage, hp = 290, atk = 36, def = 6, speed = 3.4f, detect = 18, attackRange = 12f, attackCd = 2.6f, exp = 35, gold = 18, model = ModelKind.Kachujin, tint = new Color(0.75f, 0.7f, 0.95f), scale = 0.95f, weapon = WeaponKind.Staff, accessory = "skull", projColor = new Color(0.6f, 0.3f, 1f) });
-            AddEnemy(new EnemyDef { id = "Zombie", name = "Zombie", archetype = Archetype.Melee, hp = 520, atk = 32, def = 10, speed = 2.4f, detect = 12, attackRange = 2.0f, attackCd = 2.0f, exp = 22, gold = 8, model = ModelKind.Vanguard, tint = new Color(0.5f, 0.65f, 0.45f), scale = 1.0f, weapon = WeaponKind.Claws, animSpeed = 0.7f });
-            AddEnemy(new EnemyDef { id = "DarkKnight", name = "Dark Knight", archetype = Archetype.Elite, hp = 1500, atk = 52, def = 35, speed = 3.8f, detect = 18, attackRange = 2.8f, attackCd = 1.8f, exp = 90, gold = 50, model = ModelKind.Paladin, tint = new Color(0.35f, 0.2f, 0.45f), scale = 1.18f, weapon = WeaponKind.None, accessory = "eyes" });
-            AddEnemy(new EnemyDef { id = "Demon", name = "Demon", archetype = Archetype.Assassin, hp = 700, atk = 46, def = 15, speed = 5.2f, detect = 20, attackRange = 2.3f, attackCd = 1.5f, exp = 60, gold = 35, model = ModelKind.Vanguard, tint = new Color(0.95f, 0.35f, 0.3f), scale = 1.05f, weapon = WeaponKind.Claws, accessory = "horns" });
-            AddEnemy(new EnemyDef { id = "CrystalGolem", name = "Crystal Golem", archetype = Archetype.Tank, hp = 1000, atk = 44, def = 40, speed = 2.6f, detect = 14, attackRange = 3.2f, attackCd = 2.4f, exp = 80, gold = 45, model = ModelKind.Golem, tint = new Color(0.55f, 0.75f, 1f), scale = 1.0f });
-            AddEnemy(new EnemyDef { id = "ForestMonster", name = "Forest Monster", archetype = Archetype.Melee, hp = 600, atk = 36, def = 18, speed = 3.4f, detect = 14, attackRange = 2.8f, attackCd = 2.0f, exp = 35, gold = 16, model = ModelKind.Treant, tint = new Color(0.35f, 0.6f, 0.25f), scale = 1.0f });
+            AddEnemy(new EnemyDef { id = "Goblin", name = "Goblin", archetype = Archetype.Melee, hp = 550, atk = 26, def = 12, speed = 4.4f, detect = 14, attackRange = 2.0f, attackCd = 1.4f, exp = 20, gold = 8, model = ModelKind.Kachujin, tint = new Color(0.45f, 0.85f, 0.35f), scale = 0.72f, weapon = WeaponKind.Daggers, accessory = "ears" });
+            AddEnemy(new EnemyDef { id = "GoblinArcher", name = "Goblin Archer", archetype = Archetype.Ranged, hp = 420, atk = 28, def = 8, speed = 4.0f, detect = 18, attackRange = 13f, attackCd = 2.0f, exp = 25, gold = 10, model = ModelKind.Kachujin, tint = new Color(0.6f, 0.75f, 0.3f), scale = 0.72f, weapon = WeaponKind.Bow, accessory = "ears", projColor = new Color(0.9f, 0.8f, 0.4f) });
+            AddEnemy(new EnemyDef { id = "Skeleton", name = "Skeleton", archetype = Archetype.Melee, hp = 680, atk = 30, def = 18, speed = 3.6f, detect = 14, attackRange = 2.2f, attackCd = 1.6f, exp = 25, gold = 12, model = ModelKind.Vanguard, tint = new Color(0.92f, 0.9f, 0.8f), scale = 0.95f, weapon = WeaponKind.SwordShield, accessory = "skull" });
+            AddEnemy(new EnemyDef { id = "SkeletonWarrior", name = "Skeleton Warrior", archetype = Archetype.Tank, hp = 1250, atk = 34, def = 38, speed = 3.2f, detect = 14, attackRange = 2.4f, attackCd = 1.9f, exp = 40, gold = 20, model = ModelKind.Paladin, tint = new Color(0.85f, 0.83f, 0.72f), scale = 1.0f, weapon = WeaponKind.None, accessory = "skull" });
+            AddEnemy(new EnemyDef { id = "SkeletonMage", name = "Skeleton Mage", archetype = Archetype.Mage, hp = 520, atk = 36, def = 10, speed = 3.4f, detect = 18, attackRange = 12f, attackCd = 2.6f, exp = 35, gold = 18, model = ModelKind.Kachujin, tint = new Color(0.75f, 0.7f, 0.95f), scale = 0.95f, weapon = WeaponKind.Staff, accessory = "skull", projColor = new Color(0.6f, 0.3f, 1f) });
+            AddEnemy(new EnemyDef { id = "Zombie", name = "Zombie", archetype = Archetype.Melee, hp = 980, atk = 32, def = 14, speed = 2.4f, detect = 12, attackRange = 2.0f, attackCd = 2.0f, exp = 22, gold = 8, model = ModelKind.Vanguard, tint = new Color(0.5f, 0.65f, 0.45f), scale = 1.0f, weapon = WeaponKind.Claws, animSpeed = 0.7f });
+            AddEnemy(new EnemyDef { id = "DarkKnight", name = "Dark Knight", archetype = Archetype.Elite, hp = 3000, atk = 52, def = 48, speed = 3.8f, detect = 18, attackRange = 2.8f, attackCd = 1.8f, exp = 90, gold = 50, model = ModelKind.Paladin, tint = new Color(0.35f, 0.2f, 0.45f), scale = 1.18f, weapon = WeaponKind.None, accessory = "eyes" });
+            AddEnemy(new EnemyDef { id = "Demon", name = "Demon", archetype = Archetype.Assassin, hp = 1350, atk = 46, def = 20, speed = 5.2f, detect = 20, attackRange = 2.3f, attackCd = 1.5f, exp = 60, gold = 35, model = ModelKind.Vanguard, tint = new Color(0.95f, 0.35f, 0.3f), scale = 1.05f, weapon = WeaponKind.Claws, accessory = "horns" });
+            AddEnemy(new EnemyDef { id = "CrystalGolem", name = "Crystal Golem", archetype = Archetype.Tank, hp = 2000, atk = 44, def = 52, speed = 2.6f, detect = 14, attackRange = 3.2f, attackCd = 2.4f, exp = 80, gold = 45, model = ModelKind.Golem, tint = new Color(0.55f, 0.75f, 1f), scale = 1.0f });
+            AddEnemy(new EnemyDef { id = "ForestMonster", name = "Forest Monster", archetype = Archetype.Melee, hp = 1150, atk = 36, def = 24, speed = 3.4f, detect = 14, attackRange = 2.8f, attackCd = 2.0f, exp = 35, gold = 16, model = ModelKind.Treant, tint = new Color(0.35f, 0.6f, 0.25f), scale = 1.0f });
 
-            Boss = new EnemyDef { id = "AbyssalKnight", name = "Abyssal Knight", archetype = Archetype.Boss, hp = 16000, atk = 70, def = 40, speed = 4.2f, detect = 60, attackRange = 3.6f, attackCd = 2.2f, exp = 600, gold = 400, model = ModelKind.Paladin, tint = new Color(0.45f, 0.12f, 0.2f), scale = 1.85f, weapon = WeaponKind.None, accessory = "crown", projColor = new Color(0.7f, 0.1f, 1f) };
+            Boss = new EnemyDef { id = "AbyssalKnight", name = "Abyssal Knight", archetype = Archetype.Boss, hp = 48000, atk = 70, def = 75, speed = 4.2f, detect = 60, attackRange = 3.6f, attackCd = 2.2f, exp = 600, gold = 400, model = ModelKind.Paladin, tint = new Color(0.45f, 0.12f, 0.2f), scale = 1.85f, weapon = WeaponKind.None, accessory = "crown", projColor = new Color(0.7f, 0.1f, 1f) };
         }
 
         static void AddEnemy(EnemyDef d) { Enemies[d.id] = d; }
@@ -391,6 +391,7 @@ namespace AbyssGame
                 case RoomType.Puzzle: return "Phòng Ấn Phong (Giải đố)";
                 case RoomType.MiniBoss: return "Kẻ Giữ Cổng (Mini Boss)";
                 case RoomType.Boss: return "Điện Thờ Vực Thẳm (Boss)";
+                case RoomType.Treasure: return "Kho Báu Cổ Đại (Treasure)";
             }
             return "";
         }

@@ -117,7 +117,9 @@ namespace AbyssGame
                 if (r == null) continue;
                 if (r is TrailRenderer || r is ParticleSystemRenderer || r.GetComponent<TextMesh>() != null)
                     continue;
-                if (r.name.StartsWith("ShadowBlob_", System.StringComparison.Ordinal))
+                if (r.name.StartsWith("ShadowBlob_", System.StringComparison.Ordinal) ||
+                    r.name.StartsWith("BladeSheath", System.StringComparison.Ordinal) ||
+                    (r.sharedMaterial != null && r.sharedMaterial.renderQueue >= 2900))
                     continue;
 
                 r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
@@ -782,56 +784,135 @@ namespace AbyssGame
 
     public class ExpandingBurstFx : MonoBehaviour
     {
-        private Transform _sphere;
-        private Material _mat;
+        private static Material _sharedRingMat;
+        private static Material _sharedFlareMat;
+        private Transform _ringQuad;
+        private Transform _flareBillboard;
+        private Renderer _ringRend;
+        private Renderer _flareRend;
+        private MaterialPropertyBlock _mpb;
         private Color _col;
         private float _radius;
         private float _dur;
         private float _t;
 
+        private static Material EnsureAdditiveBurstMat(ref Material slot, string matName, string texPath)
+        {
+            if (slot != null) return slot;
+            Shader sh = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                        ?? Shader.Find("Particles/Standard Unlit")
+                        ?? Shader.Find("Sprites/Default");
+            slot = new Material(sh) { name = matName, enableInstancing = true };
+            slot.SetOverrideTag("RenderType", "Transparent");
+            slot.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            if (slot.HasProperty("_Surface")) slot.SetFloat("_Surface", 1f);
+            if (slot.HasProperty("_Blend")) slot.SetFloat("_Blend", 2f);
+            if (slot.HasProperty("_SrcBlend")) slot.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (slot.HasProperty("_DstBlend")) slot.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            if (slot.HasProperty("_ZWrite")) slot.SetFloat("_ZWrite", 0f);
+            if (slot.HasProperty("_Cull")) slot.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+            Texture2D tex = Resources.Load<Texture2D>(texPath);
+            if (tex != null)
+            {
+                if (slot.HasProperty("_BaseMap")) slot.SetTexture("_BaseMap", tex);
+                slot.mainTexture = tex;
+            }
+            slot.renderQueue = 3030;
+            return slot;
+        }
+
         public void Init(Color col, float radius, float dur)
         {
-            _col = col;
-            _radius = radius;
-            _dur = Mathf.Max(0.1f, dur);
+            _col = Color.Lerp(col, Color.white, 0.25f);
+            _radius = Mathf.Max(0.8f, radius);
+            _dur = Mathf.Max(0.18f, dur);
             _t = 0f;
-            if (_mat == null)
-                _mat = CharacterVisualFactory.MakeTransparentMat(new Color(col.r, col.g, col.b, 0.55f), col);
-            else
+            if (_mpb == null) _mpb = new MaterialPropertyBlock();
+
+            Mesh hQuad = ObjMeshLoader.GetHorizontalQuadMesh();
+            if (_ringQuad == null)
             {
-                _mat.color = new Color(col.r, col.g, col.b, 0.55f);
-                if (_mat.HasProperty("_EmissionColor")) _mat.SetColor("_EmissionColor", col);
+                var rq = new GameObject("ShockwaveRing");
+                rq.transform.SetParent(transform, false);
+                rq.AddComponent<MeshFilter>().sharedMesh = hQuad;
+                _ringRend = rq.AddComponent<MeshRenderer>();
+                _ringRend.sharedMaterial = EnsureAdditiveBurstMat(ref _sharedRingMat, "M_BurstShockRing", "VFX/Textures/T_Vfx_ShockRing");
+                _ringRend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _ringRend.receiveShadows = false;
+                _ringQuad = rq.transform;
             }
-            if (_sphere == null)
-                _sphere = CharacterVisualFactory.Prim(PrimitiveType.Sphere, "Burst", transform, Vector3.zero, Vector3.one * 0.2f, _mat).transform;
-            else
-                _sphere.localScale = Vector3.one * 0.2f;
+
+            if (_flareBillboard == null)
+            {
+                var fq = new GameObject("StarFlare");
+                fq.transform.SetParent(transform, false);
+                fq.AddComponent<MeshFilter>().sharedMesh = hQuad;
+                _flareRend = fq.AddComponent<MeshRenderer>();
+                _flareRend.sharedMaterial = EnsureAdditiveBurstMat(ref _sharedFlareMat, "M_BurstStarFlare", "VFX/Textures/T_Vfx_StarFlare");
+                _flareRend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _flareRend.receiveShadows = false;
+                _flareBillboard = fq.transform;
+            }
+
+            // Ground-align the shockwave ring just above the floor while keeping star-flare at impact height
+            float groundOffset = Mathf.Max(-transform.position.y + 0.05f, -1.15f);
+            _ringQuad.localPosition = new Vector3(0f, groundOffset, 0f);
+            _ringQuad.localRotation = Quaternion.identity;
+            _flareBillboard.localPosition = Vector3.zero;
+            UpdateVisual(0f);
         }
 
         private void Update()
         {
             _t += Time.deltaTime;
             float u = Mathf.Clamp01(_t / _dur);
-            float s = Mathf.Lerp(0.25f, _radius * 2f, Mathf.Sqrt(u));
-            if (_sphere != null) _sphere.localScale = new Vector3(s, s * 0.55f, s);
-            if (_mat != null)
-            {
-                Color c = new Color(_col.r, _col.g, _col.b, (1f - u) * 0.55f);
-                _mat.color = c;
-                if (_mat.HasProperty("_BaseColor")) _mat.SetColor("_BaseColor", c);
-            }
+            UpdateVisual(u);
             if (_t >= _dur)
             {
                 GameObjectPool.ReleaseBurst(this);
             }
         }
+
+        private void UpdateVisual(float u)
+        {
+            float ringDiam = Mathf.Lerp(0.35f, _radius * 2.25f, Mathf.Sqrt(u));
+            if (_ringQuad != null)
+            {
+                _ringQuad.localScale = new Vector3(ringDiam, 1f, ringDiam);
+                _ringQuad.localRotation = Quaternion.Euler(0f, _t * 140f, 0f);
+                SetAdditiveTint(_ringRend, _col, (1f - u) * 0.92f);
+            }
+
+            if (_flareBillboard != null)
+            {
+                float flareSize = Mathf.Lerp(_radius * 1.45f, _radius * 0.25f, u);
+                _flareBillboard.localScale = new Vector3(flareSize, 1f, flareSize);
+                if (Camera.main != null)
+                    _flareBillboard.rotation = Camera.main.transform.rotation * Quaternion.Euler(90f, _t * 180f, 0f);
+                SetAdditiveTint(_flareRend, Color.Lerp(_col, Color.white, 0.45f), (1f - u * u) * 0.95f);
+            }
+        }
+
+        private void SetAdditiveTint(Renderer r, Color c, float alpha)
+        {
+            if (r == null) return;
+            Color hdr = new Color(c.r * 1.85f, c.g * 1.85f, c.b * 1.85f, Mathf.Clamp01(alpha));
+            _mpb.Clear();
+            _mpb.SetColor("_BaseColor", hdr);
+            _mpb.SetColor("_Color", hdr);
+            r.SetPropertyBlock(_mpb);
+        }
     }
 
     public class GroundTelegraphFx : MonoBehaviour
     {
+        private static Material _sharedTelegraphFillMat;
         private Transform _outer;
         private Transform _inner;
         private Material _mOuter, _mInner;
+        private Renderer _rInner;
+        private MaterialPropertyBlock _mpb;
+        private Color _col;
         private float _radius, _delay, _t;
         private Vector3 _box;
         private System.Action _cb;
@@ -839,26 +920,75 @@ namespace AbyssGame
         public static readonly List<GroundTelegraphFx> ActiveHazards = new List<GroundTelegraphFx>();
         public float HazardRadius => _box != Vector3.zero ? Mathf.Max(_box.x, _box.z) * 0.5f : _radius;
 
+        private static Material GetTelegraphMat(ref Material slot, string matName, string texPath)
+        {
+            if (slot != null) return slot;
+            Shader sh = Shader.Find("Universal Render Pipeline/Particles/Unlit")
+                        ?? Shader.Find("Particles/Standard Unlit")
+                        ?? Shader.Find("Sprites/Default");
+            slot = new Material(sh) { name = matName, enableInstancing = true };
+            slot.SetOverrideTag("RenderType", "Transparent");
+            slot.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            if (slot.HasProperty("_Surface")) slot.SetFloat("_Surface", 1f);
+            if (slot.HasProperty("_Blend")) slot.SetFloat("_Blend", 2f);
+            if (slot.HasProperty("_SrcBlend")) slot.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (slot.HasProperty("_DstBlend")) slot.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            if (slot.HasProperty("_ZWrite")) slot.SetFloat("_ZWrite", 0f);
+            if (slot.HasProperty("_Cull")) slot.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+            Texture2D tex = Resources.Load<Texture2D>(texPath);
+            if (tex != null)
+            {
+                if (slot.HasProperty("_BaseMap")) slot.SetTexture("_BaseMap", tex);
+                slot.mainTexture = tex;
+            }
+            slot.renderQueue = 3015;
+            return slot;
+        }
+
         public void Init(float radius, float delay, Color color, System.Action cb, Vector3 box)
         {
             _radius = radius;
             _delay = Mathf.Max(0.15f, delay);
             _cb = cb;
             _box = box;
-            _mOuter = CharacterVisualFactory.MakeTransparentMat(new Color(color.r, color.g, color.b, 0.25f));
-            _mInner = CharacterVisualFactory.MakeTransparentMat(new Color(color.r, color.g, color.b, 0.58f), color);
+            _col = color;
+            _mpb = new MaterialPropertyBlock();
 
             if (box != Vector3.zero)
             {
+                _mOuter = CharacterVisualFactory.MakeTransparentMat(new Color(color.r, color.g, color.b, 0.25f));
+                _mInner = CharacterVisualFactory.MakeTransparentMat(new Color(color.r, color.g, color.b, 0.58f), color);
                 _outer = CharacterVisualFactory.Prim(PrimitiveType.Cube, "Outer", transform, new Vector3(0, 0, box.z * 0.5f), new Vector3(box.x, 0.02f, box.z), _mOuter).transform;
                 _inner = CharacterVisualFactory.Prim(PrimitiveType.Cube, "Inner", transform, new Vector3(0, 0.01f, box.z * 0.5f), new Vector3(box.x, 0.025f, 0.1f), _mInner).transform;
             }
             else
             {
-                _outer = CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "Outer", transform, Vector3.zero, new Vector3(radius * 2f, 0.01f, radius * 2f), _mOuter).transform;
-                _inner = CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "Inner", transform, new Vector3(0, 0.01f, 0), new Vector3(0.1f, 0.015f, 0.1f), _mInner).transform;
+                // Soft radial hazard pulse on floor without busy circular rune-frame decals
+                Mesh hQuad = ObjMeshLoader.GetHorizontalQuadMesh();
+                var iGo = new GameObject("InnerFillRing");
+                iGo.transform.SetParent(transform, false);
+                iGo.transform.localPosition = new Vector3(0f, 0.014f, 0f);
+                iGo.AddComponent<MeshFilter>().sharedMesh = hQuad;
+                _rInner = iGo.AddComponent<MeshRenderer>();
+                _rInner.sharedMaterial = GetTelegraphMat(ref _sharedTelegraphFillMat, "M_TelegraphShockInner", "VFX/Textures/T_Vfx_RadialBurstRing");
+                _rInner.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                _rInner.receiveShadows = false;
+                _inner = iGo.transform;
+                _inner.localScale = new Vector3(0.20f, 1f, 0.20f);
+
+                SetTelegraphTint(_rInner, _col, 0.38f);
             }
             ActiveHazards.Add(this);
+        }
+
+        private void SetTelegraphTint(Renderer r, Color c, float alpha)
+        {
+            if (r == null) return;
+            Color hdr = new Color(c.r * 1.75f, c.g * 1.75f, c.b * 1.75f, alpha);
+            _mpb.Clear();
+            _mpb.SetColor("_BaseColor", hdr);
+            _mpb.SetColor("_Color", hdr);
+            r.SetPropertyBlock(_mpb);
         }
 
         private void OnDestroy()
@@ -878,8 +1008,9 @@ namespace AbyssGame
                     _inner.localScale = new Vector3(_box.x, 0.025f, Mathf.Lerp(0.1f, _box.z, u));
                 else
                 {
-                    float d = Mathf.Lerp(0.1f, _radius * 2f, u);
-                    _inner.localScale = new Vector3(d, 0.015f, d);
+                    float d = Mathf.Lerp(0.2f, _radius * 2.05f, u);
+                    _inner.localScale = new Vector3(d, 1f, d);
+                    if (_outer != null) _outer.localRotation = Quaternion.Euler(0f, _t * 75f, 0f);
                 }
             }
             if (_t >= _delay)
@@ -964,6 +1095,13 @@ namespace AbyssGame
             foreach (var mr in visualRoot.GetComponentsInChildren<MeshRenderer>(true))
             {
                 if (mr == null) continue;
+                if (mr.name.StartsWith("BladeSheath", System.StringComparison.Ordinal) ||
+                    (mr.sharedMaterial != null && mr.sharedMaterial.renderQueue >= 2900))
+                {
+                    mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    mr.receiveShadows = false;
+                    continue;
+                }
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 mr.receiveShadows = true;
             }

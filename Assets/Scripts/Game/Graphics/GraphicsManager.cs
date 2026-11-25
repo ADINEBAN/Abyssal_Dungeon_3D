@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using AbyssalDungeon.VFX;
 
 namespace AbyssGame
 {
@@ -280,6 +281,14 @@ namespace AbyssGame
             // 2. Compute effective granular parameters (allowing user sub-option overrides over the base preset)
             bool custom = SettingsData != null && SettingsData.hasCustomSubOptionOverrides;
             float effRenderScale = custom ? Mathf.Clamp(SettingsData.renderScale, 0.50f, 1.50f) : ActivePreset.renderScale;
+
+            // High-DPI / 4K Editor GameView safeguard for integrated GPUs & Low/Medium presets:
+            // ScreenSpaceOverlay UI remains crisp native resolution while 3D URP pixel fill stays <= 900p/1080p!
+            if (!custom && Screen.height > 1150 && (CurrentTier <= GraphicsQualityTier.Medium || HardwareReport.isIntegratedOrSharedMemory))
+            {
+                float targetMaxVertPx = CurrentTier == GraphicsQualityTier.Low ? 900f : 1080f;
+                effRenderScale = Mathf.Min(effRenderScale, Mathf.Clamp(targetMaxVertPx / Screen.height, 0.45f, 1.0f));
+            }
 
             ShadowQualityOption shOpt = custom ? (ShadowQualityOption)SettingsData.shadowQuality : ActivePreset.shadowQualityOption;
             GetShadowParameters(shOpt, ActivePreset, out bool effMainShadows, out bool effSoftShadows, out int effShadowRes, out int effCascades, out float effShadowDist, out bool effAddShadows);
@@ -821,6 +830,8 @@ namespace AbyssGame
 
             int maxPointLights = ActivePreset.maxActiveScenePointLights;
             float maxLightDistSq = cullDistMeters * cullDistMeters;
+            bool allowPointShadows = enableAddShadows && !HardwareReport.isIntegratedOrSharedMemory;
+            int shadowPointLightsUsed = 0;
             for (int i = 0; i < pointLights.Count; i++)
             {
                 Light pl = pointLights[i];
@@ -829,7 +840,10 @@ namespace AbyssGame
                 pl.enabled = shouldEnable;
                 if (shouldEnable)
                 {
-                    pl.shadows = enableAddShadows ? LightShadows.Soft : LightShadows.None;
+                    // Cap punctual shadow casters to at most 2 nearest lights (0 on integrated GPUs) to prevent URP shadow atlas overflow & maintain 60 FPS
+                    bool castShadow = allowPointShadows && shadowPointLightsUsed < 2 && pl.range >= 12f;
+                    pl.shadows = castShadow ? LightShadows.Soft : LightShadows.None;
+                    if (castShadow) shadowPointLightsUsed++;
                 }
             }
 
@@ -844,7 +858,9 @@ namespace AbyssGame
             {
                 if (ps == null) continue;
                 VfxQualitySystem.RegisterParticleSystem(ps);
-                if (ps.gameObject.name == "AmbientDustEmberParticles")
+                bool isAtmoRoot = ps.gameObject.name == "AmbientDustEmberParticles";
+                bool isAtmoChild = ps.transform.parent != null && ps.transform.parent.name == "AmbientDustEmberParticles";
+                if (isAtmoRoot)
                 {
                     ps.gameObject.SetActive(ActivePreset.enableAmbientDustParticles);
                     if (ActivePreset.enableAmbientDustParticles)
@@ -855,18 +871,23 @@ namespace AbyssGame
                         em.rateOverTime = 24f * particleDensity;
                     }
                 }
+                else if (isAtmoChild)
+                {
+                    ps.transform.parent.gameObject.SetActive(ActivePreset.enableAmbientDustParticles);
+                }
             }
 
             foreach (var mr in FindObjectsOfType<MeshRenderer>(true))
             {
-                if (mr != null && mr.gameObject.name == "GroundMistPlane")
+                if (mr != null && (mr.gameObject.name == "GroundMistPlane" || mr.gameObject.name == "GroundMistLayer"))
                 {
                     mr.gameObject.SetActive(ActivePreset.enableGroundMist);
                 }
             }
 
-            // 5. Ensure EnvironmentDistanceCuller is active in the scene (Phase 4 optimization)
+            // 5. Ensure EnvironmentDistanceCuller is active in the scene (Phase 4 optimization) & refresh Environment VFX
             EnvironmentDistanceCuller.EnsureOnActiveScene(cullDistMeters, ActivePreset.distantAnimatorThrottleMeters, maxPointLights);
+            EnvironmentVfxEmitter.RefreshAllNow();
         }
 
         private static void GetShadowParameters(

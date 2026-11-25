@@ -139,6 +139,43 @@ namespace AbyssGame
         }
 
         /// <summary>
+        /// Spawns a pooled 3D Blender helical whirlwind cyclone (SM_Vfx_WpnSpinWhirlwind) for 360-degree spin attacks.
+        /// </summary>
+        public void SpawnWhirlwindSlash(Vector3 worldOrigin, Quaternion facingRot, float radius, Color accent)
+        {
+            float scale = Mathf.Clamp(radius / 2.2f, 0.75f, 1.85f);
+            AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                AbyssalDungeon.VFX.VFXType.Wpn_SpinWhirlwind, worldOrigin, facingRot, 0.48f, accent, null, scale);
+        }
+
+        /// <summary>
+        /// Spawns a pooled 3D Blender rifled thrust lance cone (SM_Vfx_WpnThrustSpearCone) for lunges, dashes, and stabs.
+        /// </summary>
+        public void SpawnThrustPierce(Vector3 worldOrigin, Quaternion facingRot, Color accent, float scale = 1.0f)
+        {
+            AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                AbyssalDungeon.VFX.VFXType.Wpn_ThrustPierce, worldOrigin, facingRot, 0.35f, accent, null, scale);
+        }
+
+        /// <summary>
+        /// Spawns a pooled 3D Blender Gothic Aegis barrier dome (SM_Vfx_WpnShieldAegis) on shield block or ward absorption.
+        /// </summary>
+        public void SpawnShieldAegisBlock(Vector3 worldOrigin, Quaternion facingRot, Color accent, float scale = 1.0f)
+        {
+            AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                AbyssalDungeon.VFX.VFXType.Wpn_ShieldBlockAegis, worldOrigin, facingRot, 0.42f, accent, null, scale);
+        }
+
+        /// <summary>
+        /// Spawns a pooled 3D poise/guard shatter burst when an enemy or boss is staggered.
+        /// </summary>
+        public void SpawnPoiseShatter(Vector3 worldOrigin, Color accent)
+        {
+            AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                AbyssalDungeon.VFX.VFXType.Wpn_PoiseShatter, worldOrigin, Quaternion.identity, 0.75f, accent, null, 1.0f);
+        }
+
+        /// <summary>
         /// Spawns pooled directional 3D impact sparks + shockwave ring at the exact hurtbox contact point,
         /// plus a crisp 90ms MaterialPropertyBlock emission flash on the struck unit.
         /// </summary>
@@ -182,15 +219,22 @@ namespace AbyssGame
     }
 
     /// <summary>
-    /// Pooled Procedural 3D Crescent Ribbon Mesh for Melee Swings, Combo Finishers, and Heavy Overhead Smashes.
-    /// Reuses its Mesh and Material across pool cycles without per-swing allocations.
+    /// Pooled 3D Crescent Ribbon / Heavy Serrated Cleave Mesh for Melee Swings, Combo Finishers, and Heavy Overhead Smashes.
+    /// Uses the sculpted Blender 5.3.0 3D volumetric meshes (SM_Vfx_WpnSlashCrescent / SM_Vfx_WpnHeavyCleaveWave)
+    /// with MaterialPropertyBlock instancing, falling back to procedural geometry if not yet imported.
     /// </summary>
     public class SlashArcRibbonFx : MonoBehaviour
     {
+        private static Mesh _blenderCrescentMesh;
+        private static Mesh _blenderHeavyCleaveMesh;
+        private static Material _sharedCrescentMat;
+        private static Material _sharedHeavyMat;
+
         private Mesh _mesh;
         private MeshFilter _mf;
         private MeshRenderer _mr;
-        private Material _mat;
+        private Material _fallbackMat;
+        private MaterialPropertyBlock _mpb;
         private Vector3[] _verts;
         private Vector2[] _uvs;
         private Color[] _cols;
@@ -198,24 +242,26 @@ namespace AbyssGame
         private float _dur;
         private float _t;
         private float _alphaScale = 1f;
+        private Color _coreCol;
         private Color _edgeCol;
+        private Vector3 _baseScale = Vector3.one;
+        private bool _usingBlenderMesh;
 
         public void Init(Shader shader, float radius, float arcDeg, float width, Color coreCol, Color edgeCol, float duration, bool reverse)
         {
             _dur = Mathf.Max(0.10f, duration);
             _t = 0f;
+            _coreCol = coreCol;
             _edgeCol = edgeCol;
 
             VfxTierRules rules = VfxQualitySystem.CurrentRules;
             _alphaScale = rules.transparencyAlphaScale;
-
-            UpdateCrescentMesh(Mathf.Max(0.9f, radius), Mathf.Clamp(arcDeg, 40f, 340f), Mathf.Clamp(width, 0.25f, 1.6f), reverse);
+            if (_mpb == null) _mpb = new MaterialPropertyBlock();
 
             if (_mf == null)
             {
                 _mf = gameObject.GetComponent<MeshFilter>();
                 if (_mf == null) _mf = gameObject.AddComponent<MeshFilter>();
-                _mf.sharedMesh = _mesh;
             }
 
             if (_mr == null)
@@ -226,24 +272,83 @@ namespace AbyssGame
                 _mr.receiveShadows = false;
             }
 
-            if (_mat == null)
+            bool isHeavy = width >= 0.80f || arcDeg >= 154f;
+            if (_blenderCrescentMesh == null)
+                _blenderCrescentMesh = AbyssalDungeon.VFX.WeaponVfxFactory.LoadWeaponMesh("SM_Vfx_WpnSlashCrescent");
+            if (_blenderHeavyCleaveMesh == null)
+                _blenderHeavyCleaveMesh = AbyssalDungeon.VFX.WeaponVfxFactory.LoadWeaponMesh("SM_Vfx_WpnHeavyCleaveWave");
+
+            Mesh chosenBlender = isHeavy ? (_blenderHeavyCleaveMesh ?? _blenderCrescentMesh) : _blenderCrescentMesh;
+            _usingBlenderMesh = chosenBlender != null;
+
+            if (_usingBlenderMesh)
             {
+                _mf.sharedMesh = chosenBlender;
+                float refRadius = (chosenBlender == _blenderHeavyCleaveMesh) ? 2.20f : 1.85f;
+                float rScale = Mathf.Clamp(radius / refRadius, 0.55f, 2.25f);
+                float arcScaleX = Mathf.Clamp(arcDeg / (isHeavy ? 174f : 148f), 0.72f, 1.32f);
+                float signX = reverse ? -1f : 1f;
+                _baseScale = new Vector3(rScale * arcScaleX * signX, rScale * (isHeavy ? 1.15f : 1.0f), rScale);
+
                 if (shader != null)
-                    _mat = new Material(shader);
-                else
-                    _mat = CharacterVisualFactory.MakeTransparentMat(new Color(edgeCol.r, edgeCol.g, edgeCol.b, 0.72f), coreCol * 2f);
-                _mr.sharedMaterial = _mat;
+                {
+                    if (isHeavy)
+                    {
+                        if (_sharedHeavyMat == null)
+                        {
+                            _sharedHeavyMat = AbyssalDungeon.VFX.WeaponVfxFactory.GetSlashTrailMaterial(
+                                "M_Wpn_HeavyCleave", "T_Vfx_WpnSerratedArc", Color.white, Color.white);
+                        }
+                        _mr.sharedMaterial = _sharedHeavyMat;
+                    }
+                    else
+                    {
+                        if (_sharedCrescentMat == null)
+                        {
+                            _sharedCrescentMat = AbyssalDungeon.VFX.WeaponVfxFactory.GetSlashTrailMaterial(
+                                "M_Wpn_SlashCrescent", "T_Vfx_SlashCrescent", Color.white, Color.white);
+                        }
+                        _mr.sharedMaterial = _sharedCrescentMat;
+                    }
+                }
             }
-
-            if (_mat != null)
+            else
             {
-                if (_mat.HasProperty("_MainColor")) _mat.SetColor("_MainColor", coreCol);
-                if (_mat.HasProperty("_EdgeColor")) _mat.SetColor("_EdgeColor", edgeCol);
-                if (_mat.HasProperty("_Progress")) _mat.SetFloat("_Progress", 0f);
-                if (_mat.HasProperty("_Opacity")) _mat.SetFloat("_Opacity", 0.95f * _alphaScale);
+                UpdateCrescentMesh(Mathf.Max(0.9f, radius), Mathf.Clamp(arcDeg, 40f, 340f), Mathf.Clamp(width, 0.25f, 1.6f), reverse);
+                _mf.sharedMesh = _mesh;
+                _baseScale = Vector3.one;
+
+                if (_fallbackMat == null)
+                {
+                    if (shader != null)
+                    {
+                        _fallbackMat = new Material(shader);
+                        var tex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_SlashCrescent")
+                                  ?? Resources.Load<Texture2D>("VFX/Textures/T_Vfx_BladeSlash");
+                        if (tex != null) _fallbackMat.SetTexture("_MainTex", tex);
+                    }
+                    else
+                    {
+                        _fallbackMat = CharacterVisualFactory.MakeTransparentMat(new Color(edgeCol.r, edgeCol.g, edgeCol.b, 0.85f), coreCol * 2.4f);
+                    }
+                }
+                _mr.sharedMaterial = _fallbackMat;
             }
 
-            transform.localScale = Vector3.one * 0.88f;
+            ApplySlashPropertyBlock(0f, 1.45f * _alphaScale);
+            transform.localScale = _baseScale * 0.88f;
+        }
+
+        private void ApplySlashPropertyBlock(float progress, float opacity)
+        {
+            if (_mr == null) return;
+            _mpb.Clear();
+            _mpb.SetColor("_MainColor", _coreCol * 1.35f);
+            _mpb.SetColor("_EdgeColor", _edgeCol);
+            _mpb.SetFloat("_Progress", progress);
+            _mpb.SetFloat("_Opacity", opacity);
+            _mpb.SetColor("_BaseColor", new Color(_edgeCol.r, _edgeCol.g, _edgeCol.b, opacity * 0.65f));
+            _mr.SetPropertyBlock(_mpb);
         }
 
         private void UpdateCrescentMesh(float outerR, float arcDeg, float width, bool reverse)
@@ -314,14 +419,8 @@ namespace AbyssGame
         {
             _t += Time.deltaTime;
             float u = Mathf.Clamp01(_t / _dur);
-            transform.localScale = Vector3.one * Mathf.Lerp(0.88f, 1.12f, u);
-
-            if (_mat != null)
-            {
-                if (_mat.HasProperty("_Progress")) _mat.SetFloat("_Progress", u);
-                if (_mat.HasProperty("_Opacity")) _mat.SetFloat("_Opacity", Mathf.Pow(1f - u, 0.75f) * _alphaScale);
-                if (_mat.HasProperty("_BaseColor")) _mat.SetColor("_BaseColor", new Color(_edgeCol.r, _edgeCol.g, _edgeCol.b, (1f - u) * 0.7f * _alphaScale));
-            }
+            transform.localScale = _baseScale * Mathf.Lerp(0.88f, 1.12f, u);
+            ApplySlashPropertyBlock(u, Mathf.Pow(1f - u, 0.75f) * _alphaScale * 1.35f);
 
             if (_t >= _dur)
                 GameObjectPool.ReleaseSlashArc(this);
@@ -330,7 +429,7 @@ namespace AbyssGame
         private void OnDestroy()
         {
             if (_mesh != null) Destroy(_mesh);
-            if (_mat != null) Destroy(_mat);
+            if (_fallbackMat != null) Destroy(_fallbackMat);
         }
     }
 
@@ -347,8 +446,11 @@ namespace AbyssGame
         private Vector3[] _vels;
         private Transform _ring;
         private Renderer _ringRenderer;
+        private Transform _flash;
+        private Renderer _flashRenderer;
         private Material _sparkMat;
         private Material _ringMat;
+        private Material _flashMat;
         private MaterialPropertyBlock _mpb;
 
         private int _activeCount;
@@ -362,8 +464,27 @@ namespace AbyssGame
             if (_sparks != null) return;
 
             _mpb = new MaterialPropertyBlock();
-            _sparkMat = CharacterVisualFactory.MakeMat(Color.white, 0.9f, 0f, Color.white * 2.5f);
-            _ringMat = CharacterVisualFactory.MakeTransparentMat(new Color(1f, 1f, 1f, 0.62f), Color.white * 2f);
+
+            Shader addShader = Resources.Load<Shader>("Shaders/AbyssalEnvAdditive");
+            if (addShader == null) addShader = Shader.Find("AbyssalDungeon/EnvAdditive");
+            if (addShader == null) addShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+
+            // 1. Spark Material with Ember/Spark Texture
+            _sparkMat = new Material(addShader);
+            var sparkTex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_EmberSpark");
+            if (sparkTex == null) sparkTex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_StarFlare");
+            if (sparkTex != null) _sparkMat.SetTexture("_MainTex", sparkTex);
+
+            // 2. Shockwave Ring Material with ShockRing Texture
+            _ringMat = new Material(addShader);
+            var ringTex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_ShockRing");
+            if (ringTex == null) ringTex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_RadialBurstRing");
+            if (ringTex != null) _ringMat.SetTexture("_MainTex", ringTex);
+
+            // 3. Central Hit Flash Material with StarFlare Texture
+            _flashMat = new Material(addShader);
+            var flashTex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_StarFlare");
+            if (flashTex != null) _flashMat.SetTexture("_MainTex", flashTex);
 
             _sparks = new Transform[MaxPooledSparks];
             _sparkRenderers = new Renderer[MaxPooledSparks];
@@ -371,20 +492,46 @@ namespace AbyssGame
 
             for (int i = 0; i < MaxPooledSparks; i++)
             {
-                var sp = CharacterVisualFactory.Prim(
-                    PrimitiveType.Cube, "Spark" + i, transform,
-                    Vector3.zero, new Vector3(0.035f, 0.035f, 0.25f), _sparkMat);
+                var sp = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                sp.name = "SparkQuad_" + i;
+                sp.transform.SetParent(transform, false);
+                var col = sp.GetComponent<Collider>();
+                if (col != null) Destroy(col);
+
                 _sparks[i] = sp.transform;
                 _sparkRenderers[i] = sp.GetComponent<Renderer>();
+                _sparkRenderers[i].sharedMaterial = _sparkMat;
+                _sparkRenderers[i].shadowCastingMode = ShadowCastingMode.Off;
+                _sparkRenderers[i].receiveShadows = false;
                 sp.SetActive(false);
             }
 
-            var ringGo = CharacterVisualFactory.Prim(
-                PrimitiveType.Cylinder, "ImpactRing", transform,
-                Vector3.zero, new Vector3(0.2f, 0.012f, 0.2f), _ringMat,
-                Quaternion.Euler(90f, 0f, 0f));
+            // Expanding Shockwave Ring (Quad on impact plane)
+            var ringGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            ringGo.name = "ImpactShockRing";
+            ringGo.transform.SetParent(transform, false);
+            ringGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            var ringCol = ringGo.GetComponent<Collider>();
+            if (ringCol != null) Destroy(ringCol);
+
             _ring = ringGo.transform;
             _ringRenderer = ringGo.GetComponent<Renderer>();
+            _ringRenderer.sharedMaterial = _ringMat;
+            _ringRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            _ringRenderer.receiveShadows = false;
+
+            // Instant Center Star Flash
+            var flashGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            flashGo.name = "ImpactStarFlash";
+            flashGo.transform.SetParent(transform, false);
+            var flashCol = flashGo.GetComponent<Collider>();
+            if (flashCol != null) Destroy(flashCol);
+
+            _flash = flashGo.transform;
+            _flashRenderer = flashGo.GetComponent<Renderer>();
+            _flashRenderer.sharedMaterial = _flashMat;
+            _flashRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            _flashRenderer.receiveShadows = false;
         }
 
         public void Init(Color accent, bool heavyOrCrit)
@@ -392,19 +539,21 @@ namespace AbyssGame
             EnsureAllocated();
 
             _heavy = heavyOrCrit;
-            _dur = heavyOrCrit ? 0.28f : 0.19f;
+            _dur = heavyOrCrit ? 0.32f : 0.22f;
             _t = 0f;
 
             VfxTierRules rules = VfxQualitySystem.CurrentRules;
-            Color bright = Color.Lerp(accent, new Color(1f, 0.94f, 0.65f), heavyOrCrit ? 0.65f : 0.35f);
+            Color bright = Color.Lerp(accent, new Color(1f, 0.96f, 0.75f), heavyOrCrit ? 0.75f : 0.45f);
 
             _mpb.Clear();
+            _mpb.SetColor("_CoreColor", bright * 2.2f);
+            _mpb.SetColor("_OuterColor", accent);
             _mpb.SetColor("_BaseColor", bright);
-            _mpb.SetColor("_Color", bright);
-            _mpb.SetColor("_EmissionColor", bright * 3.0f);
+            _mpb.SetColor("_EmissionColor", bright * 3.5f);
+            _mpb.SetFloat("_Intensity", 2.5f);
 
-            int baseCount = heavyOrCrit ? 8 : 5;
-            _activeCount = Mathf.Clamp(Mathf.RoundToInt(baseCount * rules.particleCountMultiplier), 2, MaxPooledSparks);
+            int baseCount = heavyOrCrit ? 10 : 6;
+            _activeCount = Mathf.Clamp(Mathf.RoundToInt(baseCount * rules.particleCountMultiplier), 3, MaxPooledSparks);
 
             for (int i = 0; i < MaxPooledSparks; i++)
             {
@@ -413,16 +562,16 @@ namespace AbyssGame
                 if (!active) continue;
 
                 Vector3 dir = Quaternion.Euler(
-                    Random.Range(-52f, 52f),
+                    Random.Range(-55f, 55f),
                     Random.Range(-65f, 65f),
-                    0f) * Vector3.forward;
+                    Random.Range(0f, 360f)) * Vector3.forward;
 
-                float spd = Random.Range(4.5f, heavyOrCrit ? 11.5f : 8.2f);
-                _vels[i] = transform.TransformDirection(dir) * spd + Vector3.up * Random.Range(1.2f, 3.2f);
+                float spd = Random.Range(5.5f, heavyOrCrit ? 13.5f : 9.5f);
+                _vels[i] = transform.TransformDirection(dir) * spd + Vector3.up * Random.Range(1.5f, 3.8f);
 
                 _sparks[i].position = transform.position;
                 _sparks[i].rotation = Quaternion.LookRotation(_vels[i].normalized);
-                _sparks[i].localScale = new Vector3(0.035f, 0.035f, heavyOrCrit ? 0.34f : 0.22f);
+                _sparks[i].localScale = new Vector3(0.08f, 0.08f, heavyOrCrit ? 0.45f : 0.30f);
                 if (_sparkRenderers[i] != null)
                     _sparkRenderers[i].SetPropertyBlock(_mpb);
             }
@@ -434,13 +583,20 @@ namespace AbyssGame
                 if (_ringActive)
                 {
                     _ring.localPosition = Vector3.zero;
-                    _ring.localScale = new Vector3(0.22f, 0.01f, 0.22f);
+                    _ring.localScale = Vector3.one * 0.2f;
                     if (_ringRenderer != null)
-                    {
-                        _mpb.SetColor("_BaseColor", new Color(bright.r, bright.g, bright.b, 0.62f * rules.transparencyAlphaScale));
                         _ringRenderer.SetPropertyBlock(_mpb);
-                    }
                 }
+            }
+
+            if (_flash != null)
+            {
+                _flash.gameObject.SetActive(true);
+                _flash.localPosition = Vector3.zero;
+                _flash.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+                _flash.localScale = Vector3.one * (heavyOrCrit ? 1.35f : 0.85f);
+                if (_flashRenderer != null)
+                    _flashRenderer.SetPropertyBlock(_mpb);
             }
         }
 
@@ -453,18 +609,36 @@ namespace AbyssGame
             for (int i = 0; i < _activeCount; i++)
             {
                 if (_sparks[i] == null) continue;
-                _vels[i] += Vector3.down * (14f * dt);
+                _vels[i] += Vector3.down * (15f * dt);
                 _sparks[i].position += _vels[i] * dt;
                 if (_vels[i].sqrMagnitude > 0.05f)
                     _sparks[i].rotation = Quaternion.LookRotation(_vels[i].normalized);
-                float len = Mathf.Lerp(_heavy ? 0.36f : 0.22f, 0.02f, u);
-                _sparks[i].localScale = new Vector3(0.032f * (1f - u * 0.6f), 0.032f * (1f - u * 0.6f), len);
+                float len = Mathf.Lerp(_heavy ? 0.45f : 0.30f, 0.04f, u);
+                float w = Mathf.Lerp(0.09f, 0.01f, u);
+                _sparks[i].localScale = new Vector3(w, w, len);
             }
 
             if (_ringActive && _ring != null)
             {
-                float r = Mathf.Lerp(0.22f, _heavy ? 1.85f : 1.05f, Mathf.Sqrt(u));
-                _ring.localScale = new Vector3(r, 0.01f, r);
+                float r = Mathf.Lerp(0.2f, _heavy ? 2.3f : 1.45f, Mathf.Sqrt(u));
+                _ring.localScale = new Vector3(r, r, 1f);
+                _mpb.SetFloat("_Intensity", Mathf.Lerp(2.8f, 0.0f, u));
+                if (_ringRenderer != null) _ringRenderer.SetPropertyBlock(_mpb);
+            }
+
+            if (_flash != null && _flash.gameObject.activeSelf)
+            {
+                float flashScale = Mathf.Lerp(_heavy ? 1.35f : 0.85f, 0.0f, u * 2.8f);
+                if (flashScale <= 0.01f)
+                {
+                    _flash.gameObject.SetActive(false);
+                }
+                else
+                {
+                    _flash.localScale = Vector3.one * flashScale;
+                    _mpb.SetFloat("_Intensity", Mathf.Lerp(3.5f, 0.0f, u * 2.5f));
+                    if (_flashRenderer != null) _flashRenderer.SetPropertyBlock(_mpb);
+                }
             }
 
             if (_t >= _dur)
@@ -475,6 +649,7 @@ namespace AbyssGame
         {
             if (_sparkMat != null) Destroy(_sparkMat);
             if (_ringMat != null) Destroy(_ringMat);
+            if (_flashMat != null) Destroy(_flashMat);
         }
     }
 

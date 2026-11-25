@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31784d385fa605b4a9e4add2d6d551da, type: 3}
+  m_Name: Loadout_Cleric
+  m_EditorClassIdentifier: 
+  ClassId: 9
+  ClassName: Cleric
+  MainHandProfile: {fileID: 11400000, guid: ebaea248bbac6c446895dc789ac19573, type: 2}
+  OffHandProfile: {fileID: 11400000, guid: 55a5e0882f957c241b8ea01a57af297b, type: 2}
+  ProjectileVisualPrefab: {fileID: 0}
+  BasicWindup: 0.11
+  BasicActive: 0.14
+  HeavyWindup: 0.18
+  HeavyActive: 0.16
+  SkillCastWindup: 0.15

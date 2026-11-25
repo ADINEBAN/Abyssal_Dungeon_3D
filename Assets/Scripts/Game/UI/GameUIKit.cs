@@ -42,20 +42,20 @@ namespace AbyssGame
         private static readonly Dictionary<int, Sprite> _classIcons = new Dictionary<int, Sprite>();
 
         // =====================================================================
-        // OFFICIAL COLOR SYSTEM: ANCIENT GOTHIC – ANTIQUE GOLD & DARK BROWN
+        // OFFICIAL COLOR SYSTEM: GLOOMY DARK GOTHIC – OBSIDIAN SLATE & TARNISHED GOLD
         // =====================================================================
-        public static readonly Color ColBgDark      = new Color(0.08f, 0.055f, 0.04f, 0.96f);   // #140E0A Deep Abyssal Umber
-        public static readonly Color ColPanel       = new Color(0.14f, 0.10f, 0.07f, 0.96f);    // #241A12 Dark Aged Leather & Bronze
-        public static readonly Color ColCard        = new Color(0.19f, 0.135f, 0.095f, 0.96f);  // #302218 Warm Dark Chestnut Plate
-        public static readonly Color ColGold        = new Color(0.85f, 0.69f, 0.34f, 1.00f);    // #D9B057 Antique Gold
-        public static readonly Color ColGoldBright  = new Color(0.97f, 0.86f, 0.52f, 1.00f);    // #F8DC85 Illuminated Gold Highlight
-        public static readonly Color ColBronze      = new Color(0.64f, 0.46f, 0.24f, 1.00f);    // #A3753D Engraved Antique Bronze
-        public static readonly Color ColIron        = new Color(0.22f, 0.18f, 0.15f, 0.96f);    // #382E26 Dark Forged Iron
-        public static readonly Color ColParchment   = new Color(0.93f, 0.86f, 0.73f, 1.00f);    // #EDE0BA Aged Parchment Text
-        public static readonly Color ColAccent      = new Color(0.76f, 0.54f, 0.20f, 1.00f);    // #C28A33 Burnished Amber-Gold (Primary Action)
-        public static readonly Color ColGreen       = new Color(0.28f, 0.62f, 0.32f, 1.00f);    // #479E52 Medieval Emerald Seal
-        public static readonly Color ColDanger      = new Color(0.68f, 0.16f, 0.15f, 1.00f);    // #AD2926 Blood Crimson
-        public static readonly Color ColMuted       = new Color(0.74f, 0.65f, 0.52f, 1.00f);    // #BDA685 Warm Aged Pewter/Tan
+        public static readonly Color ColBgDark      = new Color(0.035f, 0.035f, 0.052f, 0.97f);  // #09090D Abyssal Void Obsidian
+        public static readonly Color ColPanel       = new Color(0.068f, 0.064f, 0.092f, 0.97f);  // #111017 Soot-Darkened Crypt Slate
+        public static readonly Color ColCard        = new Color(0.095f, 0.090f, 0.128f, 0.97f);  // #181721 Shadowed Basalt Plate
+        public static readonly Color ColGold        = new Color(0.78f, 0.63f, 0.34f, 1.00f);     // #C7A157 Tarnished Antique Gold
+        public static readonly Color ColGoldBright  = new Color(0.93f, 0.82f, 0.54f, 1.00f);     // #EDD18A Candlelit Relic Gold
+        public static readonly Color ColBronze      = new Color(0.55f, 0.43f, 0.24f, 1.00f);     // #8C6E3D Weathered Crypt Bronze
+        public static readonly Color ColIron        = new Color(0.13f, 0.125f, 0.168f, 0.97f);   // #21202B Cold Forged Iron
+        public static readonly Color ColParchment   = new Color(0.91f, 0.87f, 0.79f, 1.00f);     // #E8DEC9 Pale Bone-Parchment Text
+        public static readonly Color ColAccent      = new Color(0.68f, 0.48f, 0.20f, 1.00f);     // #AD7A33 Burnished Dark Amber
+        public static readonly Color ColGreen       = new Color(0.24f, 0.56f, 0.30f, 1.00f);     // #3D8F4D Muted Emerald Seal
+        public static readonly Color ColDanger      = new Color(0.62f, 0.14f, 0.15f, 1.00f);     // #9E2426 Dried Blood Crimson
+        public static readonly Color ColMuted       = new Color(0.64f, 0.61f, 0.58f, 1.00f);     // #A39C94 Ashen Pewter
 
         // =====================================================================
         // TYPOGRAPHY SYSTEM (Title Serif + Body Sans with Full Vietnamese Support)
@@ -286,14 +286,32 @@ namespace AbyssGame
             // Detect legacy flat dark-purple/navy tints and convert to warm white/amber multiplier for the textured 9-slice sprite
             bool wasDarkPanel = (legacyBg.r < 0.30f && legacyBg.g < 0.30f && legacyBg.b < 0.48f);
             if (wasDarkPanel)
-                return new Color(1f, 0.98f, 0.94f, Mathf.Max(0.94f, legacyBg.a));
+                return new Color(0.95f, 0.95f, 1.0f, Mathf.Max(0.95f, legacyBg.a));
 
-            // Otherwise blend the requested tint gently with the underlying Gothic texture
+            // Otherwise blend the requested tint gently with the underlying Gloomy Gothic texture
             return new Color(
-                Mathf.Lerp(0.85f, 1f, legacyBg.r),
-                Mathf.Lerp(0.82f, 1f, legacyBg.g),
-                Mathf.Lerp(0.75f, 1f, legacyBg.b),
-                Mathf.Max(0.92f, legacyBg.a));
+                Mathf.Lerp(0.80f, 0.98f, legacyBg.r),
+                Mathf.Lerp(0.80f, 0.98f, legacyBg.g),
+                Mathf.Lerp(0.84f, 1.00f, legacyBg.b),
+                Mathf.Max(0.93f, legacyBg.a));
+        }
+
+        /// <summary>
+        /// Adds non-raycast gloomy dark Gothic top & bottom shadow framing bars on 3D Sanctuary/Menu canvases.
+        /// </summary>
+        public static void MakeSanctuaryAtmosphericVignette(Transform canvasRoot)
+        {
+            var topVig = MakePanel("GothicTopShadow", canvasRoot,
+                new Vector2(0f, 0.86f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero,
+                new Color(0.02f, 0.02f, 0.035f, 0.58f));
+            topVig.raycastTarget = false;
+            topVig.transform.SetAsFirstSibling();
+
+            var botVig = MakePanel("GothicBottomShadow", canvasRoot,
+                new Vector2(0f, 0f), new Vector2(1f, 0.14f), Vector2.zero, Vector2.zero,
+                new Color(0.02f, 0.02f, 0.035f, 0.62f));
+            botVig.raycastTarget = false;
+            botVig.transform.SetAsFirstSibling();
         }
 
         public static Image MakeStyledPanel(

@@ -56,7 +56,7 @@ namespace AbyssGame
         public static Material AgedOakWood()
         {
             if (_cache.TryGetValue("AgedOakWood", out var m) && m != null) return m;
-            m = BuildUrpPbr("M_AgedOakWood", "T_AgedOakWood", new Color(0.86f, 0.74f, 0.62f, 1f), metallic: 0.03f, smoothness: 0.28f, bumpScale: 1.05f, aoStrength: 0.85f);
+            m = BuildUrpPbr("M_AgedOakWood", "T_AgedOakWood", new Color(0.68f, 0.62f, 0.56f, 1f), metallic: 0.02f, smoothness: 0.22f, bumpScale: 1.00f, aoStrength: 0.88f);
             _cache["AgedOakWood"] = m;
             return m;
         }
@@ -141,6 +141,40 @@ namespace AbyssGame
             return m;
         }
 
+        public static Material LightShaft(Color beamColor, float intensity = 0.62f)
+        {
+            string key = $"LightShaft_{ColorUtility.ToHtmlStringRGBA(beamColor)}_{intensity:0.00}";
+            if (_cache.TryGetValue(key, out var m) && m != null) return m;
+
+            Shader sh = Resources.Load<Shader>("Shaders/AbyssalLightShaft")
+                        ?? Shader.Find("AbyssalDungeon/LightShaft");
+
+            if (sh != null)
+            {
+                m = new Material(sh) { name = "M_" + key, enableInstancing = true };
+                m.SetColor("_Color", beamColor);
+                m.SetFloat("_Intensity", intensity);
+                m.SetFloat("_FresnelPower", 3.2f);
+                m.SetFloat("_ScrollSpeed", 0.20f);
+                m.SetFloat("_FadeDist", 4.6f);
+            }
+            else
+            {
+                m = CharacterVisualFactory.MakeTransparentMat(new Color(beamColor.r, beamColor.g, beamColor.b, 0.05f), beamColor * 0.4f);
+            }
+            _cache[key] = m;
+            return m;
+        }
+
+        public static Material AncientRuneGlow(Color runeColor)
+        {
+            string key = $"RuneGlow_{ColorUtility.ToHtmlStringRGB(runeColor)}";
+            if (_cache.TryGetValue(key, out var m) && m != null) return m;
+            m = AbyssalCrystal(runeColor * 0.72f, runeColor * 1.45f, 2.0f);
+            _cache[key] = m;
+            return m;
+        }
+
         public static Material SurfaceDecal(bool battleScorch)
         {
             string key = battleScorch ? "DecalScorch" : "DecalCracksMoss";
@@ -159,7 +193,7 @@ namespace AbyssGame
             if (m.HasProperty("_SrcBlend")) m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
             if (m.HasProperty("_DstBlend")) m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
             if (m.HasProperty("_ZWrite")) m.SetFloat("_ZWrite", 0f);
-            m.renderQueue = 2465; // Just over opaque floor geometry, below transparent mist & VFX
+            m.renderQueue = 2990; // URP Transparent pass (>= 2501 so alpha blend actually executes!), below mist & VFX
 
             Color tint = battleScorch ? new Color(0.10f, 0.08f, 0.08f, 0.52f) : new Color(0.45f, 0.50f, 0.42f, 0.42f);
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", tint);
@@ -220,7 +254,7 @@ namespace AbyssGame
             m.color = Color.white;
             if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", _softShadowTex);
             m.mainTexture = _softShadowTex;
-            m.renderQueue = 2470;
+            m.renderQueue = 2992; // URP Transparent pass (>= 2501) so radial shadow alpha blends cleanly!
             _cache["SoftShadowDecal"] = m;
             return m;
         }
@@ -287,8 +321,13 @@ namespace AbyssGame
                 inst.color = baseColor;
                 if (prefix == "T_GothicStone")
                 {
+                    inst.mainTextureScale = new Vector2(1.5f, 1.5f);
+                    if (inst.HasProperty("_BumpScale")) inst.SetFloat("_BumpScale", 1.25f);
+                }
+                else if (prefix == "T_CathedralFloor" || prefix == "T_MossyRuins")
+                {
                     inst.mainTextureScale = new Vector2(2f, 2f);
-                    if (inst.HasProperty("_BumpScale")) inst.SetFloat("_BumpScale", 1.55f);
+                    if (inst.HasProperty("_BumpScale")) inst.SetFloat("_BumpScale", 1.15f);
                 }
                 return inst;
             }

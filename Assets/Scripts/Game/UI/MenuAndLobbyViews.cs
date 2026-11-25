@@ -24,6 +24,7 @@ namespace AbyssGame
 
             var canvas = GameUIKit.CreateCanvas("MainMenuCanvas");
             var root = canvas.transform;
+            GameUIKit.MakeSanctuaryAtmosphericVignette(root);
 
             // Left Ancient Gothic Command Monument
             var leftCard = GameUIKit.MakeStyledPanel(
@@ -170,46 +171,57 @@ namespace AbyssGame
 
             if (Camera.main != null)
             {
-                Camera.main.transform.position = new Vector3(-0.9f, 1.85f, -5.2f);
-                Camera.main.transform.rotation = Quaternion.Euler(6f, 12f, 0f);
+                Camera.main.clearFlags = CameraClearFlags.SolidColor;
+                Camera.main.backgroundColor = new Color(0.024f, 0.025f, 0.042f);
+                Camera.main.transform.position = new Vector3(-0.75f, 1.72f, -4.85f);
+                Camera.main.transform.rotation = Quaternion.Euler(6f, 13f, 0f);
             }
 
             _stageRoot = new GameObject("Menu3DStage").transform;
             _stageRoot.SetParent(transform, false);
 
-            // Place South wall at z = -9.5f (well behind Camera at z = -5.2f) so no wall or colonnade arch ever blocks the view
-            ModularDungeonArchitect.BuildModularRoomShell(
-                _stageRoot, new Vector3(1.5f, 0f, 0.5f), width: 18f, length: 20f, wallHeight: 5.5f,
-                biome: DungeonBiome.AncientDungeon, openSouthDoor: false, openNorthDoor: false);
+            ModularDungeonArchitect.BuildGothicSanctuaryStage(_stageRoot, new Vector3(1.35f, 0f, -0.45f), wideForParty: false);
 
-            Material stoneMat = PbrMaterialLibrary.GothicStone();
-
-            ObjMeshLoader.SpawnPiece("GuardianStatue_Gothic", _stageRoot, new Vector3(4.2f, 0f, 3.8f), Quaternion.Euler(0f, -155f, 0f), Vector3.one * 1.15f, stoneMat, addBoxCollider: false);
-            ObjMeshLoader.SpawnPiece("RunicPillarAltar", _stageRoot, new Vector3(-1.4f, 0f, 3.4f), Quaternion.Euler(0f, 25f, 0f), Vector3.one * 0.9f, stoneMat, addBoxCollider: false);
-
-            // Warm flickering torchlight & antique gold rim light on the 3D Hero
+            // Gloomy Gothic dual-tone lighting: warm flickering torch key + cool moonlight rim
             var keyGo = new GameObject("HeroTorchKeyLight");
             keyGo.transform.SetParent(_stageRoot, false);
-            keyGo.transform.position = new Vector3(0.4f, 2.7f, -2.5f);
+            keyGo.transform.position = new Vector3(0.35f, 2.55f, -2.35f);
             var keyLight = keyGo.AddComponent<Light>();
             keyLight.type = LightType.Point;
-            keyLight.color = new Color(1.0f, 0.84f, 0.58f);
+            keyLight.color = new Color(1.0f, 0.78f, 0.48f);
             keyLight.range = 12f;
-            keyLight.intensity = 2.6f;
+            keyLight.intensity = 2.35f;
+            keyLight.shadows = LightShadows.None;
 
-            var rimGo = new GameObject("HeroBronzeRimLight");
+            var rimGo = new GameObject("HeroMoonRimLight");
             rimGo.transform.SetParent(_stageRoot, false);
-            rimGo.transform.position = new Vector3(2.6f, 2.8f, 1.2f);
+            rimGo.transform.position = new Vector3(2.8f, 2.9f, 1.6f);
             var rimLight = rimGo.AddComponent<Light>();
             rimLight.type = LightType.Point;
-            rimLight.color = new Color(0.95f, 0.68f, 0.30f);
-            rimLight.range = 10f;
-            rimLight.intensity = 1.8f;
+            rimLight.color = new Color(0.46f, 0.58f, 0.92f);
+            rimLight.range = 11f;
+            rimLight.intensity = 1.65f;
+            rimLight.shadows = LightShadows.None;
 
             ClassDef cls = GameDB.GetClass(GameSession.I.Profile.selectedClass);
             _heroPreview = CharacterVisualFactory.BuildHeroVisual(cls, _stageRoot, out _heroAnim, GameSession.I.Profile.selectedBuild);
-            _heroPreview.transform.position = new Vector3(1.35f, 0f, -0.6f);
+            _heroPreview.transform.position = new Vector3(1.35f, 0.02f, -0.55f);
             _heroPreview.transform.rotation = Quaternion.Euler(0f, -162f, 0f);
+            SetSafeLobbyBool(_heroAnim, true);
+        }
+
+        internal static void SetSafeLobbyBool(Animator anim, bool val)
+        {
+            if (anim == null || anim.runtimeAnimatorController == null) return;
+            var pars = anim.parameters;
+            for (int i = 0; i < pars.Length; i++)
+            {
+                if (pars[i].type == AnimatorControllerParameterType.Bool && pars[i].name == "InLobby")
+                {
+                    anim.SetBool("InLobby", val);
+                    return;
+                }
+            }
         }
 
         private void Update()
@@ -288,6 +300,7 @@ namespace AbyssGame
 
             var canvas = GameUIKit.CreateCanvas("LobbyCanvas");
             var root = canvas.transform;
+            GameUIKit.MakeSanctuaryAtmosphericVignette(root);
 
             // Top Ornate Gothic Header Bar
             var top = GameUIKit.MakeStyledPanel("TopBar", root, UIPanelStyle.Ornate,
@@ -511,43 +524,40 @@ namespace AbyssGame
         {
             AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(transform);
             var atmo = BiomeAtmosphereController.EnsureOnScene(transform);
-            atmo.ApplyBiome(DungeonBiome.ForgottenTemple, instant: true);
+            atmo.ApplyBiome(DungeonBiome.AncientDungeon, instant: true);
 
             if (Camera.main != null)
             {
-                Camera.main.transform.position = new Vector3(-0.7f, 2.25f, -6.5f);
-                Camera.main.transform.rotation = Quaternion.Euler(9f, 5f, 0f);
+                Camera.main.clearFlags = CameraClearFlags.SolidColor;
+                Camera.main.backgroundColor = new Color(0.024f, 0.025f, 0.042f);
+                Camera.main.transform.position = new Vector3(-0.65f, 2.15f, -6.2f);
+                Camera.main.transform.rotation = Quaternion.Euler(8.5f, 5f, 0f);
             }
 
             _stageRoot = new GameObject("Lobby3DStage").transform;
             _stageRoot.SetParent(transform, false);
 
-            // Place South wall at z = -10.5f (4m behind Camera at z = -6.5f) so the South wall & colonnade never block the 4 Party Heroes
-            ModularDungeonArchitect.BuildModularRoomShell(
-                _stageRoot, new Vector3(0.8f, 0f, -0.5f), width: 20f, length: 20f, wallHeight: 5.5f,
-                biome: DungeonBiome.ForgottenTemple, openSouthDoor: false, openNorthDoor: false);
+            ModularDungeonArchitect.BuildGothicSanctuaryStage(_stageRoot, new Vector3(0.95f, 0f, 0.0f), wideForParty: true);
 
-            Material stoneMat = PbrMaterialLibrary.GothicStone();
-            ObjMeshLoader.SpawnPiece("RunicPillarAltar", _stageRoot, new Vector3(0.8f, 0f, 3.8f), Quaternion.identity, Vector3.one * 1.1f, stoneMat, addBoxCollider: false);
-
-            // Warm overhead sanctuary key light + fill light so all 4 3D Hero models & Gothic backdrop show rich PBR armor & faces
             var keyGo = new GameObject("LobbyStageKeyLight");
             keyGo.transform.SetParent(_stageRoot, false);
-            keyGo.transform.position = new Vector3(0.8f, 3.4f, -3.2f);
+            keyGo.transform.position = new Vector3(0.85f, 3.2f, -3.1f);
             var kl = keyGo.AddComponent<Light>();
             kl.type = LightType.Point;
-            kl.color = new Color(1.0f, 0.88f, 0.68f);
-            kl.range = 18f;
-            kl.intensity = 2.5f;
+            kl.color = new Color(1.0f, 0.82f, 0.56f);
+            kl.range = 17f;
+            kl.intensity = 2.35f;
+            kl.shadows = LightShadows.None;
 
-            var rimGo = new GameObject("LobbyStageRimLight");
+            var rimGo = new GameObject("LobbyStageMoonRimLight");
             rimGo.transform.SetParent(_stageRoot, false);
-            rimGo.transform.position = new Vector3(1.2f, 3.2f, 2.4f);
+            rimGo.transform.position = new Vector3(1.2f, 3.3f, 2.8f);
             var rl = rimGo.AddComponent<Light>();
             rl.type = LightType.Point;
-            rl.color = new Color(0.96f, 0.72f, 0.36f);
+            rl.color = new Color(0.48f, 0.60f, 0.94f);
             rl.range = 15f;
             rl.intensity = 1.65f;
+            rl.shadows = LightShadows.None;
         }
 
         private void RefreshUI()
@@ -594,8 +604,9 @@ namespace AbyssGame
                 float zPos = (i % 2 == 0) ? -0.35f : 0.25f;
                 Animator anim;
                 var model = CharacterVisualFactory.BuildHeroVisual(cls, _stageRoot, out anim, m.buildId);
-                model.transform.position = new Vector3(xPos, 0f, zPos);
+                model.transform.position = new Vector3(xPos, 0.02f, zPos);
                 model.transform.rotation = Quaternion.Euler(0f, 180f + (i - 1.5f) * -8f, 0f);
+                MainMenuSceneView.SetSafeLobbyBool(anim, true);
 
                 _stageModels[i] = model;
             }
@@ -606,7 +617,14 @@ namespace AbyssGame
     /// Section 4.3 & 3.10 Class Selection & Build Scene UI (PHASE 3 - Screen B):
     /// - Left 2x5 Grid of 10 Classes with Ornate Portrait Frames & Rune Selection
     /// - Center Interactive 3D Hero on Gothic Stone Pedestal with Animation Preview Controls
-    /// - Right Ornate Reliquary Panel showing Attributes, Active/Ultimate Skills with Icons, and 3 Build Specializations
+    /// <summary>
+    /// Section 4.3 & Phase 6 Redesigned Class Selection Scene UI (1920x1080 Ancient Gothic Dark Fantasy):
+    /// - Left (390px): Clean 2x5 Class Grid (Portrait + Name + 1-line role, bright antique gold on active, dark stone on inactive)
+    /// - Center (Wide 54% unobstructed Sanctuary Stage): 3D Hero Preview facing 3/4 forward, smooth mouse drag-to-rotate,
+    ///   focused Gothic spotlight + subtle Action Preview Dock (never blocks weapons!)
+    /// - Right (446px): Concise Dark-Charcoal Panel with single antique-gold border, 1-sentence summary,
+    ///   4 clean stat bars (HP / ATK / DEF / MOBILITY), 4 compact skill rows (Q/1, 2/Z, E/3, R/4) with interactive detail tooltip,
+    ///   3 Build Specialization tabs, and Confirm button.
     /// </summary>
     public class ClassSelectSceneView : MonoBehaviour
     {
@@ -617,6 +635,40 @@ namespace AbyssGame
         private Animator _previewAnim;
         private Transform _detailContainer;
         private readonly Button[] _classButtons = new Button[10];
+        private GameObject _skillTooltipBox;
+        private Text _skillTooltipTitle;
+        private Text _skillTooltipBody;
+        private bool _draggingModel;
+
+        private int _previewComboStep;
+
+        private static readonly string[] ShortRoleTags =
+        {
+            "TANK · FIGHTER",
+            "TANK · SUPPORT",
+            "MELEE · BRUISER",
+            "MELEE · BURST",
+            "RANGED · MARKSMAN",
+            "RANGED · AOE MAGE",
+            "CURSE · SUMMONER",
+            "MELEE · AGILE",
+            "HYBRID · NATURE",
+            "HEALER · SUPPORT"
+        };
+
+        private static readonly string[] ShortSummaries =
+        {
+            "Kiếm khiên cân bằng, tiên phong phá vỡ đội hình địch.",
+            "Bảo vệ đồng đội bằng khiên nặng và phòng thủ vững chắc.",
+            "Đại kiếm hai tay càn quét, càng ít máu sát thương càng mạnh.",
+            "Song đoản kiếm tốc độ cao, ám sát mục tiêu trọng yếu.",
+            "Cung dài cơ động, bắn tỉa chính xác từ tầm xa.",
+            "Pháp trượng nguyên tố hủy diệt diện rộng và khống chế.",
+            "Nguyền rủa linh hồn và triệu hồi bóng tối hút sinh lực.",
+            "Quyền giáp liên hoàn tốc độ cao, áp sát linh hoạt.",
+            "Phép thiên nhiên hồi phục và hóa gấu mở giao tranh.",
+            "Thánh chùy và khiên ánh sáng bảo hộ, hồi sinh đồng đội."
+        };
 
         public void Build()
         {
@@ -628,29 +680,35 @@ namespace AbyssGame
 
             var canvas = GameUIKit.CreateCanvas("ClassSelectCanvas");
             var root = canvas.transform;
+            GameUIKit.MakeSanctuaryAtmosphericVignette(root);
 
-            // Top Ornate Header Bar
-            var topBar = GameUIKit.MakeStyledPanel("TopHeader", root, UIPanelStyle.Ornate,
-                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(28f, -78f), new Vector2(-28f, -12f));
+            // Top Slim Charcoal-Bronze Header Bar (zero cluttered double borders)
+            var topBar = CreateCharcoalGothicPanel("TopHeader", root,
+                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(24f, -68f), new Vector2(-24f, -12f), 0.88f);
 
             GameUIKit.MakeIcon("HdrIcon", topBar.transform, GameUIKit.GetIcon("crown"),
-                new Vector2(0f, 0.16f), new Vector2(0f, 0.84f), new Vector2(18f, 0f), new Vector2(62f, 0f));
+                new Vector2(0f, 0.18f), new Vector2(0f, 0.82f), new Vector2(16f, 0f), new Vector2(52f, 0f));
 
             GameUIKit.MakeText("Header", topBar.transform,
-                "ĐỀN THỜ CỔ NGỮ — CHỌN LỚP NHÂN VẬT (10 AETHER HUNTER CLASSES)",
-                24, FontStyle.Bold, GameUIKit.ColGoldBright, TextAnchor.MiddleLeft,
-                new Vector2(0f, 0f), new Vector2(0.76f, 1f), new Vector2(72f, 0f), Vector2.zero);
+                "CHỌN LỚP NHÂN VẬT",
+                22, FontStyle.Bold, GameUIKit.ColGoldBright, TextAnchor.MiddleLeft,
+                new Vector2(0f, 0f), new Vector2(0.36f, 1f), new Vector2(62f, 0f), Vector2.zero);
 
-            GameUIKit.MakeStyledButton("BackLobby", topBar.transform, "← QUAY LẠI", 16, UIButtonStyle.Secondary,
-                new Vector2(0.84f, 0.16f), new Vector2(0.985f, 0.84f), Vector2.zero, Vector2.zero,
+            GameUIKit.MakeText("HeaderSub", topBar.transform,
+                "10 AETHER HUNTER CLASSES  •  GIỮ CHUỘT TRÁI GIỮA MÀN HÌNH ĐỂ XOAY NHÂN VẬT",
+                12, FontStyle.Normal, new Color(0.76f, 0.70f, 0.56f, 0.92f), TextAnchor.MiddleCenter,
+                new Vector2(0.30f, 0f), new Vector2(0.80f, 1f), Vector2.zero, Vector2.zero);
+
+            GameUIKit.MakeStyledButton("BackLobby", topBar.transform, "← QUAY LẠI", 14, UIButtonStyle.Secondary,
+                new Vector2(0.87f, 0.14f), new Vector2(0.988f, 0.86f), Vector2.zero, Vector2.zero,
                 () => GameSession.GoToScene(GameSession.I.ReturnSceneAfterClassSelect));
 
-            // Left: 2x5 Grid of 10 Classes inside UI_Panel_Character
-            var leftGrid = GameUIKit.MakeStyledPanel("ClassGrid", root, UIPanelStyle.Character,
-                new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(28f, 28f), new Vector2(530f, -90f));
+            // LEFT (396px): Clean 2x5 Grid of 10 Classes
+            var leftGrid = CreateCharcoalGothicPanel("ClassGrid", root,
+                new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(24f, 24f), new Vector2(420f, -80f), 0.86f);
 
-            GameUIKit.MakeText("GridTitle", leftGrid.transform, "DANH SÁCH 10 HỆ PHÁI THỢ SĂN:", 15, FontStyle.Bold, GameUIKit.ColGold, TextAnchor.MiddleLeft,
-                new Vector2(0.04f, 0.935f), new Vector2(0.96f, 0.985f), Vector2.zero, Vector2.zero);
+            GameUIKit.MakeText("GridTitle", leftGrid.transform, "HỆ PHÁI THỢ SĂN", 14, FontStyle.Bold, GameUIKit.ColGold, TextAnchor.MiddleLeft,
+                new Vector2(0.04f, 0.942f), new Vector2(0.96f, 0.988f), Vector2.zero, Vector2.zero);
 
             for (int i = 0; i < 10; i++)
             {
@@ -658,12 +716,12 @@ namespace AbyssGame
                 ClassDef c = GameDB.Classes[i];
                 int col = i % 2;
                 int row = i / 2;
-                float xMin = col * 0.48f + 0.03f;
-                float xMax = xMin + 0.46f;
-                float yMax = 0.92f - row * 0.18f;
-                float yMin = yMax - 0.165f;
+                float xMin = 0.032f + col * 0.482f;
+                float xMax = xMin + 0.454f;
+                float yMax = 0.930f - row * 0.184f;
+                float yMin = yMax - 0.168f;
 
-                var btn = GameUIKit.MakeStyledButton("Class_" + c.name, leftGrid.transform, "", 15, UIButtonStyle.Secondary,
+                var btn = GameUIKit.MakeStyledButton("Class_" + c.name, leftGrid.transform, "", 14, UIButtonStyle.Secondary,
                     new Vector2(xMin, yMin), new Vector2(xMax, yMax), Vector2.zero, Vector2.zero, () =>
                     {
                         _previewClass = cid;
@@ -676,99 +734,267 @@ namespace AbyssGame
                 if (ic != null)
                 {
                     GameUIKit.MakeIcon("Ic", btn.transform, ic,
-                        new Vector2(0.05f, 0.12f), new Vector2(0.36f, 0.88f), Vector2.zero, Vector2.zero);
+                        new Vector2(0.05f, 0.12f), new Vector2(0.38f, 0.88f), Vector2.zero, Vector2.zero);
                 }
 
+                string shortTag = i < ShortRoleTags.Length ? ShortRoleTags[i].Split('·')[0].Trim() : c.roleText;
                 GameUIKit.MakeText("Name", btn.transform,
-                    $"<color=#F8DC85>{c.name}</color>\n<size=11><color=#EDE0BA>{c.roleText}</color></size>",
+                    $"<color=#F8DC85>{c.name}</color>\n<size=11><color=#BFA984>{shortTag}</color></size>",
                     15, FontStyle.Bold, GameUIKit.ColGoldBright, TextAnchor.MiddleLeft,
-                    new Vector2(0.39f, 0.08f), new Vector2(0.96f, 0.92f), Vector2.zero, Vector2.zero);
+                    new Vector2(0.41f, 0.08f), new Vector2(0.96f, 0.92f), Vector2.zero, Vector2.zero);
             }
 
-            // Center-Bottom Animation Preview Dock under the 3D Hero
-            var animBar = GameUIKit.MakeStyledPanel("AnimButtons", root, UIPanelStyle.Standard,
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-240f, 28f), new Vector2(150f, 92f));
+            // CENTER-BOTTOM: Compact Action Preview Dock (unobtrusive, below hero's boots)
+            var animBar = CreateCharcoalGothicPanel("AnimButtons", root,
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-215f, 24f), new Vector2(185f, 78f), 0.84f);
 
-            GameUIKit.MakeStyledButton("TryAtk", animBar.transform, "Đòn Đánh", 14, UIButtonStyle.Secondary,
-                new Vector2(0.02f, 0.14f), new Vector2(0.33f, 0.86f), Vector2.zero, Vector2.zero,
+            GameUIKit.MakeStyledButton("TryAtk", animBar.transform, "Đánh", 13, UIButtonStyle.Secondary,
+                new Vector2(0.02f, 0.14f), new Vector2(0.26f, 0.86f), Vector2.zero, Vector2.zero,
                 () => TriggerPreviewAnim("Attack"), GameUIKit.GetIcon("sword"));
 
-            GameUIKit.MakeStyledButton("TryCast", animBar.transform, "Kỹ Năng", 14, UIButtonStyle.Secondary,
-                new Vector2(0.345f, 0.14f), new Vector2(0.655f, 0.86f), Vector2.zero, Vector2.zero,
+            GameUIKit.MakeStyledButton("TryCast", animBar.transform, "Chiêu", 13, UIButtonStyle.Secondary,
+                new Vector2(0.275f, 0.14f), new Vector2(0.515f, 0.86f), Vector2.zero, Vector2.zero,
                 () => TriggerPreviewAnim("Cast"), GameUIKit.GetIcon("exp"));
 
-            GameUIKit.MakeStyledButton("TryDodge", animBar.transform, "Né Đòn", 14, UIButtonStyle.Secondary,
-                new Vector2(0.67f, 0.14f), new Vector2(0.98f, 0.86f), Vector2.zero, Vector2.zero,
+            GameUIKit.MakeStyledButton("TryDodge", animBar.transform, "Né", 13, UIButtonStyle.Secondary,
+                new Vector2(0.53f, 0.14f), new Vector2(0.75f, 0.86f), Vector2.zero, Vector2.zero,
                 () => TriggerPreviewAnim("Dodge"), GameUIKit.GetIcon("dodge"));
 
-            // Right: Detailed Attributes, Active/Ultimate Skills Q/W/E/R, Build Specialization & Confirm
-            var right = GameUIKit.MakeStyledPanel("RightDetails", root, UIPanelStyle.Ornate,
-                new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(-690f, 28f), new Vector2(-28f, -90f));
+            GameUIKit.MakeStyledButton("ResetRot", animBar.transform, "Xoay ↺", 12, UIButtonStyle.Secondary,
+                new Vector2(0.765f, 0.14f), new Vector2(0.98f, 0.86f), Vector2.zero, Vector2.zero,
+                () => { if (_previewModel != null) _previewModel.transform.rotation = Quaternion.Euler(0f, 165f, 0f); });
+
+            // RIGHT (460px): Crisp Charcoal-Stone Class Details Panel with Breathing Room
+            var right = CreateCharcoalGothicPanel("RightDetails", root,
+                new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(-484f, 24f), new Vector2(-24f, -80f), 0.88f);
             _detailContainer = GameUIKit.MakeRect("DetailContent", right.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
+            // Interactive Skill Tooltip Popup (anchored cleanly beside Right Details panel on hover/click)
+            var tipPanel = CreateCharcoalGothicPanel("SkillTooltipPopup", root,
+                new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-810f, -68f), new Vector2(-496f, 68f), 0.95f);
+            _skillTooltipBox = tipPanel.gameObject;
+            _skillTooltipTitle = GameUIKit.MakeText("TipTitle", tipPanel.transform, "", 15, FontStyle.Bold, GameUIKit.ColGoldBright, TextAnchor.UpperLeft,
+                Vector2.zero, Vector2.one, new Vector2(14f, 8f), new Vector2(-14f, -12f));
+            _skillTooltipBody = GameUIKit.MakeText("TipBody", tipPanel.transform, "", 13, FontStyle.Normal, GameUIKit.ColParchment, TextAnchor.UpperLeft,
+                Vector2.zero, Vector2.one, new Vector2(14f, 10f), new Vector2(-14f, -38f));
+            _skillTooltipBox.SetActive(false);
+
             RefreshSelection();
+        }
+
+        private static Image CreateCharcoalGothicPanel(string name, Transform parent, Vector2 aMin, Vector2 aMax, Vector2 oMin, Vector2 oMax, float alpha)
+        {
+            var img = GameUIKit.MakePanel(name, parent, aMin, aMax, oMin, oMax, new Color(0.075f, 0.068f, 0.078f, alpha));
+            var outl = img.gameObject.AddComponent<Outline>();
+            outl.effectColor = new Color(0.76f, 0.58f, 0.25f, 0.90f);
+            outl.effectDistance = new Vector2(1.5f, -1.5f);
+            return img;
         }
 
         private void Build3DPreviewStage()
         {
             AbyssalPostProcessing.EnsureGlobalVolumeAndCameraSetup(transform);
             var atmo = BiomeAtmosphereController.EnsureOnScene(transform);
-            atmo.ApplyBiome(DungeonBiome.ForgottenTemple, instant: true);
+            atmo.ApplyBiome(DungeonBiome.AncientDungeon, instant: true);
 
             if (Camera.main != null)
             {
                 Camera.main.clearFlags = CameraClearFlags.SolidColor;
-                Camera.main.backgroundColor = new Color(0.06f, 0.042f, 0.03f);
-                Camera.main.transform.position = new Vector3(0.35f, 1.55f, -4.1f);
-                Camera.main.transform.rotation = Quaternion.Euler(7f, 0f, 0f);
+                Camera.main.backgroundColor = new Color(0.022f, 0.024f, 0.036f);
+                // Frame Hero centered cleanly between Left (420px) and Right (460px) panels with weapons fully visible!
+                Camera.main.transform.position = new Vector3(0.08f, 1.38f, -4.15f);
+                Camera.main.transform.rotation = Quaternion.Euler(4.5f, 0f, 0f);
+                Camera.main.fieldOfView = 42f;
             }
 
             _previewStage = new GameObject("ClassPreviewStage").transform;
             _previewStage.SetParent(transform, false);
 
-            // Place South wall at z = -9.5f (well behind Camera at z = -4.1f) so no wall or colonnade arch intersects the camera
-            ModularDungeonArchitect.BuildModularRoomShell(
-                _previewStage, new Vector3(0f, 0f, 0.5f), width: 16f, length: 20f, wallHeight: 5.5f,
-                biome: DungeonBiome.ForgottenTemple, openSouthDoor: false, openNorthDoor: false);
+            ModularDungeonArchitect.BuildGothicSanctuaryStage(_previewStage, Vector3.zero, wideForParty: false);
 
-            var l = new GameObject("KeyLight");
-            l.transform.SetParent(_previewStage, false);
-            l.transform.position = new Vector3(0.7f, 3.0f, -2.4f);
-            var pl = l.AddComponent<Light>();
+            // Focused Gothic 3-point Hero Showcase Lighting (warm front-3/4 key + cool moonlight rim + subtle weapon fill)
+            var keyGo = new GameObject("HeroShowcaseKeyLight");
+            keyGo.transform.SetParent(_previewStage, false);
+            keyGo.transform.position = new Vector3(1.15f, 2.75f, -2.45f);
+            var pl = keyGo.AddComponent<Light>();
             pl.type = LightType.Point;
-            pl.color = new Color(1.0f, 0.90f, 0.72f);
-            pl.range = 16f;
-            pl.intensity = 2.6f;
+            pl.color = new Color(1.0f, 0.86f, 0.62f);
+            pl.range = 14f;
+            pl.intensity = 2.95f;
+            pl.shadows = LightShadows.None;
 
-            var rim = new GameObject("RimLight");
-            rim.transform.SetParent(_previewStage, false);
-            rim.transform.position = new Vector3(-1.4f, 2.6f, 1.6f);
-            var rpl = rim.AddComponent<Light>();
+            var rimGo = new GameObject("HeroShowcaseMoonRim");
+            rimGo.transform.SetParent(_previewStage, false);
+            rimGo.transform.position = new Vector3(-1.85f, 2.85f, 1.65f);
+            var rpl = rimGo.AddComponent<Light>();
             rpl.type = LightType.Point;
-            rpl.color = new Color(0.95f, 0.72f, 0.35f);
-            rpl.range = 12f;
-            rpl.intensity = 1.6f;
+            rpl.color = new Color(0.48f, 0.66f, 1.0f);
+            rpl.range = 13f;
+            rpl.intensity = 2.10f;
+            rpl.shadows = LightShadows.None;
+
+            var fillGo = new GameObject("HeroShowcaseWeaponFill");
+            fillGo.transform.SetParent(_previewStage, false);
+            fillGo.transform.position = new Vector3(-1.35f, 1.55f, -2.10f);
+            var fpl = fillGo.AddComponent<Light>();
+            fpl.type = LightType.Point;
+            fpl.color = new Color(0.88f, 0.78f, 0.64f);
+            fpl.range = 9f;
+            fpl.intensity = 1.25f;
+            fpl.shadows = LightShadows.None;
         }
 
         private void TriggerPreviewAnim(string trigger)
         {
-            if (_previewAnim != null) _previewAnim.SetTrigger(trigger);
+            ClassDef cls = GameDB.GetClass(_previewClass);
+            Color accent = ClassSpecializationSystem.GetBuildAccentColor(_previewClass, _previewBuild, cls.color);
+
+            if (_previewAnim != null)
+            {
+                if (trigger == "Attack")
+                {
+                    int step = _previewComboStep % 3;
+                    _previewComboStep = (step + 1) % 3;
+                    var pars = _previewAnim.parameters;
+                    for (int p = 0; p < pars.Length; p++)
+                    {
+                        if (pars[p].name == "ComboStep" && pars[p].type == AnimatorControllerParameterType.Int)
+                            _previewAnim.SetInteger("ComboStep", step);
+                    }
+                    _previewAnim.SetTrigger("Attack");
+                }
+                else
+                {
+                    _previewAnim.SetTrigger(trigger);
+                }
+            }
+
+            if (_previewModel != null)
+            {
+                var wRig = _previewModel.GetComponent<WeaponRigController>();
+                if (wRig != null && trigger == "Attack")
+                    wRig.TriggerBowDraw(0.24f);
+
+                var trails = _previewModel.GetComponentsInChildren<WeaponBladeTrail3D>(true);
+                for (int i = 0; i < trails.Length; i++)
+                    trails[i].Activate(0.36f, accent);
+
+                Vector3 rootPos = _previewModel.transform.position;
+                Vector3 origin = rootPos + Vector3.up * 1.12f;
+                Quaternion facing = _previewModel.transform.rotation;
+                Vector3 fwd = _previewModel.transform.forward;
+
+                var gng = AbyssalDungeon.VFX.GnGSkillVfxDispatcher.EnsureInstance();
+
+                if (trigger == "Attack")
+                {
+                    int playedStep = (_previewComboStep + 2) % 3;
+                    GameAudio.I.PlayWeaponAttack(_previewClass, playedStep, isHeavy: playedStep == 2, isFinisher: playedStep == 2, 0.78f);
+                    if (gng != null)
+                        gng.PlayComboOrHeavy(_previewClass, 2, playedStep == 2, rootPos, facing);
+
+                    if (_previewClass == 4)
+                    {
+                        Vector3 bowMuzzle = wRig != null ? wRig.GetProjectileSpawnWorldPos(origin, fwd) : (origin + fwd * 0.55f);
+                        AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                            AbyssalDungeon.VFX.VFXType.Wpn_MuzzleCastBurst, bowMuzzle, facing, 0.30f, accent, null, 0.85f);
+                        CombatFeelManager.I.SpawnThrustPierce(bowMuzzle, facing, accent, 0.95f);
+                    }
+                    else if (_previewClass == 5 || _previewClass == 6)
+                    {
+                        Vector3 staffEmit = wRig != null ? wRig.GetProjectileSpawnWorldPos(origin, fwd) : (origin + fwd * 1.0f);
+                        AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                            AbyssalDungeon.VFX.VFXType.Wpn_SpellImpact, staffEmit, facing, 0.40f, accent, null, 0.95f);
+                    }
+                    else
+                    {
+                        bool heavy = (playedStep == 2 || _previewClass == 2 || _previewClass == 1);
+                        CombatFeelManager.I.SpawnSlashArc(
+                            origin + fwd * 0.22f, facing,
+                            heavy ? 2.15f : 1.75f,
+                            heavy ? 168f : 144f,
+                            playedStep == 1 ? 20f : -16f,
+                            Color.Lerp(accent, Color.white, 0.52f),
+                            accent,
+                            heavy ? 0.28f : 0.22f,
+                            heavy ? 0.92f : 0.65f,
+                            playedStep == 1);
+                    }
+                }
+                else if (trigger == "Cast")
+                {
+                    GameAudio.I.PlaySfx(GameSfx.Magic, 0.72f);
+                    SkillKind previewKind = cls.skills != null && cls.skills.Length > 3 ? cls.skills[3].kind : SkillKind.SelfAoE;
+                    if (gng != null)
+                        gng.PlayClassSkill(_previewClass, 3, previewKind, rootPos, rootPos + fwd * 1.6f, facing);
+
+                    if (_previewClass == 1 || _previewClass == 9)
+                        CombatFeelManager.I.SpawnShieldAegisBlock(origin + fwd * 0.55f, facing, accent, 1.05f);
+                    else if (_previewClass == 3 || _previewClass == 7)
+                        CombatFeelManager.I.SpawnThrustPierce(origin + fwd * 0.55f, facing, accent, 1.10f);
+                    else
+                        CombatFeelManager.I.SpawnWhirlwindSlash(rootPos + Vector3.up * 0.45f, facing, 2.0f, accent);
+                }
+                else
+                {
+                    GameAudio.I.PlaySfx(GameSfx.Dodge, 0.65f);
+                    AbyssalDungeon.VFX.VFXManager.EnsureInstance()?.SpawnVFX(
+                        AbyssalDungeon.VFX.VFXType.DodgeTrail, origin, facing, 0.35f, accent, null, 1.0f);
+                }
+                return;
+            }
+
             GameAudio.I.PlaySfx(GameSfx.Attack, 0.6f);
         }
 
         private void Update()
         {
-            if (_previewModel != null)
+            if (_previewModel == null) return;
+
+            bool overUi = UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+            if (Input.GetMouseButtonDown(0) && !overUi)
+                _draggingModel = true;
+            if (Input.GetMouseButtonUp(0))
+                _draggingModel = false;
+
+            if (_draggingModel && Input.GetMouseButton(0))
             {
-                if (Input.GetMouseButton(0))
-                    _previewModel.transform.Rotate(0f, -Input.GetAxis("Mouse X") * 6f, 0f);
-                else
-                    _previewModel.transform.Rotate(0f, 20f * Time.deltaTime, 0f);
+                _previewModel.transform.Rotate(0f, -Input.GetAxis("Mouse X") * 7.5f, 0f, Space.World);
             }
+        }
+
+        private void ShowSkillTooltip(string keyTag, SkillDef sk)
+        {
+            if (_skillTooltipBox == null || sk == null) return;
+            _skillTooltipTitle.text = $"[{keyTag}] {sk.name}";
+            _skillTooltipBody.text =
+                $"<color=#F8DC85>Hồi chiêu: {sk.cooldown:0.#}s   •   Mana: {sk.mana:0}</color>\n\n{sk.desc}";
+            _skillTooltipBox.SetActive(true);
+        }
+
+        private void HideSkillTooltip()
+        {
+            if (_skillTooltipBox != null) _skillTooltipBox.SetActive(false);
+        }
+
+        private static void BuildStatBarRow(Transform parent, string label, string valueText, float norm01, Color fillCol, float yTop)
+        {
+            GameUIKit.MakeText("Lbl_" + label, parent, label, 12, FontStyle.Bold, new Color(0.84f, 0.78f, 0.64f), TextAnchor.MiddleLeft,
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, yTop - 22f), new Vector2(106f, yTop));
+
+            var bg = GameUIKit.MakePanel("BarBg_" + label, parent,
+                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(110f, yTop - 17f), new Vector2(-78f, yTop - 5f),
+                new Color(0.04f, 0.038f, 0.045f, 0.95f));
+            var fill = GameUIKit.MakePanel("Fill", bg.transform,
+                Vector2.zero, new Vector2(Mathf.Clamp(norm01, 0.08f, 1f), 1f), new Vector2(1f, 1f), new Vector2(-1f, -1f), fillCol);
+
+            GameUIKit.MakeText("Val_" + label, parent, valueText, 12, FontStyle.Bold, GameUIKit.ColGoldBright, TextAnchor.MiddleRight,
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-74f, yTop - 22f), new Vector2(-20f, yTop));
         }
 
         private void RefreshSelection()
         {
+            HideSkillTooltip();
             ClassDef cls = GameDB.GetClass(_previewClass);
 
             for (int i = 0; i < 10; i++)
@@ -779,76 +1005,109 @@ namespace AbyssGame
 
             if (_previewModel != null) Destroy(_previewModel);
             _previewModel = CharacterVisualFactory.BuildHeroVisual(cls, _previewStage, out _previewAnim, _previewBuild);
-            _previewModel.transform.position = Vector3.zero;
-            _previewModel.transform.rotation = Quaternion.Euler(0f, 185f, 0f);
+            _previewModel.transform.position = new Vector3(0f, 0.02f, 0f);
+            // Heroic 3/4 front stance showing both right-hand weapon and left-hand shield/bow clearly!
+            _previewModel.transform.rotation = Quaternion.Euler(0f, 165f, 0f);
+            MainMenuSceneView.SetSafeLobbyBool(_previewAnim, false);
 
             Color buildCol = ClassSpecializationSystem.GetBuildAccentColor(_previewClass, _previewBuild, cls.color);
-            string archLabel = ClassSpecializationSystem.GetArchetypeShortTag(ClassSpecializationSystem.GetClassArchetype(_previewClass));
 
             for (int i = _detailContainer.childCount - 1; i >= 0; i--)
                 Destroy(_detailContainer.GetChild(i).gameObject);
 
-            // Portrait + Class Title Header
+            // 1. Clean Header: Portrait + CLASS NAME + Role Tag + 1 Short Sentence
             Sprite clsPortrait = GameUIKit.GetClassIcon(_previewClass);
             if (clsPortrait != null)
             {
-                GameUIKit.MakeIcon("ClsPortrait", _detailContainer, clsPortrait,
-                    new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -104f), new Vector2(104f, -20f));
+                var pBox = CreateCharcoalGothicPanel("PortraitFrame", _detailContainer,
+                    new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -92f), new Vector2(92f, -20f), 0.95f);
+                GameUIKit.MakeIcon("ClsPortrait", pBox.transform, clsPortrait,
+                    new Vector2(0.06f, 0.06f), new Vector2(0.94f, 0.94f), Vector2.zero, Vector2.zero);
             }
 
-            GameUIKit.MakeText("Title", _detailContainer,
-                $"{cls.name.ToUpper()} — {cls.roleText}",
-                25, FontStyle.Bold, GameUIKit.ColGoldBright, TextAnchor.MiddleLeft,
-                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(118f, -58f), new Vector2(-24f, -16f));
+            string roleTag = (_previewClass >= 0 && _previewClass < ShortRoleTags.Length) ? ShortRoleTags[_previewClass] : cls.roleText;
+            string summary = (_previewClass >= 0 && _previewClass < ShortSummaries.Length) ? ShortSummaries[_previewClass] : cls.desc;
 
-            GameUIKit.MakeText("Desc", _detailContainer,
-                $"{cls.desc}\n<color=#D9B057>• Nội tại: {cls.passive}   |   Hệ Giáp: {archLabel} (+15% Chỉ Số)</color>",
-                13, FontStyle.Normal, GameUIKit.ColParchment, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(118f, -112f), new Vector2(-24f, -56f));
+            GameUIKit.MakeText("Title", _detailContainer, cls.name.ToUpper(), 24, FontStyle.Bold, GameUIKit.ColGoldBright, TextAnchor.UpperLeft,
+                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(106f, -52f), new Vector2(-20f, -18f));
 
-            // Base Attributes Bar
-            string stats = $"HP: <color=#F8DC85>{cls.hp:0}</color>   |   MP: <color=#7EC8FF>{cls.mana:0}</color>   |   ATK: <color=#F8DC85>{cls.atk:0}</color>   |   DEF: <color=#F8DC85>{cls.def:0}</color>   |   Crit: <color=#F8DC85>{cls.crit * 100:0}%</color>   |   Tốc chạy: <color=#F8DC85>{cls.moveSpeed:0.1f}</color>";
-            var statBox = GameUIKit.MakeStyledPanel("StatBox", _detailContainer, UIPanelStyle.Standard,
-                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(24f, -160f), new Vector2(-24f, -118f));
-            GameUIKit.MakeText("StatTxt", statBox.transform, stats, 14, FontStyle.Bold, GameUIKit.ColParchment, TextAnchor.MiddleCenter,
-                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            GameUIKit.MakeText("RoleTag", _detailContainer, roleTag, 12, FontStyle.Bold, new Color(0.84f, 0.68f, 0.36f), TextAnchor.MiddleLeft,
+                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(106f, -72f), new Vector2(-20f, -50f));
 
-            // 4 Active & Ultimate Skills (Q, W, E, R) with Engraved Skill Medallions
-            string[] keys = { "Q / 1", "W / 2", "E / 3", "R / 4 • ULTIMATE" };
+            GameUIKit.MakeText("Summary", _detailContainer, summary, 13, FontStyle.Normal, GameUIKit.ColParchment, TextAnchor.UpperLeft,
+                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(20f, -138f), new Vector2(-20f, -98f));
+
+            GameUIKit.MakePanel("Div1", _detailContainer,
+                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(20f, -145f), new Vector2(-20f, -143f),
+                new Color(0.68f, 0.52f, 0.24f, 0.48f));
+
+            // 2. 4 Main Stat Bars (HP, ATK, DEF, MOBILITY — fixed float format!)
+            BuildStatBarRow(_detailContainer, "HP",       $"{cls.hp:0}",          cls.hp / 1350f,        new Color(0.78f, 0.22f, 0.22f), -156f);
+            BuildStatBarRow(_detailContainer, "ATK",      $"{cls.atk:0}",         cls.atk / 115f,        new Color(0.88f, 0.54f, 0.20f), -184f);
+            BuildStatBarRow(_detailContainer, "DEF",      $"{cls.def:0}",         cls.def / 85f,         new Color(0.32f, 0.58f, 0.86f), -212f);
+            BuildStatBarRow(_detailContainer, "MOBILITY", $"{cls.moveSpeed:0.0}", cls.moveSpeed / 7.2f,  new Color(0.28f, 0.78f, 0.44f), -240f);
+
+            GameUIKit.MakePanel("Div2", _detailContainer,
+                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(20f, -274f), new Vector2(-20f, -272f),
+                new Color(0.68f, 0.52f, 0.24f, 0.48f));
+
+            // 3. 4 Compact Skills (Q/1, 2/Z, E/3, R/4 ★) with Hover/Click Detail Tooltip (Zero border overlap!)
+            GameUIKit.MakeText("SkHdr", _detailContainer, "KỸ NĂNG CHÍNH  <size=11><color=#9E9074>(Di chuột / bấm để xem chi tiết)</color></size>",
+                13, FontStyle.Bold, GameUIKit.ColGold, TextAnchor.MiddleLeft,
+                new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(20f, -300f), new Vector2(-20f, -278f));
+
+            string[] keys = { "Q / 1", "2 / Z", "E / 3", "R / 4 ★" };
             for (int s = 0; s < 4; s++)
             {
                 SkillDef sk = cls.skills[s];
-                float top = -170f - s * 76f;
-                var skCard = GameUIKit.MakeStyledPanel("Sk" + s, _detailContainer,
-                    s == 3 ? UIPanelStyle.Ornate : UIPanelStyle.SkillTree,
-                    new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(24f, top - 68f), new Vector2(-24f, top));
+                string keyTag = keys[s];
+                float top = -308f - s * 78f;
+
+                var skCard = GameUIKit.MakePanel("Sk" + s, _detailContainer,
+                    new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(20f, top - 70f), new Vector2(-20f, top),
+                    s == 3 ? new Color(0.14f, 0.11f, 0.08f, 0.94f) : new Color(0.10f, 0.09f, 0.105f, 0.90f));
+                var skOut = skCard.gameObject.AddComponent<Outline>();
+                skOut.effectColor = s == 3 ? new Color(0.95f, 0.76f, 0.30f, 0.92f) : new Color(0.56f, 0.44f, 0.22f, 0.65f);
+                skOut.effectDistance = new Vector2(1f, -1f);
+
+                // Hover & Click tooltip triggers
+                var skBtn = skCard.gameObject.AddComponent<Button>();
+                skBtn.transition = Selectable.Transition.ColorTint;
+                skBtn.onClick.AddListener(() => ShowSkillTooltip(keyTag, sk));
+
+                var trig = skCard.gameObject.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+                var enterE = new UnityEngine.EventSystems.EventTrigger.Entry { eventID = UnityEngine.EventSystems.EventTriggerType.PointerEnter };
+                enterE.callback.AddListener(_ => ShowSkillTooltip(keyTag, sk));
+                trig.triggers.Add(enterE);
+                var exitE = new UnityEngine.EventSystems.EventTrigger.Entry { eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit };
+                exitE.callback.AddListener(_ => HideSkillTooltip());
+                trig.triggers.Add(exitE);
 
                 GameUIKit.MakeIcon("SkIc", skCard.transform, GameUIKit.GetSkillIcon(sk),
-                    new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(10f, 8f), new Vector2(62f, -8f));
+                    new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(10f, -24f), new Vector2(58f, 24f));
 
                 GameUIKit.MakeText("SkTitle", skCard.transform,
-                    $"[{keys[s]}] {sk.name}   <size=12><color=#BDA685>(CD: {sk.cooldown:0.#}s | Mana: {sk.mana:0})</color></size>",
-                    15, FontStyle.Bold, sk.color, TextAnchor.UpperLeft,
-                    Vector2.zero, Vector2.one, new Vector2(72f, 6f), new Vector2(-14f, -8f));
+                    $"<color=#D9B057>[{keyTag}]</color> {sk.name}",
+                    14, FontStyle.Bold, s == 3 ? GameUIKit.ColGoldBright : GameUIKit.ColParchment, TextAnchor.UpperLeft,
+                    Vector2.zero, Vector2.one, new Vector2(68f, 34f), new Vector2(-12f, -8f));
 
-                GameUIKit.MakeText("SkDesc", skCard.transform, sk.desc, 13, FontStyle.Normal, GameUIKit.ColParchment, TextAnchor.LowerLeft,
-                    Vector2.zero, Vector2.one, new Vector2(72f, 8f), new Vector2(-14f, -32f));
+                string shortDesc = sk.desc != null && sk.desc.Length > 52 ? (sk.desc.Substring(0, 49) + "...") : (sk.desc ?? "");
+                GameUIKit.MakeText("SkDesc", skCard.transform, shortDesc, 12, FontStyle.Normal, new Color(0.78f, 0.73f, 0.62f), TextAnchor.LowerLeft,
+                    Vector2.zero, Vector2.one, new Vector2(68f, 8f), new Vector2(-12f, -34f));
             }
 
-            // 3 Build Specializations
-            GameUIKit.MakeText("BuildHeader", _detailContainer,
-                "CHUYÊN MÔN HÓA HƯỚNG BUILD (3 HƯỚNG BUILD / CLASS):",
-                15, FontStyle.Bold, GameUIKit.ColGoldBright, TextAnchor.MiddleLeft,
-                new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(24f, 162f), new Vector2(-24f, 190f));
+            // 4. 3 Build Specializations + Confirm Button
+            GameUIKit.MakeText("BuildHeader", _detailContainer, "HƯỚNG BUILD", 13, FontStyle.Bold, GameUIKit.ColGold, TextAnchor.MiddleLeft,
+                new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(20f, 166f), new Vector2(-20f, 190f));
 
             for (int b = 0; b < 3; b++)
             {
                 int bIdx = b;
                 bool active = (_previewBuild == b);
-                GameUIKit.MakeStyledButton("BuildBtn" + b, _detailContainer, cls.builds[b], 14,
+                GameUIKit.MakeStyledButton("BuildBtn" + b, _detailContainer, cls.builds[b], 12,
                     active ? UIButtonStyle.Selected : UIButtonStyle.Tab,
-                    new Vector2(0.04f + b * 0.315f, 0f), new Vector2(0.335f + b * 0.315f, 0f),
-                    new Vector2(0f, 114f), new Vector2(0f, 158f), () =>
+                    new Vector2(0.044f + b * 0.310f, 0f), new Vector2(0.336f + b * 0.310f, 0f),
+                    new Vector2(0f, 120f), new Vector2(0f, 162f), () =>
                     {
                         _previewBuild = bIdx;
                         RefreshSelection();
@@ -856,13 +1115,13 @@ namespace AbyssGame
             }
 
             GameUIKit.MakeText("BuildNote", _detailContainer,
-                "• " + cls.buildDesc[_previewBuild],
-                13, FontStyle.Italic, buildCol, TextAnchor.MiddleLeft,
-                new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(26f, 76f), new Vector2(-26f, 112f));
+                cls.buildDesc[_previewBuild],
+                12, FontStyle.Italic, buildCol, TextAnchor.MiddleLeft,
+                new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(22f, 80f), new Vector2(-22f, 118f));
 
             GameUIKit.MakeStyledButton("Confirm", _detailContainer,
-                $"XÁC NHẬN CHỌN {cls.name.ToUpper()} ({cls.builds[_previewBuild]})", 18, UIButtonStyle.Primary,
-                new Vector2(0.04f, 0f), new Vector2(0.96f, 0f), new Vector2(0f, 16f), new Vector2(0f, 72f), () =>
+                $"XÁC NHẬN • {cls.name.ToUpper()}", 16, UIButtonStyle.Primary,
+                new Vector2(0.044f, 0f), new Vector2(0.956f, 0f), new Vector2(0f, 18f), new Vector2(0f, 70f), () =>
                 {
                     GameSession.I.SelectLocalClass(_previewClass, _previewBuild);
                     if (LanRoomBridge.I.IsConnectedClient)

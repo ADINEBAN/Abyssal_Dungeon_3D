@@ -1,0 +1,149 @@
+{
+  "manifestVersion": "1.0.0",
+  "project": "Abyssal_Dungeon_3D",
+  "engine": {
+    "unityVersion": "2021.3.11f1",
+    "renderPipeline": "Universal Render Pipeline 12.1.7",
+    "shaderGraphVersion": "12.1.7",
+    "forbiddenPackages": [
+      "com.unity.render-pipelines.high-definition",
+      "com.unity.visualeffectgraph"
+    ],
+    "blenderMcpVersion": "5.3.0"
+  },
+  "artDirection": {
+    "theme": "Ancient Gothic Dark Fantasy",
+    "keywords": [
+      "weathered obsidian",
+      "runic stone",
+      "antique gold embers",
+      "aged bronze patinas",
+      "abyssal violet void",
+      "restrained high-contrast bloom"
+    ],
+    "basePalette": {
+      "antiqueGold": { "hex": "#D4AF37", "rgba": [0.831, 0.686, 0.216, 1.0], "hdrBoost": 1.65, "role": "Hero holy/divine accents, level-up, legendary loot, rune puzzle activation" },
+      "agedBronze": { "hex": "#8C6239", "rgba": [0.549, 0.384, 0.224, 1.0], "hdrBoost": 1.25, "role": "Torch embers, metallic armor sparks, earthen impact grit" },
+      "darkBrown": { "hex": "#3B281E", "rgba": [0.231, 0.157, 0.118, 1.0], "hdrBoost": 1.0, "role": "Stone dust, soot, wood splinter debris, smoke core" },
+      "obsidianBlack": { "hex": "#121016", "rgba": [0.071, 0.063, 0.086, 1.0], "hdrBoost": 1.0, "role": "Void tear cores, shadow trails, dark knight smoke silhouettes" },
+      "arcanePurple": { "hex": "#8A3FFC", "rgba": [0.541, 0.247, 0.988, 1.0], "hdrBoost": 2.0, "role": "Abyssal rift portals, warlock hexes, boss phase telegraphs" }
+    },
+    "elementalAccents": {
+      "Fire": { "coreHex": "#FFE08A", "midHex": "#FF6A1A", "edgeHex": "#7A1608", "hdrMax": 2.4 },
+      "Ice": { "coreHex": "#E6FAFF", "midHex": "#52C7F2", "edgeHex": "#16507A", "hdrMax": 2.1 },
+      "Lightning": { "coreHex": "#F5FDFF", "midHex": "#70D6FF", "edgeHex": "#2C4BFF", "hdrMax": 2.6 },
+      "Poison": { "coreHex": "#C5FF7A", "midHex": "#53A824", "edgeHex": "#1D3B10", "hdrMax": 1.85 },
+      "Holy": { "coreHex": "#FFF5C8", "midHex": "#D4AF37", "edgeHex": "#8C6239", "hdrMax": 2.1 },
+      "Shadow": { "coreHex": "#B084FF", "midHex": "#3A1C59", "edgeHex": "#0E0914", "hdrMax": 1.8 },
+      "Arcane": { "coreHex": "#E3C8FF", "midHex": "#8A3FFC", "edgeHex": "#341678", "hdrMax": 2.2 },
+      "Nature": { "coreHex": "#D6FFC4", "midHex": "#389E52", "edgeHex": "#1B4229", "hdrMax": 1.8 },
+      "Blood": { "coreHex": "#FF6E7A", "midHex": "#A61124", "edgeHex": "#30050A", "hdrMax": 2.1 },
+      "Abyssal": { "coreHex": "#C88CFF", "midHex": "#6610C9", "edgeHex": "#10081A", "hdrMax": 2.3 }
+    },
+    "rarityColors": {
+      "Common": "#B8B8C0",
+      "Uncommon": "#4CE07A",
+      "Rare": "#4CA6FF",
+      "Epic": "#A852FF",
+      "Legendary": "#FFAD29",
+      "Mythic": "#FF4242"
+    },
+    "bloomPolicy": {
+      "urpThreshold": 0.95,
+      "urpIntensity": 0.55,
+      "maxOverbrightScalar": 2.6,
+      "rule": "Keep smoke and ambient fog below 0.95 luminance; reserve HDR > 1.5 strictly for impact cores, blade edges, and danger telegraphs."
+    }
+  },
+  "playableClasses": [
+    { "id": 0, "name": "Knight", "rig": "Paladin", "weaponFamily": "SwordShield", "weapons": ["ClassWeapon_KnightSword", "ClassShield_KnightCrest"], "signatureElement": "Holy", "accentHex": "#63A3FF", "builds": ["Iron Vanguard", "Radiant Paladin", "Dark Knight"] },
+    { "id": 1, "name": "Guardian", "rig": "Paladin", "weaponFamily": "TowerShield", "weapons": ["ClassWeapon_GuardianHammer", "ClassShield_GuardianBulwark"], "signatureElement": "Holy", "accentHex": "#D4AF37", "builds": ["Immortal Bastion", "Thorns Templar", "Valkyrie Aegis"] },
+    { "id": 2, "name": "Berserker", "rig": "Vanguard", "weaponFamily": "GreatSword", "weapons": ["ClassWeapon_BerserkerCleaver"], "signatureElement": "Blood", "accentHex": "#D9332E", "builds": ["Bloodthirster", "Seismic Crusher", "Undying Rage"] },
+    { "id": 3, "name": "Assassin", "rig": "Kachujin", "weaponFamily": "Daggers", "weapons": ["ClassWeapon_AssassinDagger"], "signatureElement": "Shadow", "accentHex": "#964CE8", "builds": ["Nightblade", "Venom Stalker", "Phantom Step"] },
+    { "id": 4, "name": "Ranger", "rig": "Kachujin", "weaponFamily": "Bow", "weapons": ["Bow (LH_WP)", "RangerQuiver"], "signatureElement": "Nature", "accentHex": "#5AD470", "builds": ["Windrunner", "Venom Sniper", "Storm Archer"] },
+    { "id": 5, "name": "Mage", "rig": "Kachujin", "weaponFamily": "Staff", "weapons": ["ClassWeapon_MageStaff", "MageAstrolabe"], "signatureElement": "Fire", "accentHex": "#FA8A33", "builds": ["Pyromancer", "Cryomancer", "Arcanist"] },
+    { "id": 6, "name": "Warlock", "rig": "Vanguard", "weaponFamily": "Wand", "weapons": ["ClassWeapon_WarlockScepter", "WarlockGrimoire"], "signatureElement": "Abyssal", "accentHex": "#A345F0", "builds": ["Plaguebinder", "Soul Harvester", "Doom Caller"] },
+    { "id": 7, "name": "Monk", "rig": "Kachujin", "weaponFamily": "Fists", "weapons": ["ClassWeapon_MonkGauntlet", "MonkBeads"], "signatureElement": "Lightning", "accentHex": "#F5D959", "builds": ["Tempest Fist", "Zen Guardian", "Chi Striker"] },
+    { "id": 8, "name": "Druid", "rig": "Vanguard/Hero_DruidBeast", "weaponFamily": "Staff", "weapons": ["ClassWeapon_DruidScytheStaff"], "signatureElement": "Nature", "accentHex": "#4ACC78", "builds": ["Grove Healer", "Ursine Guardian", "Stormcaller"] },
+    { "id": 9, "name": "Cleric", "rig": "Paladin", "weaponFamily": "Mace", "weapons": ["ClassWeapon_ClericMace", "ClassShield_ClericReliquary"], "signatureElement": "Holy", "accentHex": "#FCEB94", "builds": ["High Priest", "Battle Cleric", "Lightbringer"] }
+  ],
+  "biomes": [
+    { "index": 0, "enum": "ForgottenTemple", "roomType": "Entrance", "torchOuter": "#FFA640", "torchCore": "#FFED9E", "fogHex": "#14101C", "mistHex": "#262133" },
+    { "index": 1, "enum": "AncientDungeon", "roomType": "Combat", "torchOuter": "#FF8029", "torchCore": "#FFE085", "fogHex": "#100E18", "mistHex": "#242230" },
+    { "index": 2, "enum": "UndergroundFortress", "roomType": "Elite", "torchOuter": "#FF5E1F", "torchCore": "#FFDB78", "fogHex": "#1A1214", "mistHex": "#2E1C1E" },
+    { "index": 3, "enum": "AbyssalCave", "roomType": "Puzzle", "torchOuter": "#6652FF", "torchCore": "#BDAEFF", "fogHex": "#0E101F", "mistHex": "#1C2440" },
+    { "index": 4, "enum": "CrystalChamber", "roomType": "MiniBoss", "torchOuter": "#38BDFF", "torchCore": "#BFEEFF", "fogHex": "#0D1A2B", "mistHex": "#1E3B59" },
+    { "index": 5, "enum": "CursedForest", "roomType": "Combat", "torchOuter": "#4CE885", "torchCore": "#C2FFE0", "fogHex": "#0D1712", "mistHex": "#1A3326" },
+    { "index": 6, "enum": "BossArena", "roomType": "Boss", "torchOuter": "#B833FF", "torchCore": "#F0B8FF", "fogHex": "#1A0A1F", "mistHex": "#331445" }
+  ],
+  "qualityBudgets": {
+    "Low": {
+      "vfxQualitySystemTier": "Low",
+      "graphicsPresetTier": "Low",
+      "particleDensityMultiplier": 0.40,
+      "maxParticlesPerEffect": 16,
+      "maxActiveScenePointLights": 4,
+      "dynamicLightOnVfx": false,
+      "allowDistortionPass": false,
+      "allowSecondaryDebris": false,
+      "allowFootstepDust": false,
+      "keepCombatTelegraphsFull": true,
+      "targetGpuTier": "Integrated Intel UHD/Iris Xe (target 60 FPS @ 1080p w/ renderScale 0.75-0.85, subject to profiling)"
+    },
+    "Medium": {
+      "vfxQualitySystemTier": "Medium",
+      "graphicsPresetTier": "Medium",
+      "particleDensityMultiplier": 0.70,
+      "maxParticlesPerEffect": 36,
+      "maxActiveScenePointLights": 8,
+      "dynamicLightOnVfx": false,
+      "allowDistortionPass": false,
+      "allowSecondaryDebris": true,
+      "allowFootstepDust": true,
+      "keepCombatTelegraphsFull": true,
+      "targetGpuTier": "Entry dGPU / Strong iGPU"
+    },
+    "High": {
+      "vfxQualitySystemTier": "High",
+      "graphicsPresetTier": "High",
+      "particleDensityMultiplier": 1.00,
+      "maxParticlesPerEffect": 72,
+      "maxActiveScenePointLights": 12,
+      "dynamicLightOnVfx": true,
+      "allowDistortionPass": true,
+      "allowSecondaryDebris": true,
+      "allowFootstepDust": true,
+      "keepCombatTelegraphsFull": true,
+      "targetGpuTier": "GTX 1650 4GB / RTX 2050+ (target 60 FPS @ 1080p, subject to profiling)"
+    }
+  },
+  "sharedShaders": [
+    "Assets/Resources/Shaders/AbyssalSkillVfx.shader",
+    "Assets/Resources/Shaders/AbyssalTorchFlame.shader",
+    "Assets/Resources/Shaders/AbyssalGroundMist.shader",
+    "Assets/Resources/Shaders/AbyssalWeaponTrail.shader",
+    "Assets/Resources/Shaders/AbyssalCrystalLit.shader"
+  ],
+  "sharedTextureDirectory": "Assets/Resources/VFX/Textures/",
+  "existingSystems": [
+    "AbyssalDungeon.VFX.VFXManager",
+    "AbyssalDungeon.VFX.ProceduralVFXFactory",
+    "AbyssGame.VfxQualitySystem",
+    "AbyssGame.ScalableVfxResponder",
+    "AbyssGame.GraphicsManager",
+    "AbyssGame.PerformanceMonitor",
+    "AbyssGame.GameObjectPool",
+    "AbyssGame.CombatFeelManager",
+    "AbyssGame.CharacterVisualFactory",
+    "AbyssGame.ClassVisualArmorKit",
+    "AbyssGame.CharacterMotionPolisher",
+    "AbyssGame.WeaponBladeTrail3D",
+    "AbyssGame.EnvironmentDistanceCuller",
+    "AbyssGame.BiomeAtmosphereController",
+    "AbyssGame.ModularDungeonArchitect",
+    "AbyssGame.DungeonWorldBuilder",
+    "AbyssGame.AbyssalBossAI",
+    "AbyssGame.LanRoomBridge"
+  ]
+}
+

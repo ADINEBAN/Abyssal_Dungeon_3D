@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using AbyssalDungeon.VFX;
 
 namespace AbyssGame
 {
@@ -295,6 +296,12 @@ namespace AbyssGame
                 if (_self == null || _self.IsDead) return;
                 GameAudio.I.PlaySfx(GameSfx.Explosion, 1f);
                 if (OrbitCamera3D.Instance != null) OrbitCamera3D.Instance.Shake(0.35f, 0.35f);
+                var mgr = VFXManager.EnsureInstance();
+                if (mgr != null)
+                {
+                    mgr.SpawnVFX(VFXType.Env_EnvironmentalImpact, c + Vector3.up * 0.05f, Quaternion.identity, 1.9f, new Color(0.75f, 0.28f, 1.0f, 1f), null, 1.35f);
+                    mgr.SpawnVFX(VFXType.Env_StoneDebris, c + Vector3.up * 0.15f, Quaternion.identity, 1.9f, null, null, 1.2f);
+                }
                 _self.DealCircleDamage(c, 6.8f, _self.EffectiveAttack() * 2.1f, StatusType.Slow, 3f, 0f, new Color(0.75f, 0.15f, 1f));
             });
             yield return new WaitForSeconds(1.25f);
@@ -353,6 +360,13 @@ namespace AbyssGame
                     if (_self == null || _self.IsDead) return;
                     GameAudio.I.PlaySfx(GameSfx.Explosion, 0.85f);
                     if (OrbitCamera3D.Instance != null) OrbitCamera3D.Instance.Shake(0.25f, 0.22f);
+                    var mgr = VFXManager.EnsureInstance();
+                    if (mgr != null)
+                    {
+                        mgr.SpawnVFX(VFXType.Env_FireExplosion, impact + Vector3.up * 0.08f, Quaternion.identity, 2.0f, new Color(1f, 0.35f, 0.12f, 1f), null, 1.05f);
+                        mgr.SpawnVFX(VFXType.Env_StoneDebris, impact + Vector3.up * 0.12f, Quaternion.identity, 1.8f, null, null, 0.9f);
+                        mgr.SpawnVFX(VFXType.Env_GroundDustBurst, impact + Vector3.up * 0.04f, Quaternion.identity, 1.5f, null, null, 1.05f);
+                    }
                     _self.DealCircleDamage(impact, 3.6f, _self.EffectiveAttack() * 1.95f, StatusType.Burn, 4f, _self.EffectiveAttack() * 0.25f, new Color(1f, 0.35f, 0.1f));
                 });
                 yield return new WaitForSeconds(0.26f);
@@ -367,16 +381,31 @@ namespace AbyssGame
             _arenaHazardVisual = new GameObject("ArenaPhase3Transformation");
             _arenaHazardVisual.transform.position = ArenaCenter;
 
-            var fireMat = CharacterVisualFactory.MakeTransparentMat(new Color(0.95f, 0.15f, 0.25f, 0.35f), new Color(1f, 0.15f, 0.2f) * 1.5f);
-            var obeliskMat = CharacterVisualFactory.MakeMat(new Color(0.25f, 0.05f, 0.35f), 0.7f, 0.5f, new Color(0.8f, 0.1f, 0.4f) * 1.6f);
+            var fireMat = CharacterVisualFactory.MakeTransparentMat(new Color(0.82f, 0.14f, 0.10f, 0.30f), new Color(1.0f, 0.24f, 0.10f) * 1.35f);
+            var obeliskStoneMat = PbrMaterialLibrary.GothicStone(new Color(0.28f, 0.22f, 0.26f));
+            var obeliskCrystalMat = PbrMaterialLibrary.AbyssalCrystal(new Color(0.58f, 0.08f, 0.14f), new Color(1.0f, 0.26f, 0.14f), 2.8f);
 
+            var mgr = VFXManager.EnsureInstance();
             for (int i = 0; i < 12; i++)
             {
                 float a = i * (360f / 12f) * Mathf.Deg2Rad;
                 Vector3 p = new Vector3(Mathf.Cos(a) * (ArenaRadius - 2.2f), 0f, Mathf.Sin(a) * (ArenaRadius - 2.2f));
-                CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "FireNode" + i, _arenaHazardVisual.transform, p + Vector3.up * 0.04f, new Vector3(3.4f, 0.03f, 3.4f), fireMat);
+                CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "FireNode" + i, _arenaHazardVisual.transform, p + Vector3.up * 0.03f, new Vector3(3.2f, 0.02f, 3.2f), fireMat);
                 if (i % 3 == 0)
-                    CharacterVisualFactory.Prim(PrimitiveType.Cube, "VoidObelisk" + i, _arenaHazardVisual.transform, p + Vector3.up * 1.6f, new Vector3(0.75f, 3.2f, 0.75f), obeliskMat, Quaternion.Euler(0f, i * 30f, 8f));
+                {
+                    var obeliskRoot = new GameObject("VoidObelisk" + i);
+                    obeliskRoot.transform.SetParent(_arenaHazardVisual.transform, false);
+                    obeliskRoot.transform.localPosition = p;
+                    obeliskRoot.transform.localRotation = Quaternion.Euler(0f, i * 30f, 0f);
+                    ObjMeshLoader.SpawnPiece("RunicPillarAltar", obeliskRoot.transform, Vector3.zero, Quaternion.identity, new Vector3(1.15f, 1.45f, 1.15f), obeliskStoneMat, false);
+                    ObjMeshLoader.SpawnPiece("AbyssalCrystalCluster", obeliskRoot.transform, Vector3.up * 2.15f, Quaternion.Euler(0f, i * 45f, 6f), Vector3.one * 0.85f, obeliskCrystalMat, false);
+                    if (mgr != null)
+                        mgr.SpawnLoopingVFX(VFXType.Env_HazardDenseSmoke, _arenaHazardVisual.transform, p + Vector3.up * 0.2f, Quaternion.identity, new Color(0.55f, 0.16f, 0.22f, 0.68f), 0.95f);
+                }
+                else if (mgr != null && i % 2 == 0)
+                {
+                    mgr.SpawnLoopingVFX(VFXType.Env_GroundFire, _arenaHazardVisual.transform, p + Vector3.up * 0.05f, Quaternion.identity, new Color(0.95f, 0.26f, 0.14f, 1f), 0.95f);
+                }
             }
         }
 

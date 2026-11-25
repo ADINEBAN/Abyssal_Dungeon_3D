@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 106a5a255160aea4d87457e44ac0010e, type: 3}
+  m_Name: WAP_Knight_HeaterShield
+  m_EditorClassIdentifier: 
+  WeaponId: Knight_HeaterShield
+  WeaponPrefab: {fileID: 5893844375213804100, guid: b43c949999956ab47be2342fdf6fb90b,
+    type: 3}
+  GripType: 5
+  PrimaryHandBone: LH_WP
+  FallbackHandBones:
+  - Bip001 L Hand
+  - LeftHand
+  SecondaryHandBone: Bip001 L Forearm
+  IsFloatingRelic: 0
+  LocalPosition: {x: 0.02, y: 0.03, z: 0}
+  LocalRotation: {x: 0, y: 0, z: 0}
+  LocalScale: {x: 1, y: 1, z: 1}
+  GripOffset: {x: 0, y: 0, z: 0}
+  HasBladeTrail: 0
+  TipSocketName: 
+  ProjectileSocketName: 
+  ImpactSocketName: ShieldFrontCenter
+  FallbackTipLocalOffset: {x: 0, y: 0, z: 0}
+  TrailWidth: 0.2
+  AuraScale: 0.72

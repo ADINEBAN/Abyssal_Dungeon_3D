@@ -20,15 +20,16 @@ namespace AbyssGame
 
     /// <summary>
     /// Central Scalable VFX Architecture (Section 5 & Phase 3).
-    /// Scales particle counts, collision sub-emitters, realtime particle lights, distortion,
-    /// and transparency overdraw across Low / Medium / High / Ultra while strictly preserving
+    /// Scales particle counts, bursts, secondary layers, collision sub-emitters, realtime particle lights,
+    /// distortion, and transparency overdraw across Low / Medium / High / Ultra while strictly preserving
     /// 100% of combat attack telegraphs and danger zones across all players in Multiplayer.
     /// </summary>
     public static class VfxQualitySystem
     {
-        private static readonly List<ParticleSystem> _registeredParticleSystems = new List<ParticleSystem>(64);
-        private static readonly List<ScalableVfxResponder> _responders = new List<ScalableVfxResponder>(64);
+        private static readonly List<ParticleSystem> _registeredParticleSystems = new List<ParticleSystem>(128);
+        private static readonly List<ScalableVfxResponder> _responders = new List<ScalableVfxResponder>(128);
 
+        public static event Action<VfxTierRules> OnVfxRulesApplied;
         public static VfxTierRules CurrentRules { get; private set; } = GetRulesFor(VfxQualityOption.High, 1.0f);
 
         public static VfxTierRules GetRulesFor(VfxQualityOption level, float densityOverride = -1f)
@@ -116,6 +117,8 @@ namespace AbyssGame
                 }
                 r.ApplyRules(CurrentRules);
             }
+
+            OnVfxRulesApplied?.Invoke(CurrentRules);
         }
 
         public static void RegisterParticleSystem(ParticleSystem ps)
@@ -163,105 +166,4 @@ namespace AbyssGame
             }
         }
     }
-
-    /// <summary>
-    /// Component attached to any VFX prefab or pooled VFX instance so it dynamically scales
-    /// particle counts, collision modules, and realtime lights according to VfxQualitySystem.
-    /// </summary>
-    public class ScalableVfxResponder : MonoBehaviour
-    {
-        public bool isCombatTelegraph = false;
-
-        private ParticleSystem[] _systems;
-        private int[] _baseMaxParticles;
-        private float[] _baseRateOverTime;
-        private Light[] _vfxLights;
-        private bool _cached;
-
-        private void Awake()
-        {
-            CacheBaseValues();
-        }
-
-        private void OnEnable()
-        {
-            CacheBaseValues();
-            VfxQualitySystem.RegisterResponder(this);
-            if (_systems != null)
-            {
-                for (int i = 0; i < _systems.Length; i++)
-                    VfxQualitySystem.RegisterParticleSystem(_systems[i]);
-            }
-            ApplyRules(VfxQualitySystem.CurrentRules);
-        }
-
-        private void OnDisable()
-        {
-            VfxQualitySystem.UnregisterResponder(this);
-        }
-
-        private void CacheBaseValues()
-        {
-            if (_cached) return;
-            _cached = true;
-
-            _systems = GetComponentsInChildren<ParticleSystem>(true);
-            _baseMaxParticles = new int[_systems.Length];
-            _baseRateOverTime = new float[_systems.Length];
-
-            for (int i = 0; i < _systems.Length; i++)
-            {
-                var ps = _systems[i];
-                if (ps == null) continue;
-                _baseMaxParticles[i] = Mathf.Max(4, ps.main.maxParticles);
-                _baseRateOverTime[i] = ps.emission.rateOverTimeMultiplier;
-            }
-
-            _vfxLights = GetComponentsInChildren<Light>(true);
-        }
-
-        public void ApplyRules(VfxTierRules rules)
-        {
-            CacheBaseValues();
-
-            // Combat telegraphs must always stay 100% readable even on Low
-            float mult = isCombatTelegraph ? Mathf.Max(0.75f, rules.particleCountMultiplier) : rules.particleCountMultiplier;
-
-            if (_systems != null)
-            {
-                for (int i = 0; i < _systems.Length; i++)
-                {
-                    var ps = _systems[i];
-                    if (ps == null) continue;
-
-                    var main = ps.main;
-                    main.maxParticles = Mathf.Max(4, Mathf.RoundToInt(_baseMaxParticles[i] * mult));
-
-                    var em = ps.emission;
-                    em.rateOverTimeMultiplier = _baseRateOverTime[i] * mult;
-
-                    var col = ps.collision;
-                    if (col.enabled && !rules.enableCollisionParticles)
-                        col.enabled = false;
-
-                    var lightsMod = ps.lights;
-                    if (lightsMod.enabled && !rules.enableParticleRealtimeLights)
-                        lightsMod.enabled = false;
-                }
-            }
-
-            if (_vfxLights != null)
-            {
-                for (int i = 0; i < _vfxLights.Length; i++)
-                {
-                    if (_vfxLights[i] != null)
-                    {
-                        _vfxLights[i].enabled = rules.enableParticleRealtimeLights;
-                        _vfxLights[i].shadows = LightShadows.None; // Particle lights never cast realtime shadows
-                    }
-                }
-            }
-        }
-    }
 }
-

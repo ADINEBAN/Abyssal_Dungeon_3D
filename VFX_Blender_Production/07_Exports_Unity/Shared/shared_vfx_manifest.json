@@ -1,0 +1,215 @@
+{
+  "library": "Abyssal_Shared_VFX_Foundation",
+  "blender_version": "5.3.0",
+  "unity_target": "2021.3.11f1 + URP 12.1.7",
+  "asset_count": 25,
+  "blend_file": "01_Shared_VFX/Abyssal_Shared_VFX_Library.blend",
+  "preview_png": "08_Previews/Preview_Shared_VFX_Library.png",
+  "textures": [
+    "07_Exports_Unity/Shared/T_Shared_GothicSlashArc.png",
+    "07_Exports_Unity/Shared/T_Shared_GothicRuneSeal.png",
+    "07_Exports_Unity/Shared/T_Shared_ShockwaveBurst.png"
+  ],
+  "assets": [
+    {
+      "name": "SM_Shared_Debris_Cluster",
+      "vertices": 30,
+      "triangles": 40,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Debris_Cluster.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Energy_ArcaneRing",
+      "vertices": 124,
+      "triangles": 120,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Energy_ArcaneRing.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Energy_Beam",
+      "vertices": 135,
+      "triangles": 224,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Energy_Beam.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Energy_Orb",
+      "vertices": 207,
+      "triangles": 256,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Energy_Orb.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Energy_Spiral",
+      "vertices": 180,
+      "triangles": 176,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Energy_Spiral.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Impact_GroundBurst",
+      "vertices": 60,
+      "triangles": 80,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Impact_GroundBurst.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Impact_GroundCrack",
+      "vertices": 175,
+      "triangles": 224,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Impact_GroundCrack.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Impact_RadialBurst",
+      "vertices": 48,
+      "triangles": 24,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Impact_RadialBurst.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Impact_WeaponStar",
+      "vertices": 48,
+      "triangles": 64,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Impact_WeaponStar.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Projectile_Core",
+      "vertices": 45,
+      "triangles": 64,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Projectile_Core.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Rune_GothicCircle",
+      "vertices": 132,
+      "triangles": 128,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Rune_GothicCircle.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Rune_SummoningCircle",
+      "vertices": 288,
+      "triangles": 280,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Rune_SummoningCircle.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Shockwave_Circular",
+      "vertices": 231,
+      "triangles": 384,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Shockwave_Circular.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura"
+    },
+    {
+      "name": "SM_Shared_Slash_Crescent",
+      "vertices": 174,
+      "triangles": 224,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Slash_Crescent.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Slash_Cross",
+      "vertices": 150,
+      "triangles": 192,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Slash_Cross.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Slash_Double",
+      "vertices": 150,
+      "triangles": 192,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Slash_Double.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Slash_MultiEnergy",
+      "vertices": 188,
+      "triangles": 228,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Slash_MultiEnergy.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Slash_Thin",
+      "vertices": 81,
+      "triangles": 104,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Slash_Thin.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Slash_WideHeavy",
+      "vertices": 87,
+      "triangles": 112,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Slash_WideHeavy.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Trail_BowArrow",
+      "vertices": 132,
+      "triangles": 128,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Trail_BowArrow.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Trail_CurvedBlade",
+      "vertices": 75,
+      "triangles": 96,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Trail_CurvedBlade.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Trail_DualBlades",
+      "vertices": 92,
+      "triangles": 88,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Trail_DualBlades.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Trail_GloveFist",
+      "vertices": 174,
+      "triangles": 168,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Trail_GloveFist.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Trail_GreatswordHeavy",
+      "vertices": 93,
+      "triangles": 120,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Trail_GreatswordHeavy.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    },
+    {
+      "name": "SM_Shared_Trail_StaffEnergy",
+      "vertices": 198,
+      "triangles": 192,
+      "fbx_unity_export": "07_Exports_Unity/Shared/SM_Shared_Trail_StaffEnergy.fbx",
+      "exists_on_disk": true,
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail"
+    }
+  ]
+}

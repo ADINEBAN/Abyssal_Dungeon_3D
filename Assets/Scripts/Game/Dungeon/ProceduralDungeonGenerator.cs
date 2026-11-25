@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using AbyssalDungeon.VFX;
 
 namespace AbyssGame
 {
@@ -17,78 +18,120 @@ namespace AbyssGame
             public DungeonBiome biome;
             public float width;
             public float length;
+            public float wallHeight;
+            public bool isSideBranch;
+            public int branchFromIndex;
+            public bool coolArcaneAccent;
             public float tensionTarget;
             public bool hasEnvironmentalEvent;
             public string eventTitle;
         }
 
         /// <summary>
-        /// Generates a deterministic 7-room sequence using a seed derived from floor + run index,
-        /// preserving the handcrafted GDD critical path while varying room dimensions, biome accents, and environmental events.
+        /// Generates a deterministic 8-room (7-purpose) Ancient Gothic Cathedral dungeon graph:
+        /// Main critical path (0 Entrance -> 1 Combat Hub -> 3 Puzzle -> 4 Elite -> 5 MiniBoss -> 6 Combat -> 7 Boss Arena)
+        /// PLUS an East-branching side path (1 Combat Hub -> East Vaulted Corridor -> 2 Treasure Vault).
+        /// Validates full graph reachability (main + branch) via BFS.
         /// </summary>
         public static RoomNodeSpec[] GenerateSeededDungeon(int floor, int seedOffset, out bool graphValid)
         {
             int seed = (floor * 7919) ^ (seedOffset * 104729) ^ 0x5A17C3;
             var rng = new System.Random(seed);
 
-            // Sawtooth tension/rest pacing curve (level-design skill)
+            // Distinct widths, lengths, ceiling heights, and warm/cool lighting across all 7 purposeful zones
             var specs = new RoomNodeSpec[]
             {
                 new RoomNodeSpec
                 {
-                    index = 0, type = RoomType.Entrance, biome = DungeonBiome.AncientDungeon,
-                    width = 18f, length = 16f, tensionTarget = 0.10f,
-                    hasEnvironmentalEvent = false, eventTitle = ""
+                    index = 0, type = RoomType.Entrance, biome = DungeonBiome.ForgottenTemple,
+                    width = 20f, length = 18f, wallHeight = 7.8f,
+                    isSideBranch = false, branchFromIndex = -1, coolArcaneAccent = true,
+                    tensionTarget = 0.10f, hasEnvironmentalEvent = false, eventTitle = ""
                 },
                 new RoomNodeSpec
                 {
-                    index = 1, type = RoomType.Combat, biome = DungeonBiome.ForgottenTemple,
-                    width = 22f + rng.Next(0, 3), length = 22f, tensionTarget = 0.50f,
-                    hasEnvironmentalEvent = true, eventTitle = "Tế Đàn Huyết Nguyệt"
+                    index = 1, type = RoomType.Combat, biome = DungeonBiome.AncientDungeon,
+                    width = 24f + rng.Next(0, 2) * 2f, length = 24f, wallHeight = 7.2f,
+                    isSideBranch = false, branchFromIndex = -1, coolArcaneAccent = false,
+                    tensionTarget = 0.50f, hasEnvironmentalEvent = true, eventTitle = "Tế Đàn Huyết Nguyệt"
                 },
                 new RoomNodeSpec
                 {
-                    index = 2, type = RoomType.Elite, biome = DungeonBiome.UndergroundFortress,
-                    width = 24f, length = 24f, tensionTarget = 0.85f,
-                    hasEnvironmentalEvent = true, eventTitle = "Lõi Năng Lượng Cổ Đại"
+                    index = 2, type = RoomType.Treasure, biome = DungeonBiome.ForgottenTemple,
+                    width = 16f, length = 16f, wallHeight = 6.8f,
+                    isSideBranch = true, branchFromIndex = 1, coolArcaneAccent = true,
+                    tensionTarget = 0.35f, hasEnvironmentalEvent = false, eventTitle = "Hầm Bảo Vật Cổ"
                 },
                 new RoomNodeSpec
                 {
-                    index = 3, type = RoomType.Puzzle, biome = DungeonBiome.CursedForest,
-                    width = 22f, length = 22f, tensionTarget = 0.45f,
-                    hasEnvironmentalEvent = false, eventTitle = "Ấn Phong Cổ Tự"
+                    index = 3, type = RoomType.Puzzle, biome = DungeonBiome.AbyssalCave,
+                    width = 24f, length = 22f, wallHeight = 7.8f,
+                    isSideBranch = false, branchFromIndex = -1, coolArcaneAccent = true,
+                    tensionTarget = 0.48f, hasEnvironmentalEvent = false, eventTitle = "Ấn Phong Cổ Tự"
                 },
                 new RoomNodeSpec
                 {
-                    index = 4, type = RoomType.MiniBoss, biome = DungeonBiome.CrystalChamber,
-                    width = 26f, length = 26f, tensionTarget = 0.90f,
-                    hasEnvironmentalEvent = false, eventTitle = ""
+                    index = 4, type = RoomType.Elite, biome = DungeonBiome.UndergroundFortress,
+                    width = 28f, length = 26f, wallHeight = 8.2f,
+                    isSideBranch = false, branchFromIndex = -1, coolArcaneAccent = false,
+                    tensionTarget = 0.85f, hasEnvironmentalEvent = true, eventTitle = "Lõi Năng Lượng Cổ Đại"
                 },
                 new RoomNodeSpec
                 {
-                    index = 5, type = RoomType.Combat, biome = DungeonBiome.AbyssalCave,
-                    width = 24f, length = 24f, tensionTarget = 0.65f,
-                    hasEnvironmentalEvent = true, eventTitle = "Giếng Hồn Vực Thẳm"
+                    index = 5, type = RoomType.MiniBoss, biome = DungeonBiome.CrystalChamber,
+                    width = 28f, length = 26f, wallHeight = 8.6f,
+                    isSideBranch = false, branchFromIndex = -1, coolArcaneAccent = true,
+                    tensionTarget = 0.90f, hasEnvironmentalEvent = false, eventTitle = ""
                 },
                 new RoomNodeSpec
                 {
-                    index = 6, type = RoomType.Boss, biome = DungeonBiome.BossArena,
-                    width = 32f, length = 32f, tensionTarget = 1.00f,
-                    hasEnvironmentalEvent = false, eventTitle = ""
+                    index = 6, type = RoomType.Combat, biome = DungeonBiome.CursedForest,
+                    width = 26f, length = 24f, wallHeight = 7.6f,
+                    isSideBranch = false, branchFromIndex = -1, coolArcaneAccent = false,
+                    tensionTarget = 0.68f, hasEnvironmentalEvent = true, eventTitle = "Giếng Hồn Vực Thẳm"
+                },
+                new RoomNodeSpec
+                {
+                    index = 7, type = RoomType.Boss, biome = DungeonBiome.BossArena,
+                    width = 36f, length = 36f, wallHeight = 9.4f,
+                    isSideBranch = false, branchFromIndex = -1, coolArcaneAccent = true,
+                    tensionTarget = 1.00f, hasEnvironmentalEvent = false, eventTitle = ""
                 }
             };
 
-            graphValid = ValidateDungeonGraphReachability(specs.Length);
+            graphValid = ValidateDungeonGraphReachability(specs);
             return specs;
         }
 
         /// <summary>
-        /// Validates that every room from Entrance (0) to Boss (N-1) is reachable via BFS.
+        /// Validates that every room (both main critical path and side-branch Treasure Room) is reachable from Entrance (0) via BFS.
         /// </summary>
-        public static bool ValidateDungeonGraphReachability(int roomCount)
+        public static bool ValidateDungeonGraphReachability(RoomNodeSpec[] specs)
         {
-            if (roomCount < 2) return false;
-            var visited = new bool[roomCount];
+            if (specs == null || specs.Length < 2) return false;
+            var adj = new List<int>[specs.Length];
+            for (int i = 0; i < specs.Length; i++) adj[i] = new List<int>();
+
+            int prevMain = -1;
+            for (int i = 0; i < specs.Length; i++)
+            {
+                if (specs[i].isSideBranch && specs[i].branchFromIndex >= 0 && specs[i].branchFromIndex < specs.Length)
+                {
+                    adj[specs[i].branchFromIndex].Add(i);
+                    adj[i].Add(specs[i].branchFromIndex);
+                }
+                else
+                {
+                    if (prevMain >= 0)
+                    {
+                        adj[prevMain].Add(i);
+                        adj[i].Add(prevMain);
+                    }
+                    prevMain = i;
+                }
+            }
+
+            var visited = new bool[specs.Length];
             var queue = new Queue<int>();
             queue.Enqueue(0);
             visited[0] = true;
@@ -98,15 +141,19 @@ namespace AbyssGame
             {
                 int cur = queue.Dequeue();
                 reached++;
-                int next = cur + 1;
-                if (next < roomCount && !visited[next])
+                foreach (int nb in adj[cur])
                 {
-                    visited[next] = true;
-                    queue.Enqueue(next);
+                    if (!visited[nb])
+                    {
+                        visited[nb] = true;
+                        queue.Enqueue(nb);
+                    }
                 }
             }
-            return reached == roomCount && visited[roomCount - 1];
+            return reached == specs.Length && visited[specs.Length - 1];
         }
+
+        public static bool ValidateDungeonGraphReachability(int roomCount) => roomCount >= 2;
     }
 
     /// <summary>
@@ -123,6 +170,9 @@ namespace AbyssGame
         private int _roomIndex;
         private Transform _floatingCore;
         private Light _eventLight;
+        private GameObject _idleRunesVfx;
+        private GameObject _idleEnergyVfx;
+        private Color _themeCol;
 
         public static WorldEnvironmentalEvent Create(Transform parent, Vector3 pos, string eventName, int roomIndex)
         {
@@ -154,6 +204,18 @@ namespace AbyssGame
             ev._roomIndex = roomIndex;
             ev._floatingCore = core.transform;
             ev._eventLight = l;
+            ev._themeCol = themeCol;
+
+            if (Application.isPlaying)
+            {
+                var mgr = VFXManager.EnsureInstance();
+                if (mgr != null)
+                {
+                    ev._idleRunesVfx = mgr.SpawnLoopingVFX(VFXType.Env_FloatingRunes, go.transform, new Vector3(0f, 0.8f, 0f), Quaternion.identity, themeCol, 0.95f);
+                    ev._idleEnergyVfx = mgr.SpawnLoopingVFX(VFXType.Env_MagicalEnergy, go.transform, new Vector3(0f, 0.6f, 0f), Quaternion.identity, themeCol, 0.9f);
+                }
+            }
+
             HeroPlayerInput.Interactables.Add(ev);
             return ev;
         }
@@ -177,6 +239,15 @@ namespace AbyssGame
 
             if (_eventLight != null) _eventLight.intensity = 0.5f;
             if (_floatingCore != null) _floatingCore.localScale *= 0.65f;
+
+            var mgr = VFXManager.EnsureInstance();
+            if (mgr != null)
+            {
+                if (_idleRunesVfx != null) { mgr.ReleaseVFX(VFXType.Env_FloatingRunes, _idleRunesVfx); _idleRunesVfx = null; }
+                if (_idleEnergyVfx != null) { mgr.ReleaseVFX(VFXType.Env_MagicalEnergy, _idleEnergyVfx); _idleEnergyVfx = null; }
+                mgr.SpawnVFX(VFXType.Env_AncientAltarActivation, transform.position, Quaternion.identity, 2.2f, _themeCol, null, 1.0f);
+                mgr.SpawnVFX(VFXType.Env_GroundDustBurst, transform.position + Vector3.up * 0.05f, Quaternion.identity, 1.6f, null, null, 0.9f);
+            }
 
             GameAudio.I.PlaySfx(GameSfx.Heal, 1f);
             CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 1.4f, new Color(1f, 0.65f, 0.22f), 4.2f, 0.65f);

@@ -106,7 +106,7 @@ Shader "AbyssalDungeon/GroundMist"
                 half2 borderDist = min((half2)IN.uv, 1.0h - (half2)IN.uv);
                 half borderFade = smoothstep(0.0h, _EdgeSoftness, min(borderDist.x, borderDist.y));
 
-                half alpha = saturate(cloud * borderFade * _MistColor.a);
+                half alpha = saturate(cloud * borderFade * min(_MistColor.a, 0.10h));
                 half3 col = MixFog(_MistColor.rgb, IN.fogFactor);
                 return half4(col, alpha);
             }

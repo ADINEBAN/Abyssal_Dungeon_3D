@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_vfx_smoke_512_10ceb6bf
+  m_Shader: {fileID: 4800000, guid: 7b4e91c2d83a4f509e126c84a90d31ef, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3010
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+      _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 67f62ccf1c7b33346a34769186bacd2a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _MaskMap:
+        m_Texture: {fileID: 2800000, guid: 7044e7e676d4bd94591b492552f255f0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+      _Cull: 0
+      _DstBlend: 10
+      _EmissionBoost: 1.25
+      _LumAsAlpha: 0.15
+      _SrcBlend: 5
+      _UseMask: 1.0
+    m_Colors:
+      _BaseColor: {r: 0.0661, g: 0.0547, b: 0.0943, a: 0.5020}

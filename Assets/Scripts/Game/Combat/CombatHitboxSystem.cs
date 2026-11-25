@@ -76,18 +76,19 @@ namespace AbyssGame
         {
             _defaultColor = accent;
             _trail = gameObject.AddComponent<TrailRenderer>();
-            _trail.time = 0.17f;
-            _trail.minVertexDistance = 0.04f;
-            _trail.numCornerVertices = 2;
-            _trail.numCapVertices = 2;
+            _trail.time = 0.22f;
+            _trail.minVertexDistance = 0.02f;
+            _trail.numCornerVertices = 4;
+            _trail.numCapVertices = 4;
             _trail.shadowCastingMode = ShadowCastingMode.Off;
             _trail.receiveShadows = false;
             _trail.alignment = LineAlignment.View;
             _trail.emitting = false;
+            _trail.textureMode = LineTextureMode.Stretch;
 
             var curve = new AnimationCurve(
-                new Keyframe(0f, width),
-                new Keyframe(0.35f, width * 0.82f),
+                new Keyframe(0f, width * 1.15f),
+                new Keyframe(0.35f, width * 0.95f),
                 new Keyframe(1f, 0.0f));
             _trail.widthCurve = curve;
 
@@ -96,14 +97,19 @@ namespace AbyssGame
             if (sh != null)
             {
                 _mat = new Material(sh);
-                _mat.SetColor("_MainColor", Color.Lerp(accent, Color.white, 0.45f));
+                var tex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_WpnRuneStreak");
+                if (tex == null) tex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_EnergyTrail");
+                if (tex == null) tex = Resources.Load<Texture2D>("VFX/Textures/T_Vfx_BladeSlash");
+                if (tex != null) _mat.SetTexture("_MainTex", tex);
+
+                _mat.SetColor("_MainColor", Color.Lerp(accent, Color.white, 0.65f));
                 _mat.SetColor("_EdgeColor", accent);
-                _mat.SetFloat("_Progress", 0.35f);
-                _mat.SetFloat("_Opacity", 0.92f);
+                _mat.SetFloat("_Progress", 0.05f);
+                _mat.SetFloat("_Opacity", 1.35f);
             }
             else
             {
-                _mat = CharacterVisualFactory.MakeTransparentMat(new Color(accent.r, accent.g, accent.b, 0.72f), accent * 2f);
+                _mat = CharacterVisualFactory.MakeTransparentMat(new Color(accent.r, accent.g, accent.b, 0.85f), accent * 2.5f);
             }
             _trail.sharedMaterial = _mat;
         }

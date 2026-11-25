@@ -1,0 +1,122 @@
+{
+  "class": "Assassin",
+  "weapon": "Dual_Blades",
+  "unity_target": "2021.3.11f1 + URP 12.1.7",
+  "blender_version": "5.3.0",
+  "measured_unity_weapons": {
+    "right_hand": {
+      "prefab": "Assets/Art/Exported/Weapons/Wpn_AssassinBladeR.prefab",
+      "size_m": [
+        0.064,
+        0.046,
+        0.657
+      ],
+      "tip_local_z": 0.531
+    },
+    "left_hand": {
+      "prefab": "Assets/Art/Exported/Weapons/Wpn_AssassinBladeL.prefab",
+      "size_m": [
+        0.063,
+        0.046,
+        0.597
+      ],
+      "tip_local_z": 0.533,
+      "socket_note": "LH_WP has 180 deg X-roll"
+    }
+  },
+  "animation_stages_30fps": {
+    "anticipation": [
+      1,
+      8
+    ],
+    "charge": [
+      9,
+      18
+    ],
+    "release": [
+      19,
+      28
+    ],
+    "travel": [
+      29,
+      38
+    ],
+    "impact": [
+      39,
+      48
+    ],
+    "dissipation": [
+      49,
+      60
+    ]
+  },
+  "blend_scene": "02_Weapons/Assassin/Dual_Blades/Blender/Assassin_DualBlades_VFX_Assembly.blend",
+  "animated_fbx": "07_Exports_Unity/Assassin/Dual_Blades/Anim_Asn_DualBlades_6StageShowcase.fbx",
+  "textures": [
+    "T_Asn_CrimsonShadowSlash.png",
+    "T_Asn_VenomSplatter.png",
+    "T_Asn_ShadowSmokeWisps.png",
+    "T_Asn_BackstabSigil.png"
+  ],
+  "previews": [
+    "Preview_Assassin_6Effects_Sheet.png",
+    "Preview_Assassin_ReleaseSlash_f24.png",
+    "Preview_Assassin_ImpactBurst_f44.png"
+  ],
+  "effects": [
+    {
+      "name": "SM_Asn_DualBladeSlash",
+      "vertices": 174,
+      "triangles": 224,
+      "fbx_weapon_dir": "02_Weapons/Assassin/Dual_Blades/FBX/SM_Asn_DualBladeSlash.fbx",
+      "fbx_unity_export": "07_Exports_Unity/Assassin/Dual_Blades/SM_Asn_DualBladeSlash.fbx",
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail",
+      "primary_texture": "T_Asn_CrimsonShadowSlash.png"
+    },
+    {
+      "name": "SM_Asn_RapidComboTrails",
+      "vertices": 435,
+      "triangles": 560,
+      "fbx_weapon_dir": "02_Weapons/Assassin/Dual_Blades/FBX/SM_Asn_RapidComboTrails.fbx",
+      "fbx_unity_export": "07_Exports_Unity/Assassin/Dual_Blades/SM_Asn_RapidComboTrails.fbx",
+      "intended_unity_shader": "AbyssalDungeon/WeaponTrail",
+      "primary_texture": "T_Asn_CrimsonShadowSlash.png"
+    },
+    {
+      "name": "SM_Asn_DashAfterimage",
+      "vertices": 168,
+      "triangles": 192,
+      "fbx_weapon_dir": "02_Weapons/Assassin/Dual_Blades/FBX/SM_Asn_DashAfterimage.fbx",
+      "fbx_unity_export": "07_Exports_Unity/Assassin/Dual_Blades/SM_Asn_DashAfterimage.fbx",
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura",
+      "primary_texture": "T_Asn_ShadowSmokeWisps.png"
+    },
+    {
+      "name": "SM_Asn_BackstabImpact",
+      "vertices": 66,
+      "triangles": 80,
+      "fbx_weapon_dir": "02_Weapons/Assassin/Dual_Blades/FBX/SM_Asn_BackstabImpact.fbx",
+      "fbx_unity_export": "07_Exports_Unity/Assassin/Dual_Blades/SM_Asn_BackstabImpact.fbx",
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura",
+      "primary_texture": "T_Asn_BackstabSigil.png"
+    },
+    {
+      "name": "SM_Asn_PoisonBladeImpact",
+      "vertices": 363,
+      "triangles": 440,
+      "fbx_weapon_dir": "02_Weapons/Assassin/Dual_Blades/FBX/SM_Asn_PoisonBladeImpact.fbx",
+      "fbx_unity_export": "07_Exports_Unity/Assassin/Dual_Blades/SM_Asn_PoisonBladeImpact.fbx",
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura",
+      "primary_texture": "T_Asn_VenomSplatter.png"
+    },
+    {
+      "name": "SM_Asn_ShadowBurst",
+      "vertices": 226,
+      "triangles": 208,
+      "fbx_weapon_dir": "02_Weapons/Assassin/Dual_Blades/FBX/SM_Asn_ShadowBurst.fbx",
+      "fbx_unity_export": "07_Exports_Unity/Assassin/Dual_Blades/SM_Asn_ShadowBurst.fbx",
+      "intended_unity_shader": "AbyssalDungeon/WeaponAura",
+      "primary_texture": "T_Asn_ShadowSmokeWisps.png"
+    }
+  ]
+}

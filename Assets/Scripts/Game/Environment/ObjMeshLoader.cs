@@ -20,6 +20,8 @@ namespace AbyssGame
         private static Mesh _gothicBrickWallGoldMesh;
         private static Mesh _gothicCathedralFloorStoneMesh;
         private static Mesh _gothicCathedralFloorGoldMesh;
+        private static Mesh _gothicOpenArchStoneMesh;
+        private static Mesh _gothicOpenArchTrimMesh;
 
         /// <summary>
         /// Loads or parses an authored polygonal Mesh (e.g. "GothicPillar_LOD0").
@@ -78,6 +80,11 @@ namespace AbyssGame
             {
                 return SpawnOrnateGothicCathedralFloor(parent, localPos, localRot, localScale, material, addBoxCollider);
             }
+            if (cleanBase == "GothicArchVault" || cleanBase == "GothicGateFrame")
+            {
+                float baseW = cleanBase == "GothicGateFrame" ? 6.0f : 4.0f;
+                return SpawnOrnateGothicOpenArch(cleanBase, baseW, parent, localPos, localRot, localScale, material, castShadows);
+            }
 
             // Check Editor-baked LODGroup prefab first
             if (!_prefabCache.TryGetValue(cleanBase, out var prefab))
@@ -106,34 +113,48 @@ namespace AbyssGame
                 for (int i = 0; i < renderers.Length; i++)
                 {
                     Renderer r = renderers[i];
-                    Material existing = r.sharedMaterial;
-                    bool hasPaintedTex = existing != null &&
-                        ((existing.HasProperty("_BaseMap") && existing.GetTexture("_BaseMap") != null) ||
-                         (existing.HasProperty("_MainTex") && existing.GetTexture("_MainTex") != null));
+                    if (material != null)
+                    {
+                        Material existing = r.sharedMaterial;
+                        bool isMultiMat = r.sharedMaterials != null && r.sharedMaterials.Length > 1;
+                        bool isCustomFxShader = existing != null && existing.shader != null &&
+                            (existing.shader.name.IndexOf("LightShaft", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             existing.shader.name.IndexOf("AbyssalCrystal", StringComparison.OrdinalIgnoreCase) >= 0);
+                        bool hasPaintedTex = existing != null &&
+                            ((existing.HasProperty("_BaseMap") && existing.GetTexture("_BaseMap") != null) ||
+                             (existing.HasProperty("_MainTex") && existing.GetTexture("_MainTex") != null));
 
-                    if (!hasPaintedTex || forceFxMaterial)
-                    {
-                        if (material != null) r.sharedMaterial = material;
-                    }
-                    else if (material != null)
-                    {
-                        // Preserve ExportedProject hand-painted PBR texture & normal map while applying subtle biome/rarity tint
-                        Color callerCol = material.HasProperty("_BaseColor") ? material.GetColor("_BaseColor") : material.color;
-                        Color tinted = Color.Lerp(Color.white, callerCol, 0.35f);
-                        tinted.a = 1f;
-                        _mpb.Clear();
-                        _mpb.SetColor("_BaseColor", tinted);
-                        _mpb.SetColor("_Color", tinted);
-                        if (material.IsKeywordEnabled("_EMISSION") && material.HasProperty("_EmissionColor"))
+                        if (!isMultiMat && !isCustomFxShader && (!hasPaintedTex || forceFxMaterial))
                         {
-                            _mpb.SetColor("_EmissionColor", material.GetColor("_EmissionColor") * 0.45f);
+                            r.sharedMaterial = material;
                         }
-                        r.SetPropertyBlock(_mpb);
+                        else if (!isCustomFxShader)
+                        {
+                            // Preserve multi-material / hand-painted PBR texture & normal map while applying subtle biome tint
+                            Color callerCol = material.HasProperty("_BaseColor") ? material.GetColor("_BaseColor") : material.color;
+                            Color tinted = Color.Lerp(Color.white, callerCol, 0.35f);
+                            tinted.a = 1f;
+                            _mpb.Clear();
+                            _mpb.SetColor("_BaseColor", tinted);
+                            _mpb.SetColor("_Color", tinted);
+                            if (material.IsKeywordEnabled("_EMISSION") && material.HasProperty("_EmissionColor"))
+                            {
+                                _mpb.SetColor("_EmissionColor", material.GetColor("_EmissionColor") * 0.45f);
+                            }
+                            r.SetPropertyBlock(_mpb);
+                        }
                     }
 
                     r.shadowCastingMode = castShadows
                         ? UnityEngine.Rendering.ShadowCastingMode.On
                         : UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
+
+                var embeddedLights = root.GetComponentsInChildren<Light>(true);
+                for (int i = 0; i < embeddedLights.Length; i++)
+                {
+                    if (embeddedLights[i].type != LightType.Directional)
+                        embeddedLights[i].shadows = LightShadows.None;
                 }
 
                 boundsLocal = ComputeRootLocalBounds(root);
@@ -213,10 +234,10 @@ namespace AbyssGame
             root.transform.localScale = localScale;
 
             Material stoneMat = wallMat != null ? wallMat : PbrMaterialLibrary.GothicStone();
-            Material goldMat = PbrMaterialLibrary.RunicGold();
+            Material ironTrimMat = PbrMaterialLibrary.WroughtIron();
 
-            CreateMeshChild("GothicBrickMasonry", root.transform, _gothicBrickWallStoneMesh, stoneMat, castShadows);
-            CreateMeshChild("GothicReliefTrim", root.transform, _gothicBrickWallGoldMesh, goldMat, castShadows);
+            CreateMeshChild("GothicBrickMasonry", root.transform, _gothicBrickWallStoneMesh, stoneMat, false);
+            CreateMeshChild("GothicReliefTrim", root.transform, _gothicBrickWallGoldMesh, ironTrimMat, false);
 
             if (addBoxCollider)
             {
@@ -228,87 +249,140 @@ namespace AbyssGame
             return root;
         }
 
+        /// <summary>
+        /// Spawns a 100% open, pass-through 3D Gothic Pointed Cathedral Archway (zero grates/bars blocking heroes or doors).
+        /// </summary>
+        private static GameObject SpawnOrnateGothicOpenArch(
+            string name,
+            float baseWidth,
+            Transform parent,
+            Vector3 localPos,
+            Quaternion localRot,
+            Vector3 localScale,
+            Material archMat,
+            bool castShadows)
+        {
+            if (_gothicOpenArchStoneMesh == null || _gothicOpenArchTrimMesh == null)
+            {
+                var sV = new List<Vector3>(256);
+                var sUV = new List<Vector2>(256);
+                var sN = new List<Vector3>(256);
+                var sT = new List<int>(512);
+
+                var tV = new List<Vector3>(128);
+                var tUV = new List<Vector2>(128);
+                var tN = new List<Vector3>(128);
+                var tT = new List<int>(256);
+
+                // Left & Right Heavy Gothic Jamb Pillars (4.0m nominal span, clear 3.0m opening)
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    float jx = side * 1.76f;
+                    AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(jx, 0.32f, 0f), new Vector3(0.58f, 0.64f, 0.74f), 0.42f);
+                    AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(jx, 2.15f, 0f), new Vector3(0.46f, 3.30f, 0.62f), 0.42f);
+                    AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(jx, 3.88f, 0f), new Vector3(0.58f, 0.22f, 0.72f), 0.42f);
+                    AppendBoxUvScaled(tV, tUV, tN, tT, new Vector3(jx, 3.74f, 0f), new Vector3(0.52f, 0.06f, 0.66f), 0.5f);
+
+                    // Pointed Ogive Voussoir Arch Stones rising from y = 3.95m to apex y = 5.02m
+                    int segs = 5;
+                    for (int s = 0; s < segs; s++)
+                    {
+                        float tm = (s + 0.5f) / segs;
+                        float ax = side * Mathf.Lerp(1.66f, 0.16f, tm);
+                        float ay = Mathf.Lerp(4.02f, 4.98f, Mathf.Sin(tm * Mathf.PI * 0.5f));
+                        AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(ax, ay, 0f), new Vector3(0.42f, 0.34f, 0.60f), 0.45f);
+                        AppendBoxUvScaled(tV, tUV, tN, tT, new Vector3(ax, ay - 0.16f, 0f), new Vector3(0.38f, 0.06f, 0.64f), 0.5f);
+                    }
+                }
+
+                // Apex Keystone & Upper Spandrel Crown Lintel
+                AppendBoxUvScaled(tV, tUV, tN, tT, new Vector3(0f, 5.04f, 0f), new Vector3(0.38f, 0.44f, 0.68f), 0.5f);
+                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(0f, 5.12f, 0f), new Vector3(4.06f, 0.22f, 0.64f), 0.42f);
+
+                _gothicOpenArchStoneMesh = new Mesh { name = "OrnateGothicOpenArch_Stone" };
+                _gothicOpenArchStoneMesh.SetVertices(sV);
+                _gothicOpenArchStoneMesh.SetUVs(0, sUV);
+                _gothicOpenArchStoneMesh.SetNormals(sN);
+                _gothicOpenArchStoneMesh.SetTriangles(sT, 0);
+                _gothicOpenArchStoneMesh.RecalculateBounds();
+                _gothicOpenArchStoneMesh.RecalculateTangents();
+
+                _gothicOpenArchTrimMesh = new Mesh { name = "OrnateGothicOpenArch_Trim" };
+                _gothicOpenArchTrimMesh.SetVertices(tV);
+                _gothicOpenArchTrimMesh.SetUVs(0, tUV);
+                _gothicOpenArchTrimMesh.SetNormals(tN);
+                _gothicOpenArchTrimMesh.SetTriangles(tT, 0);
+                _gothicOpenArchTrimMesh.RecalculateBounds();
+                _gothicOpenArchTrimMesh.RecalculateTangents();
+            }
+
+            var root = new GameObject(name);
+            if (parent != null) root.transform.SetParent(parent, false);
+            root.transform.localPosition = localPos;
+            root.transform.localRotation = localRot;
+            float widthFactor = baseWidth / 4.0f;
+            root.transform.localScale = new Vector3(localScale.x * widthFactor, localScale.y, localScale.z);
+
+            Material stoneMat = archMat != null ? archMat : PbrMaterialLibrary.GothicStone();
+            Material ironMat = PbrMaterialLibrary.WroughtIron();
+            CreateMeshChild("ArchStone", root.transform, _gothicOpenArchStoneMesh, stoneMat, false);
+            CreateMeshChild("ArchIronTrim", root.transform, _gothicOpenArchTrimMesh, ironMat, false);
+            return root;
+        }
+
         private static void EnsureOrnateGothicBrickWallMeshes()
         {
             if (_gothicBrickWallStoneMesh != null && _gothicBrickWallGoldMesh != null)
                 return;
 
-            var sV = new List<Vector3>(512);
-            var sUV = new List<Vector2>(512);
-            var sN = new List<Vector3>(512);
-            var sT = new List<int>(1024);
+            var sV = new List<Vector3>(256);
+            var sUV = new List<Vector2>(256);
+            var sN = new List<Vector3>(256);
+            var sT = new List<int>(512);
 
-            var gV = new List<Vector3>(256);
-            var gUV = new List<Vector2>(256);
-            var gN = new List<Vector3>(256);
-            var gT = new List<int>(512);
+            var gV = new List<Vector3>(64);
+            var gUV = new List<Vector2>(64);
+            var gN = new List<Vector3>(64);
+            var gT = new List<int>(128);
 
-            // 1. Main Solid Staggered Gothic Brick Backing Wall (4.0m wide x 5.2m tall x 0.34m thick)
-            AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(0f, 2.60f, 0f), new Vector3(4.00f, 5.20f, 0.34f), 0.38f);
+            // 1. Clean Monumental Ashlar Stone Masonry Backing Wall (4.0m wide x 5.2m tall, seamless UV tiling)
+            AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(0f, 2.60f, 0f), new Vector3(4.00f, 5.20f, 0.36f), 0.36f);
 
-            // 2. Heavy Molded Stone Plinth Base (y = 0..0.68m) & Upper Plinth Ledge
-            AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(0f, 0.34f, 0f), new Vector3(4.04f, 0.68f, 0.54f), 0.40f);
-            AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(0f, 0.74f, 0f), new Vector3(4.02f, 0.12f, 0.48f), 0.40f);
+            // 2. Grounded Heavy Dungeon Stone Plinth Dado Base (y = 0..0.72m)
+            AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(0f, 0.36f, 0.08f), new Vector3(4.02f, 0.72f, 0.44f), 0.38f);
+            AppendBoxUvScaled(gV, gUV, gN, gT, new Vector3(0f, 0.74f, 0.12f), new Vector3(4.02f, 0.06f, 0.42f), 0.50f);
 
-            // 3. Left, CenterMullion & Right Fluted Gothic Buttress Pilasters
-            float[] pilasterXs = { -1.84f, 0.0f, 1.84f };
+            // 3. Left & Right Bay Buttress Pilasters + Central Gothic Blind-Arch Lancet Relief
+            float[] pilasterXs = { -1.84f, 1.84f };
             for (int i = 0; i < pilasterXs.Length; i++)
             {
                 float px = pilasterXs[i];
-                float pw = (i == 1) ? 0.30f : 0.34f;
-                float pd = (i == 1) ? 0.50f : 0.58f;
-                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(px, 2.60f, 0f), new Vector3(pw, 5.20f, pd), 0.42f);
-                // Pilaster Capital & Base Collar
-                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(px, 4.42f, 0f), new Vector3(pw + 0.10f, 0.18f, pd + 0.08f), 0.42f);
-                AppendBoxUvScaled(gV, gUV, gN, gT, new Vector3(px, 4.30f, 0f), new Vector3(pw + 0.06f, 0.06f, pd + 0.05f), 0.5f);
+                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(px, 2.60f, 0.12f), new Vector3(0.36f, 5.20f, 0.48f), 0.38f);
+                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(px, 4.56f, 0.16f), new Vector3(0.48f, 0.24f, 0.54f), 0.40f);
+                AppendBoxUvScaled(gV, gUV, gN, gT, new Vector3(px, 4.42f, 0.16f), new Vector3(0.42f, 0.06f, 0.52f), 0.50f);
             }
 
-            // 4. Carved Gothic Dado Frieze Band (y = 1.72m .. 1.98m) with Bronze-Gold Relief Moldings
-            AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(0f, 1.85f, 0f), new Vector3(4.02f, 0.26f, 0.48f), 0.42f);
-            AppendBoxUvScaled(gV, gUV, gN, gT, new Vector3(0f, 1.99f, 0f), new Vector3(4.03f, 0.05f, 0.50f), 0.5f);
-            AppendBoxUvScaled(gV, gUV, gN, gT, new Vector3(0f, 1.71f, 0f), new Vector3(4.03f, 0.05f, 0.50f), 0.5f);
-
-            // 5. Twin Gothic Pointed Blind Arches (Left Bay x = -0.92m, Right Bay x = +0.92m)
-            float[] bayXs = { -0.92f, 0.92f };
-            for (int b = 0; b < bayXs.Length; b++)
+            // Twin Pointed Blind-Arch Moulded Stone Ribs on Front Wall Face (authentic Gothic cathedral relief)
+            float[] mullionXs = { -0.92f, 0.0f, 0.92f };
+            for (int m = 0; m < mullionXs.Length; m++)
             {
-                float bx = bayXs[b];
-                // Vertical jambs of the blind arch
-                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(bx - 0.58f, 3.05f, 0f), new Vector3(0.14f, 2.15f, 0.44f), 0.42f);
-                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(bx + 0.58f, 3.05f, 0f), new Vector3(0.14f, 2.15f, 0.44f), 0.42f);
-
-                // Pointed Ogive Arch Ribs (5 segments per side meeting at a sharp Gothic apex at y = 4.46m)
-                int segs = 4;
-                for (int side = -1; side <= 1; side += 2)
-                {
-                    for (int s = 0; s < segs; s++)
-                    {
-                        float t0 = (float)s / segs;
-                        float t1 = (float)(s + 1) / segs;
-                        float tm = (t0 + t1) * 0.5f;
-                        float x = bx + side * Mathf.Lerp(0.56f, 0.05f, tm);
-                        float y = Mathf.Lerp(3.95f, 4.44f, Mathf.Sin(tm * Mathf.PI * 0.5f));
-                        AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(x, y, 0f), new Vector3(0.18f, 0.20f, 0.46f), 0.45f);
-                    }
-                }
-
-                // Gothic Arch Keystone + Carved Central Quatrefoil Rosette Boss in each bay
-                AppendBoxUvScaled(gV, gUV, gN, gT, new Vector3(bx, 4.48f, 0f), new Vector3(0.18f, 0.22f, 0.49f), 0.5f);
-                AppendBoxUvScaled(gV, gUV, gN, gT, new Vector3(bx, 3.22f, 0f), new Vector3(0.34f, 0.34f, 0.42f), 0.5f);
-                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(bx, 3.22f, 0f), new Vector3(0.22f, 0.52f, 0.40f), 0.5f);
-                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(bx, 3.22f, 0f), new Vector3(0.52f, 0.22f, 0.40f), 0.5f);
+                float mx = mullionXs[m];
+                float mw = (m == 1) ? 0.18f : 0.13f;
+                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(mx, 2.35f, 0.14f), new Vector3(mw, 3.20f, 0.22f), 0.42f);
             }
-
-            // 6. Corbelled Gothic Crown Cornice & Crenellated Frieze (y = 4.68m .. 5.20m)
-            AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(0f, 4.78f, 0f), new Vector3(4.04f, 0.22f, 0.54f), 0.42f);
-            AppendBoxUvScaled(gV, gUV, gN, gT, new Vector3(0f, 4.91f, 0f), new Vector3(4.05f, 0.06f, 0.58f), 0.5f);
-            AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(0f, 5.06f, 0f), new Vector3(4.06f, 0.26f, 0.62f), 0.42f);
-
-            // Stone corbel brackets along the upper frieze
-            for (int c = -3; c <= 3; c++)
+            // Pointed blind-arch voussoir lintels spanning the twin bays (y = 3.95..4.48m)
+            for (int bay = -1; bay <= 1; bay += 2)
             {
-                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(c * 0.52f, 4.62f, 0f), new Vector3(0.16f, 0.18f, 0.52f), 0.45f);
+                float bx = bay * 0.92f;
+                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(bx - 0.36f, 4.18f, 0.14f), new Vector3(0.46f, 0.20f, 0.22f), 0.45f);
+                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(bx + 0.36f, 4.18f, 0.14f), new Vector3(0.46f, 0.20f, 0.22f), 0.45f);
+                AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(bx, 4.38f, 0.15f), new Vector3(0.44f, 0.22f, 0.24f), 0.45f);
+                AppendBoxUvScaled(gV, gUV, gN, gT, new Vector3(bx, 4.38f, 0.20f), new Vector3(0.16f, 0.18f, 0.16f), 0.50f);
             }
+
+            // 4. Clean Architectural Crown Cornice Lintel (y = 4.82m .. 5.20m) & Subtle Wrought-Iron Tie Band
+            AppendBoxUvScaled(sV, sUV, sN, sT, new Vector3(0f, 4.98f, 0.14f), new Vector3(4.04f, 0.42f, 0.52f), 0.38f);
+            AppendBoxUvScaled(gV, gUV, gN, gT, new Vector3(0f, 4.74f, 0.16f), new Vector3(4.02f, 0.06f, 0.46f), 0.50f);
 
             _gothicBrickWallStoneMesh = new Mesh { name = "OrnateGothicBrickWall_Stone" };
             _gothicBrickWallStoneMesh.SetVertices(sV);
@@ -328,9 +402,8 @@ namespace AbyssGame
         }
 
         /// <summary>
-        /// Spawns a 4.0m x 4.0m 3D Ornate Gothic Cathedral Flagstone & Carved Quatrefoil Medallion Floor Tile.
-        /// Replaces flat dark floor meshes with sculpted flagstone borders, sunken drainage channels,
-        /// octagonal Gothic center slab, and antique bronze-gold filigree inlays.
+        /// Spawns a clean, seamless 4.0m x 4.0m Gold and Glory Medieval Flagstone Floor Tile
+        /// with world-aligned hand-painted stone slabs and zero repeating bullseye/gold grids.
         /// </summary>
         private static GameObject SpawnOrnateGothicCathedralFloor(
             Transform parent,
@@ -348,25 +421,9 @@ namespace AbyssGame
             root.transform.localRotation = localRot;
             root.transform.localScale = localScale;
 
-            Material stoneMat = PbrMaterialLibrary.CathedralFloor();
-            Material goldMat = PbrMaterialLibrary.RunicGold();
-
+            Material stoneMat = floorMat != null ? floorMat : PbrMaterialLibrary.CathedralFloor();
             var rStone = CreateMeshChild("GothicFloorMasonry", root.transform, _gothicCathedralFloorStoneMesh, stoneMat, false);
             rStone.receiveShadows = true;
-            var rGold = CreateMeshChild("GothicFloorGoldInlay", root.transform, _gothicCathedralFloorGoldMesh, goldMat, false);
-            rGold.receiveShadows = true;
-
-            // Subtle biome/room tint via MaterialPropertyBlock while preserving hand-crafted cathedral floor PBR texture
-            if (floorMat != null)
-            {
-                Color callerCol = floorMat.HasProperty("_BaseColor") ? floorMat.GetColor("_BaseColor") : floorMat.color;
-                Color tinted = Color.Lerp(Color.white, callerCol, 0.22f);
-                tinted.a = 1f;
-                _mpb.Clear();
-                _mpb.SetColor("_BaseColor", tinted);
-                _mpb.SetColor("_Color", tinted);
-                rStone.SetPropertyBlock(_mpb);
-            }
 
             if (addBoxCollider)
             {
@@ -380,76 +437,24 @@ namespace AbyssGame
 
         private static void EnsureOrnateGothicCathedralFloorMeshes()
         {
-            if (_gothicCathedralFloorStoneMesh != null && _gothicCathedralFloorGoldMesh != null)
+            if (_gothicCathedralFloorStoneMesh != null)
                 return;
 
-            var sV = new List<Vector3>(512);
-            var sUV = new List<Vector2>(512);
-            var sN = new List<Vector3>(512);
-            var sT = new List<int>(1024);
+            var sV = new List<Vector3>(128);
+            var sUV = new List<Vector2>(128);
+            var sN = new List<Vector3>(128);
+            var sT = new List<int>(256);
 
-            var gV = new List<Vector3>(256);
-            var gUV = new List<Vector2>(256);
-            var gN = new List<Vector3>(256);
-            var gT = new List<int>(512);
-
-            // 1. Recessed Sub-Slab (Sunken mortar/channel base at y = -0.025m)
-            AppendFloorSlabBox(sV, sUV, sN, sT, new Vector3(0f, -0.085f, 0f), new Vector3(4.00f, 0.12f, 4.00f));
-
-            // 2. Outer Raised Ashlar Border Stones (leaving 0.06m perimeter groove & corner pockets)
-            float borderThick = 0.34f;
-            float borderPos = 2.00f - borderThick * 0.5f - 0.03f; // +/-1.80m
-            AppendFloorSlabBox(sV, sUV, sN, sT, new Vector3(0f, -0.015f,  borderPos), new Vector3(2.84f, 0.04f, borderThick));
-            AppendFloorSlabBox(sV, sUV, sN, sT, new Vector3(0f, -0.015f, -borderPos), new Vector3(2.84f, 0.04f, borderThick));
-            AppendFloorSlabBox(sV, sUV, sN, sT, new Vector3( borderPos, -0.015f, 0f), new Vector3(borderThick, 0.04f, 2.84f));
-            AppendFloorSlabBox(sV, sUV, sN, sT, new Vector3(-borderPos, -0.015f, 0f), new Vector3(borderThick, 0.04f, 2.84f));
-
-            // 4 Corner Plinth Stones with Bronze-Gold Studs
-            for (int sx = -1; sx <= 1; sx += 2)
-            {
-                for (int sz = -1; sz <= 1; sz += 2)
-                {
-                    Vector3 cp = new Vector3(sx * 1.74f, -0.01f, sz * 1.74f);
-                    AppendFloorSlabBox(sV, sUV, sN, sT, cp, new Vector3(0.46f, 0.05f, 0.46f));
-                    AppendFloorSlabBox(gV, gUV, gN, gT, cp + new Vector3(0f, 0.018f, 0f), new Vector3(0.22f, 0.022f, 0.22f));
-                }
-            }
-
-            // 3. 4 Quadrant Recessed Flagstone Slabs (separated by central Gothic cruciform channels & bronze inlays)
+            // Tight seamless Cathedral Flagstone slabs (flush near y = 0.0m, subtle stone joints instead of stark black grid lines)
+            AppendFloorSlabBox(sV, sUV, sN, sT, new Vector3(0f, -0.056f, 0f), new Vector3(4.00f, 0.09f, 4.00f));
             for (int qx = -1; qx <= 1; qx += 2)
             {
                 for (int qz = -1; qz <= 1; qz += 2)
                 {
-                    Vector3 qc = new Vector3(qx * 0.88f, -0.016f, qz * 0.88f);
-                    AppendFloorSlabBox(sV, sUV, sN, sT, qc, new Vector3(1.26f, 0.036f, 1.26f));
-                    // Inner beveled flagstone relief
-                    AppendFloorSlabBox(sV, sUV, sN, sT, qc + new Vector3(0f, 0.008f, 0f), new Vector3(0.96f, 0.024f, 0.96f));
+                    Vector3 qc = new Vector3(qx * 0.996f, -0.012f, qz * 0.996f);
+                    AppendFloorSlabBox(sV, sUV, sN, sT, qc, new Vector3(1.984f, 0.024f, 1.984f));
                 }
             }
-
-            // 4. Central Raised Gothic Sanctuary Medallion & Cruciform Ribs
-            AppendFloorSlabBox(sV, sUV, sN, sT, new Vector3(0f, -0.010f, 0f), new Vector3(1.12f, 0.044f, 1.12f));
-            AppendFloorSlabBox(sV, sUV, sN, sT, new Vector3(0f, -0.012f, 0f), new Vector3(3.16f, 0.038f, 0.22f));
-            AppendFloorSlabBox(sV, sUV, sN, sT, new Vector3(0f, -0.012f, 0f), new Vector3(0.22f, 0.038f, 3.16f));
-
-            // 5. Antique Bronze-Gold Gothic Filigree Trim & Central Quatrefoil Rosette Inlay
-            // Outer perimeter gold frame strips
-            float gFrame = 1.56f;
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(0f, -0.004f,  gFrame), new Vector3(3.18f, 0.028f, 0.055f));
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(0f, -0.004f, -gFrame), new Vector3(3.18f, 0.028f, 0.055f));
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3( gFrame, -0.004f, 0f), new Vector3(0.055f, 0.028f, 3.18f));
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(-gFrame, -0.004f, 0f), new Vector3(0.055f, 0.028f, 3.18f));
-
-            // Cruciform gold inlay ribs
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(0f, -0.002f, 0f), new Vector3(3.08f, 0.028f, 0.06f));
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(0f, -0.002f, 0f), new Vector3(0.06f, 0.028f, 3.08f));
-
-            // Central Gothic Sanctuary Ring & Rosette Boss
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(0f, 0.001f,  0.48f), new Vector3(1.02f, 0.028f, 0.06f));
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(0f, 0.001f, -0.48f), new Vector3(1.02f, 0.028f, 0.06f));
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3( 0.48f, 0.001f, 0f), new Vector3(0.06f, 0.028f, 1.02f));
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(-0.48f, 0.001f, 0f), new Vector3(0.06f, 0.028f, 1.02f));
-            AppendFloorSlabBox(gV, gUV, gN, gT, new Vector3(0f, 0.003f, 0f), new Vector3(0.36f, 0.030f, 0.36f));
 
             _gothicCathedralFloorStoneMesh = new Mesh { name = "OrnateGothicCathedralFloor_Stone" };
             _gothicCathedralFloorStoneMesh.SetVertices(sV);
@@ -458,14 +463,7 @@ namespace AbyssGame
             _gothicCathedralFloorStoneMesh.SetTriangles(sT, 0);
             _gothicCathedralFloorStoneMesh.RecalculateBounds();
             _gothicCathedralFloorStoneMesh.RecalculateTangents();
-
-            _gothicCathedralFloorGoldMesh = new Mesh { name = "OrnateGothicCathedralFloor_GoldInlay" };
-            _gothicCathedralFloorGoldMesh.SetVertices(gV);
-            _gothicCathedralFloorGoldMesh.SetUVs(0, gUV);
-            _gothicCathedralFloorGoldMesh.SetNormals(gN);
-            _gothicCathedralFloorGoldMesh.SetTriangles(gT, 0);
-            _gothicCathedralFloorGoldMesh.RecalculateBounds();
-            _gothicCathedralFloorGoldMesh.RecalculateTangents();
+            _gothicCathedralFloorGoldMesh = _gothicCathedralFloorStoneMesh;
         }
 
         /// <summary>
@@ -519,45 +517,56 @@ namespace AbyssGame
             float uvPerMeter)
         {
             Vector3 h = size * 0.5f;
-            // Shift wall depth slightly backward (-0.14m Z) so the brick face sits near z=0 and reliefs project cleanly into +Z.
-            // Omit the exterior -Z (Vector3.back) face so cameras positioned behind/at a perimeter wall looking into the room (+Z)
-            // are never occluded by the back of the wall.
+            // Shift backing depth slightly so front face (+Z) aligns cleanly with room perimeter and reliefs protrude inward.
             Vector3 c = center + new Vector3(0f, 0f, -0.14f);
 
-            // 5 interior-visible faces: +Z (room-facing front), +X, -X, +Y, -Y
+            // All 6 faces with mathematically verified Left-Handed Unity clockwise front winding & upright UVs (+V = +Y):
+            // 1. +Z Front Face (room-facing interior) -> Cross((0,+1,0), (-1,+1,0)) = (0,0,+1)
             AddFaceQuad(verts, uvs, norms, tris,
-                c + new Vector3(-h.x, -h.y,  h.z),
-                c + new Vector3(-h.x,  h.y,  h.z),
-                c + new Vector3( h.x,  h.y,  h.z),
                 c + new Vector3( h.x, -h.y,  h.z),
+                c + new Vector3( h.x,  h.y,  h.z),
+                c + new Vector3(-h.x,  h.y,  h.z),
+                c + new Vector3(-h.x, -h.y,  h.z),
                 Vector3.forward, size.x * uvPerMeter, size.y * uvPerMeter);
 
+            // 2. -Z Back Face (visible from opposite side of archways/gates) -> Cross((0,+1,0), (+1,+1,0)) = (0,0,-1)
             AddFaceQuad(verts, uvs, norms, tris,
-                c + new Vector3( h.x, -h.y,  h.z),
-                c + new Vector3( h.x,  h.y,  h.z),
+                c + new Vector3(-h.x, -h.y, -h.z),
+                c + new Vector3(-h.x,  h.y, -h.z),
                 c + new Vector3( h.x,  h.y, -h.z),
                 c + new Vector3( h.x, -h.y, -h.z),
+                Vector3.back, size.x * uvPerMeter, size.y * uvPerMeter);
+
+            // 3. +X Right Face -> Cross((0,+1,0), (0,+1,+1)) = (+1,0,0)
+            AddFaceQuad(verts, uvs, norms, tris,
+                c + new Vector3( h.x, -h.y, -h.z),
+                c + new Vector3( h.x,  h.y, -h.z),
+                c + new Vector3( h.x,  h.y,  h.z),
+                c + new Vector3( h.x, -h.y,  h.z),
                 Vector3.right, size.z * uvPerMeter, size.y * uvPerMeter);
 
+            // 4. -X Left Face -> Cross((0,+1,0), (0,+1,-1)) = (-1,0,0)
             AddFaceQuad(verts, uvs, norms, tris,
-                c + new Vector3(-h.x, -h.y, -h.z),
-                c + new Vector3(-h.x,  h.y, -h.z),
-                c + new Vector3(-h.x,  h.y,  h.z),
                 c + new Vector3(-h.x, -h.y,  h.z),
+                c + new Vector3(-h.x,  h.y,  h.z),
+                c + new Vector3(-h.x,  h.y, -h.z),
+                c + new Vector3(-h.x, -h.y, -h.z),
                 Vector3.left, size.z * uvPerMeter, size.y * uvPerMeter);
 
+            // 5. +Y Top Face -> Cross((0,0,+1), (+1,0,+1)) = (0,+1,0)
             AddFaceQuad(verts, uvs, norms, tris,
-                c + new Vector3(-h.x,  h.y,  h.z),
                 c + new Vector3(-h.x,  h.y, -h.z),
-                c + new Vector3( h.x,  h.y, -h.z),
+                c + new Vector3(-h.x,  h.y,  h.z),
                 c + new Vector3( h.x,  h.y,  h.z),
+                c + new Vector3( h.x,  h.y, -h.z),
                 Vector3.up, size.x * uvPerMeter, size.z * uvPerMeter);
 
+            // 6. -Y Bottom Face -> Cross((0,0,-1), (+1,0,-1)) = (0,-1,0)
             AddFaceQuad(verts, uvs, norms, tris,
-                c + new Vector3(-h.x, -h.y, -h.z),
                 c + new Vector3(-h.x, -h.y,  h.z),
-                c + new Vector3( h.x, -h.y,  h.z),
+                c + new Vector3(-h.x, -h.y, -h.z),
                 c + new Vector3( h.x, -h.y, -h.z),
+                c + new Vector3( h.x, -h.y,  h.z),
                 Vector3.down, size.x * uvPerMeter, size.z * uvPerMeter);
         }
 

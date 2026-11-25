@@ -57,7 +57,9 @@ namespace AbyssGame
                 if (isBoss || def.archetype == Archetype.Boss || def.id == "AbyssalKnight")
                 {
                     Transform rh = rHand != null ? rHand : visualRoot.transform;
-                    WeaponBladeTrail3D.Attach(rh, new Vector3(0f, 1.15f, 0.25f), 0.65f, new Color(0.55f, 0.22f, 1f));
+                    Color bossCol = new Color(0.55f, 0.22f, 1f);
+                    WeaponBladeTrail3D.Attach(rh, new Vector3(0f, 1.15f, 0.25f), 0.65f, bossCol);
+                    AbyssalDungeon.VFX.WeaponVfxFactory.AttachSmartWeaponAura(rh, bossCol, 1.45f);
                 }
             }
             else if (isBoss || def.archetype == Archetype.Boss || def.id == "AbyssalKnight")
@@ -121,7 +123,11 @@ namespace AbyssGame
             var gs = ObjMeshLoader.SpawnPiece("Boss_AbyssalKnight_Greatsword", rh,
                 new Vector3(0f, 0.08f, 0.04f), Quaternion.identity, Vector3.one * 1.12f, bladeMat, addBoxCollider: false);
             if (gs != null)
-                WeaponBladeTrail3D.Attach(gs.transform, new Vector3(0f, 1.55f, 0f), 0.65f, new Color(0.55f, 0.22f, 1f));
+            {
+                Color bossCol = new Color(0.55f, 0.22f, 1f);
+                WeaponBladeTrail3D.Attach(gs.transform, new Vector3(0f, 1.55f, 0f), 0.65f, bossCol);
+                AbyssalDungeon.VFX.WeaponVfxFactory.AttachSmartWeaponAura(gs.transform, bossCol, 1.45f);
+            }
 
             // 5. Gothic Bulwark Shield on Left Hand
             Transform lh = lHand != null ? lHand : visualRoot.transform;

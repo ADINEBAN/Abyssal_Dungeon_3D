@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using AbyssalDungeon.VFX;
 
 namespace AbyssGame
 {
@@ -14,11 +15,17 @@ namespace AbyssGame
         public Vector3 center;
         public float width;
         public float length;
+        public float wallHeight = 7.4f;
+        public bool isSideBranch;
+        public bool discovered;
         public bool activated;
         public bool cleared;
+        public Transform roomRoot;
         public DungeonGate entryGate;
         public DungeonGate exitGate;
+        public DungeonGate sideGate;
         public WorldTreasureChest rewardChest;
+        public WorldTreasureChest bonusChest;
         public readonly List<ActorUnit> activeMonsters = new List<ActorUnit>();
         public readonly List<WorldRunePillar> puzzlePillars = new List<WorldRunePillar>();
     }
@@ -79,14 +86,28 @@ namespace AbyssGame
             director.OnDirectorAdjusted += msg => ShowBanner(msg, 4.5f);
 
             SetupEnvironmentLighting();
+            PrewarmEnvironmentVfx();
             CreateDungeonMaterials();
             ConstructRoomsGeometry();
             SpawnHeroParty();
 
-            // Activate Entrance Room immediately
+            // Activate Entrance Room immediately & cull distant room props/VFX/lights for iGPU smoothness
             ActivateRoom(0);
+            ApplyRoomDistanceCulling(0);
             ShowBanner($"TẦNG {GameSession.I.Profile.selectedFloor}: ABYSSAL DUNGEON — {director.CompositionTag}", 4f);
             GameAudio.I.PlayMusic(GameMusic.Dungeon);
+        }
+
+        private void PrewarmEnvironmentVfx()
+        {
+            var mgr = VFXManager.EnsureInstance();
+            if (mgr == null) return;
+            mgr.Prewarm(VFXType.Env_TrapActivation, 4);
+            mgr.Prewarm(VFXType.Env_FireExplosion, 3);
+            mgr.Prewarm(VFXType.Env_GroundDustBurst, 4);
+            mgr.Prewarm(VFXType.Env_StoneDebris, 4);
+            mgr.Prewarm(VFXType.Env_EnvironmentalImpact, 3);
+            mgr.Prewarm(VFXType.Env_AncientAltarActivation, 2);
         }
 
         private void SetupEnvironmentLighting()
@@ -106,112 +127,177 @@ namespace AbyssGame
 
         private void ConstructRoomsGeometry()
         {
-            // Progression matching Section 3.5 & Section 2.1 (7 Distinct Biomes across 7 Rooms):
-            // 0 Entrance (ForgottenTemple) -> 1 Combat (AncientDungeon) -> 2 Elite (UndergroundFortress)
-            // -> 3 Puzzle/Event (AbyssalCave) -> 4 MiniBoss (CrystalChamber) -> 5 Combat (CursedForest) -> 6 Final Boss (BossArena)
-            var specs = new (RoomType type, float w, float len)[]
-            {
-                (RoomType.Entrance, 20f, 20f),
-                (RoomType.Combat,   24f, 24f),
-                (RoomType.Elite,    26f, 26f),
-                (RoomType.Puzzle,   24f, 24f),
-                (RoomType.MiniBoss, 26f, 26f),
-                (RoomType.Combat,   26f, 26f),
-                (RoomType.Boss,     34f, 34f)
-            };
+            int floor = GameSession.I.Profile.selectedFloor;
+            var specs = ProceduralDungeonGenerator.GenerateSeededDungeon(floor, 0, out bool graphValid);
+            if (!graphValid)
+                Debug.LogWarning("[DungeonWorldBuilder] Dungeon graph reachability check failed!");
 
             const float corridorLen = 8f;
             const float corridorW = 6f;
             float cursorZ = 0f;
 
+            // Pre-identify which main-path rooms spawn an East side branch
+            var hasEastBranch = new bool[specs.Length];
             for (int i = 0; i < specs.Length; i++)
             {
-                float w = specs[i].w;
-                float len = specs[i].len;
-                Vector3 center = new Vector3(0f, 0f, cursorZ + len * 0.5f);
-                DungeonBiome biome = BiomeAtmosphereLibrary.BiomeForDungeonRoom(i, specs[i].type);
+                if (specs[i].isSideBranch && specs[i].branchFromIndex >= 0 && specs[i].branchFromIndex < specs.Length)
+                    hasEastBranch[specs[i].branchFromIndex] = true;
+            }
+
+            // Identify last non-branch room for North doorway check
+            int lastMainIdx = specs.Length - 1;
+            for (int i = specs.Length - 1; i >= 0; i--)
+            {
+                if (!specs[i].isSideBranch) { lastMainIdx = i; break; }
+            }
+
+            for (int i = 0; i < specs.Length; i++)
+            {
+                var sp = specs[i];
+                float w = sp.width;
+                float len = sp.length;
+                float wallH = Mathf.Max(6.6f, sp.wallHeight);
+                Vector3 center;
+
+                bool hasSouthDoor = false;
+                bool hasNorthDoor = false;
+                bool hasEastDoor = false;
+                bool hasWestDoor = false;
+
+                if (sp.isSideBranch && sp.branchFromIndex >= 0 && sp.branchFromIndex < Rooms.Count)
+                {
+                    var host = Rooms[sp.branchFromIndex];
+                    float westEdge = host.center.x + host.width * 0.5f + corridorLen;
+                    center = new Vector3(westEdge + w * 0.5f, 0f, host.center.z);
+                    hasWestDoor = true;
+                }
+                else
+                {
+                    center = new Vector3(0f, 0f, cursorZ + len * 0.5f);
+                    hasSouthDoor = (i > 0);
+                    hasNorthDoor = (i < lastMainIdx);
+                    hasEastDoor = hasEastBranch[i];
+                }
 
                 var room = new DungeonRoomRuntime
                 {
                     index = i,
-                    type = specs[i].type,
-                    biome = biome,
-                    title = $"Phòng {i + 1}/7: {GameDB.RoomName(specs[i].type)}",
+                    type = sp.type,
+                    biome = sp.biome,
+                    title = sp.isSideBranch
+                        ? $"Khu Phụ: {GameDB.RoomName(sp.type)}"
+                        : $"Khu {i + 1}/{specs.Length}: {GameDB.RoomName(sp.type)}",
                     center = center,
                     width = w,
-                    length = len
+                    length = len,
+                    wallHeight = wallH,
+                    isSideBranch = sp.isSideBranch,
+                    discovered = (i == 0)
                 };
                 Rooms.Add(room);
 
-                var rRoot = new GameObject($"Room_{i}_{specs[i].type}_{biome}");
+                var rRoot = new GameObject($"Room_{i}_{sp.type}_{sp.biome}");
                 rRoot.transform.SetParent(transform, false);
+                room.roomRoot = rRoot.transform;
 
-                float wallH = specs[i].type == RoomType.Boss ? 6.6f : 5.2f;
-                bool hasSouthDoor = (i > 0);
-                bool hasNorthDoor = (i < specs.Length - 1);
-
-                // Modular 3D Gothic Architecture (Pillars, Vault Arches, Recessed Channel Floor, Blind-Arch Walls, Sconce Torches, Mist & Decals)
+                // Modular 3D Ancient Gothic Cathedral Shell (High Ribbed Vaults, Blind-Arch Walls, Volumetric Shafts, Warm/Cool Contrast)
                 ModularDungeonArchitect.BuildModularRoomShell(
-                    rRoot.transform, center, w, len, wallH, biome,
-                    openSouthDoor: hasSouthDoor, openNorthDoor: hasNorthDoor, doorwayWidth: corridorW);
+                    rRoot.transform, center, w, len, wallH, sp.biome,
+                    openSouthDoor: hasSouthDoor, openNorthDoor: hasNorthDoor, doorwayWidth: corridorW,
+                    openEastDoor: hasEastDoor, openWestDoor: hasWestDoor, sideDoorwayWidth: corridorW,
+                    coolArcaneAccent: sp.coolArcaneAccent);
 
-                // Biome-specific 3D Prop Storytelling (Statues, Crystals, Braziers, Cursed Roots, Ruined Rubble, Boss Altar)
-                ModularDungeonArchitect.DressBiomeEnvironmentProps(rRoot.transform, center, w, len, biome);
+                // Biome & Zone Prop Storytelling (Fallen Angel & Warrior Statues, Coffins, Barrels/Crates, Tactical Cover, Boss Altar)
+                ModularDungeonArchitect.DressBiomeEnvironmentProps(rRoot.transform, center, w, len, sp.biome, sp.type);
 
-                float southZ = cursorZ;
-                if (hasSouthDoor)
+                if (sp.isSideBranch)
                 {
-                    room.entryGate = DungeonGate.Create(rRoot.transform, new Vector3(0f, 0f, southZ), corridorW);
+                    float westDoorX = center.x - w * 0.5f;
+                    room.entryGate = DungeonGate.Create(rRoot.transform, new Vector3(westDoorX, 0f, center.z), corridorW, yRot: 90f);
+                }
+                else
+                {
+                    float southZ = cursorZ;
+                    if (hasSouthDoor)
+                        room.entryGate = DungeonGate.Create(rRoot.transform, new Vector3(0f, 0f, southZ), corridorW, yRot: 0f);
+
+                    float northZ = cursorZ + len;
+                    if (hasNorthDoor)
+                    {
+                        room.exitGate = DungeonGate.Create(rRoot.transform, new Vector3(0f, 0f, northZ), corridorW, yRot: 0f);
+                        ModularDungeonArchitect.BuildModularCorridor(rRoot.transform, northZ, corridorLen, corridorW, wallH, sp.biome);
+                    }
+
+                    if (hasEastDoor)
+                    {
+                        float eastEdgeX = center.x + w * 0.5f;
+                        room.sideGate = DungeonGate.Create(rRoot.transform, new Vector3(eastEdgeX, 0f, center.z), corridorW, yRot: 90f);
+                        room.sideGate.SetOpen(false, instant: true); // Unlocks when Hub Combat Room is cleared!
+                        ModularDungeonArchitect.BuildModularSideCorridor(rRoot.transform, eastEdgeX, corridorLen, center.z, corridorW, wallH, sp.biome);
+                    }
+
+                    cursorZ = northZ + corridorLen;
                 }
 
-                float northZ = cursorZ + len;
-                if (hasNorthDoor)
-                {
-                    room.exitGate = DungeonGate.Create(rRoot.transform, new Vector3(0f, 0f, northZ), corridorW);
-                    ModularDungeonArchitect.BuildModularCorridor(rRoot.transform, northZ, corridorLen, corridorW, wallH, biome);
-                }
+                DecorateRoom(room, rRoot.transform, wallH, sp.eventTitle);
 
-                DecorateRoom(room, rRoot.transform, wallH);
-                cursorZ = northZ + corridorLen;
+                // Runtime Static Batching on stationary cathedral masonry & vaults to dramatically slash draw calls!
+                CombineStaticSubtree(rRoot.transform.Find("ModularFloorTiles"));
+                CombineStaticSubtree(rRoot.transform.Find("ModularPerimeterWalls"));
+                CombineStaticSubtree(rRoot.transform.Find("GothicVaults"));
             }
         }
 
-        private void DecorateRoom(DungeonRoomRuntime room, Transform root, float wallH)
+        private static void CombineStaticSubtree(Transform t)
+        {
+            if (t == null) return;
+            StaticBatchingUtility.Combine(t.gameObject);
+        }
+
+        private void DecorateRoom(DungeonRoomRuntime room, Transform root, float wallH, string eventTitle = "")
         {
             Vector3 c = room.center;
-            float hl = room.length * 0.5f - 2.2f;
+            float hl = room.length * 0.5f - 2.4f;
 
             switch (room.type)
             {
                 case RoomType.Entrance:
                     // Entry abyssal portal behind party + starter Healing Shrine
-                    BuildDecorativePortal(root, c + new Vector3(0f, 0f, -6.2f), new Color(0.65f, 0.25f, 1f));
+                    BuildDecorativePortal(root, c + new Vector3(0f, 0f, -5.8f), new Color(0.45f, 0.55f, 1f));
                     WorldHealingShrine.Create(root, c + new Vector3(4.6f, 0f, 1.5f));
                     break;
 
                 case RoomType.Combat:
-                    WorldDungeonTrap.Create(root, c + new Vector3(-3.8f, 0f, 0f), false);
-                    WorldDungeonTrap.Create(root, c + new Vector3(3.8f, 0f, 0f), room.index == 5);
+                    WorldDungeonTrap.Create(root, c + new Vector3(-3.6f, 0f, 0f), false);
+                    WorldDungeonTrap.Create(root, c + new Vector3(3.6f, 0f, 0f), room.index >= 5);
                     room.rewardChest = WorldTreasureChest.Create(root, c + new Vector3(0f, 0f, hl - 1.2f), room.index >= 5 ? 2 : 1);
-                    WorldEnvironmentalEvent.Create(root, c + new Vector3(6.2f, 0f, -2.5f),
-                        room.index == 1 ? "Tế Đàn Huyết Nguyệt" : "Giếng Hồn Vực Thẳm", room.index);
-                    if (room.index == 5)
-                        WorldHealingShrine.Create(root, c + new Vector3(-6.5f, 0f, hl - 1.5f));
+                    WorldEnvironmentalEvent.Create(root, c + new Vector3(-6.2f, 0f, -2.5f),
+                        string.IsNullOrEmpty(eventTitle) ? (room.index == 1 ? "Tế Đàn Huyết Nguyệt" : "Giếng Hồn Vực Thẳm") : eventTitle, room.index);
+                    if (room.index >= 5)
+                        WorldHealingShrine.Create(root, c + new Vector3(-6.5f, 0f, hl - 1.6f));
+                    break;
+
+                case RoomType.Treasure:
+                    // Gilded Gothic Treasure Vault: Dual High-Rarity Reliquary Chests + Sanctuary Healing Shrine
+                    room.rewardChest = WorldTreasureChest.Create(root, c + new Vector3(1.8f, 0f, 2.4f), 2);
+                    room.bonusChest = WorldTreasureChest.Create(root, c + new Vector3(1.8f, 0f, -2.4f), 3);
+                    WorldHealingShrine.Create(root, c + new Vector3(-2.6f, 0f, 3.8f));
                     break;
 
                 case RoomType.Elite:
-                    WorldDungeonTrap.Create(root, c + new Vector3(0f, 0f, -2.5f), true);
-                    WorldEnvironmentalEvent.Create(root, c + new Vector3(-6.4f, 0f, 0f), "Lõi Năng Lượng Cổ Đại", room.index);
+                    WorldDungeonTrap.Create(root, c + new Vector3(0f, 0f, -2.8f), true);
+                    WorldEnvironmentalEvent.Create(root, c + new Vector3(-7.0f, 0f, 0f),
+                        string.IsNullOrEmpty(eventTitle) ? "Lõi Năng Lượng Cổ Đại" : eventTitle, room.index);
                     room.rewardChest = WorldTreasureChest.Create(root, c + new Vector3(0f, 0f, hl - 1.2f), 2);
                     break;
 
                 case RoomType.Puzzle:
-                    // 3 Rune Pillars that must be activated + Spike Traps around center
+                    // 3 Ancient Rune Pillars that must be activated + Spike Trap around center
                     Vector3[] runePos =
                     {
-                        c + new Vector3(-6f, 0f, -2f),
-                        c + new Vector3(6f, 0f, -2f),
-                        c + new Vector3(0f, 0f, 4.5f)
+                        c + new Vector3(-6.0f, 0f, -2.2f),
+                        c + new Vector3(6.0f, 0f, -2.2f),
+                        c + new Vector3(0f, 0f, 4.6f)
                     };
                     for (int r = 0; r < 3; r++)
                     {
@@ -223,15 +309,15 @@ namespace AbyssGame
                     break;
 
                 case RoomType.MiniBoss:
-                    WorldHealingShrine.Create(root, c + new Vector3(6.5f, 0f, hl - 1.5f));
-                    room.rewardChest = WorldTreasureChest.Create(root, c + new Vector3(-6.5f, 0f, hl - 1.5f), 3);
+                    WorldHealingShrine.Create(root, c + new Vector3(6.8f, 0f, hl - 1.6f));
+                    room.rewardChest = WorldTreasureChest.Create(root, c + new Vector3(-6.8f, 0f, hl - 1.6f), 3);
                     break;
 
                 case RoomType.Boss:
-                    // Grand arcane summoning sigil on cathedral floor
-                    CharacterVisualFactory.Prim(PrimitiveType.Cylinder, "BossSigil", root,
-                        c + Vector3.up * 0.02f, new Vector3(9.5f, 0.02f, 9.5f),
-                        CharacterVisualFactory.MakeTransparentMat(new Color(0.75f, 0.15f, 0.95f, 0.30f), new Color(0.75f, 0.15f, 0.95f)));
+                    ObjMeshLoader.SpawnPiece("EscapeFloorPortal", root,
+                        c + Vector3.up * 0.018f, Quaternion.identity, new Vector3(2.4f, 0.65f, 2.4f),
+                        PbrMaterialLibrary.AbyssalCrystal(new Color(0.42f, 0.24f, 0.85f), new Color(0.65f, 0.42f, 1.0f), 2.1f),
+                        addBoxCollider: false, castShadows: false);
                     break;
             }
         }
@@ -265,6 +351,13 @@ namespace AbyssGame
             pl.range = 10f;
             pl.intensity = 2.0f;
             pl.shadows = LightShadows.None;
+
+            if (Application.isPlaying)
+            {
+                var mgr = VFXManager.EnsureInstance();
+                if (mgr != null)
+                    mgr.SpawnLoopingVFX(VFXType.Env_PortalParticles, p.transform, new Vector3(0f, 0.05f, 0f), Quaternion.identity, col, 0.9f);
+            }
         }
 
         private void SpawnHeroParty()
@@ -332,20 +425,20 @@ namespace AbyssGame
                 return;
             }
 
-            // Detect player entering next room
+            // Detect player entering any room (full 2D X & Z bounds supporting main path + branching Treasure Room!)
             if (LocalHero != null && !LocalHero.IsDead)
             {
-                float hz = LocalHero.transform.position.z;
+                Vector3 hp = LocalHero.transform.position;
                 for (int i = 0; i < Rooms.Count; i++)
                 {
                     var rm = Rooms[i];
-                    float minZ = rm.center.z - rm.length * 0.5f + 1.4f;
-                    float maxZ = rm.center.z + rm.length * 0.5f;
-                    if (hz >= minZ && hz <= maxZ)
+                    if (IsPointInsideRoom(hp, rm, inset: 1.35f))
                     {
                         if (CurrentRoomIndex != i)
                         {
                             CurrentRoomIndex = i;
+                            rm.discovered = true;
+                            ApplyRoomDistanceCulling(i);
                             if (BiomeAtmosphereController.Instance != null)
                                 BiomeAtmosphereController.Instance.ApplyBiome(rm.biome, instant: false);
                         }
@@ -390,6 +483,7 @@ namespace AbyssGame
         private void ActivateRoom(int idx)
         {
             var room = Rooms[idx];
+            room.discovered = true;
             if (room.activated) return;
             room.activated = true;
 
@@ -397,28 +491,41 @@ namespace AbyssGame
             {
                 room.cleared = true;
                 if (room.exitGate != null) room.exitGate.SetOpen(true);
+                if (idx + 1 < Rooms.Count) Rooms[idx + 1].discovered = true;
                 CurrentObjective = "Tiến về phía Bắc qua Cổng Sắt để bắt đầu vượt Phó Bản!";
                 return;
             }
 
-            // Lock gates during encounter & pull AI party inside room
+            // Lock gates during encounter & pull AI party safely inside room (2D X/Z check for both main & branch rooms!)
             if (room.entryGate != null) room.entryGate.SetOpen(false);
             if (room.exitGate != null) room.exitGate.SetOpen(false);
+            if (room.sideGate != null) room.sideGate.SetOpen(false);
 
             foreach (var h in PartyUnits)
             {
                 if (h != null && !h.IsLocalPlayer && !h.IsDead)
                 {
-                    if (h.transform.position.z < room.center.z - room.length * 0.5f + 0.5f)
+                    if (!IsPointInsideRoom(h.transform.position, room, inset: 0.55f))
                     {
                         if (h.Controller != null) h.Controller.enabled = false;
-                        h.transform.position = LocalHero.transform.position + new Vector3(UnityEngine.Random.Range(-2f, 2f), 0f, 0.5f);
+                        Vector3 pullDir = (room.center - LocalHero.transform.position);
+                        pullDir.y = 0f;
+                        if (pullDir.sqrMagnitude > 0.01f) pullDir.Normalize();
+                        h.transform.position = LocalHero.transform.position + pullDir * 0.9f + new Vector3(UnityEngine.Random.Range(-1.6f, 1.6f), 0f, UnityEngine.Random.Range(-1.2f, 1.2f));
                         if (h.Controller != null) h.Controller.enabled = true;
                     }
                 }
             }
 
             SpawnEncounterForRoom(room);
+        }
+
+        private static bool IsPointInsideRoom(Vector3 pos, DungeonRoomRuntime rm, float inset)
+        {
+            float hx = rm.width * 0.5f - inset;
+            float hz = rm.length * 0.5f - inset;
+            return pos.x >= rm.center.x - hx && pos.x <= rm.center.x + hx
+                && pos.z >= rm.center.z - hz && pos.z <= rm.center.z + hz;
         }
 
         private void SpawnEncounterForRoom(DungeonRoomRuntime room)
@@ -447,6 +554,15 @@ namespace AbyssGame
                             Vector3 pos = RandomPointInRoom(room, 3.5f);
                             room.activeMonsters.Add(SpawnMonsterAt(GameDB.Enemies[id], pos, floor, bonusElite, false));
                         }
+                        break;
+                    }
+
+                case RoomType.Treasure:
+                    {
+                        // Optional Vault Guardians protecting the dual Reliquary Treasure Chests
+                        room.activeMonsters.Add(SpawnMonsterAt(GameDB.Enemies["SkeletonWarrior"], room.center + new Vector3(1.5f, 0f, 0f), floor, true, false));
+                        room.activeMonsters.Add(SpawnMonsterAt(GameDB.Enemies["SkeletonMage"], room.center + new Vector3(4.0f, 0f, 2.2f), floor, false, false));
+                        ShowBanner("PHÒNG KHO BÁU CỔ ĐẠI! Đánh bại Hộ Vệ Hầm Mộ để mở 2 Rương Cổ Vật!", 3.8f);
                         break;
                     }
 
@@ -588,11 +704,12 @@ namespace AbyssGame
             GameAudio.I.PlaySfx(GameSfx.Heal, 0.9f);
             AwardExpAndGold(35, 20);
             int lit = 0;
-            var room = Rooms[3];
-            foreach (var p in room.puzzlePillars) if (p.Activated) lit++;
-            if (pillar != null && room.exitGate != null)
+            var room = Rooms.Find(r => r.type == RoomType.Puzzle);
+            if (room != null)
             {
-                RuneSealEnergyBeam.SpawnConnectorBeam(transform, pillar.Position, room.exitGate.transform.position, new Color(1f, 0.85f, 0.28f));
+                foreach (var p in room.puzzlePillars) if (p.Activated) lit++;
+                if (pillar != null && room.exitGate != null)
+                    RuneSealEnergyBeam.SpawnConnectorBeam(transform, pillar.Position, room.exitGate.transform.position, new Color(1f, 0.85f, 0.28f));
             }
             ShowBanner($"Đã thắp sáng Ấn Phong Cổ ({lit}/3)!", 2.5f);
         }
@@ -602,7 +719,16 @@ namespace AbyssGame
             room.cleared = true;
             if (room.entryGate != null) room.entryGate.SetOpen(true);
             if (room.exitGate != null) room.exitGate.SetOpen(true);
+            if (room.sideGate != null) room.sideGate.SetOpen(true);
             if (room.rewardChest != null) room.rewardChest.UnlockChest();
+            if (room.bonusChest != null) room.bonusChest.UnlockChest();
+
+            // Reveal adjacent connected rooms on minimap Fog-of-War
+            for (int i = 0; i < Rooms.Count; i++)
+            {
+                if (Vector3.Distance(Rooms[i].center, room.center) <= 44f)
+                    Rooms[i].discovered = true;
+            }
 
             // Revive any downed teammates automatically on clearing a room!
             foreach (var h in PartyUnits)
@@ -620,12 +746,19 @@ namespace AbyssGame
                 WorldExitPortal.Create(transform, room.center + new Vector3(0f, 0f, 8f), "HOÀN THÀNH PHÓ BẢN [Phím F]", () => CompleteRun(true));
                 StartCoroutine(AutoCompleteAfterDelay(9f));
             }
+            else if (room.type == RoomType.Treasure)
+            {
+                AwardExpAndGold(85 * GameSession.I.Profile.selectedFloor, 120 * GameSession.I.Profile.selectedFloor);
+                CurrentObjective = "Đã chiếm Kho Báu Cổ! Mở cả 2 Rương [F] rồi quay lại lối chính tiến về phía Bắc.";
+                ShowBanner("KHO BÁU MỞ KHÓA! Thu thập chiến lợi phẩm Hiếm & tiếp tục tiến công!", 3.6f);
+            }
             else
             {
                 if (AbyssDirectorAI.Instance != null)
                     AbyssDirectorAI.Instance.EvaluateAndAdjustNextEncounter(room.index);
 
-                CurrentObjective = $"Đã dọn sạch {GameDB.RoomName(room.type)}! Mở Rương [F] và tiến sang phòng tiếp theo.";
+                string sideNote = room.sideGate != null ? " (Lối phụ phía Đông dẫn đến Kho Báu đã mở!)" : "";
+                CurrentObjective = $"Đã dọn sạch {GameDB.RoomName(room.type)}! Mở Rương [F] và tiến sang khu vực tiếp theo.{sideNote}";
             }
         }
 
@@ -733,11 +866,62 @@ namespace AbyssGame
             ShowBanner("MỎ NEO LINH HỒN KÍCH HOẠT — HỒI SINH TỔ ĐỘI (1 LẦN/TẦNG)!", 4.5f);
         }
 
+        /// <summary>
+        /// Keeps decorative props, ambient particle systems, and point lights active ONLY in CurrentRoomIndex +/- 1.
+        /// Structural colliders & walls remain intact while distant rooms cost ~0 GPU draw calls / overdraw on laptop iGPUs.
+        /// </summary>
+        private void ApplyRoomDistanceCulling(int activeIdx)
+        {
+            Vector3 activeCenter = (activeIdx >= 0 && activeIdx < Rooms.Count) ? Rooms[activeIdx].center : Vector3.zero;
+            for (int i = 0; i < Rooms.Count; i++)
+            {
+                Transform rr = Rooms[i].roomRoot;
+                if (rr == null) continue;
+                float dist = Vector3.Distance(Rooms[i].center, activeCenter);
+                bool near = Mathf.Abs(i - activeIdx) <= 1 || dist <= 50f;
+                bool visibleGeo = near || dist <= 68f;
+
+                for (int c = 0; c < rr.childCount; c++)
+                {
+                    Transform ch = rr.GetChild(c);
+                    string cn = ch.name;
+                    if (cn.StartsWith("EnvironmentVfx", StringComparison.Ordinal) ||
+                        cn.StartsWith("BiomeProps_", StringComparison.Ordinal) ||
+                        cn.StartsWith("FloorStoryDecals", StringComparison.Ordinal) ||
+                        cn == "VolumetricLightShafts" ||
+                        cn == "WallRunes")
+                    {
+                        if (ch.gameObject.activeSelf != near)
+                            ch.gameObject.SetActive(near);
+                    }
+                    else if (cn == "ModularFloorTiles" || cn == "GothicVaults")
+                    {
+                        if (ch.gameObject.activeSelf != visibleGeo)
+                            ch.gameObject.SetActive(visibleGeo);
+                    }
+                    else if (cn == "GothicColonnade")
+                    {
+                        var lights = ch.GetComponentsInChildren<Light>(true);
+                        for (int l = 0; l < lights.Length; l++)
+                            lights[l].enabled = near;
+                    }
+                }
+            }
+        }
+
         private static Vector3 RandomPointInRoom(DungeonRoomRuntime r, float margin)
         {
-            float x = UnityEngine.Random.Range(-r.width * 0.5f + margin, r.width * 0.5f - margin);
-            float z = UnityEngine.Random.Range(-r.length * 0.5f + margin, r.length * 0.5f - margin);
-            return r.center + new Vector3(x, 0f, z);
+            float safeM = Mathf.Min(margin, Mathf.Min(r.width, r.length) * 0.35f);
+            for (int attempt = 0; attempt < 12; attempt++)
+            {
+                float x = UnityEngine.Random.Range(-r.width * 0.5f + safeM, r.width * 0.5f - safeM);
+                float z = UnityEngine.Random.Range(-r.length * 0.5f + safeM, r.length * 0.5f - safeM);
+                Vector3 candidate = r.center + new Vector3(x, 0f, z);
+                // Verify obstacle-free clearance so enemies never spawn inside pillars, statues, coffins, or barrels
+                if (!Physics.CheckSphere(candidate + Vector3.up * 0.95f, 0.80f, 1 << 0, QueryTriggerInteraction.Ignore))
+                    return candidate;
+            }
+            return r.center + new Vector3(0f, 0f, 1.5f);
         }
     }
 
@@ -748,12 +932,14 @@ namespace AbyssGame
         private Transform _bars;
         private BoxCollider _blocker;
         private bool _open = true;
+        private bool _pendingSlamDust = false;
 
-        public static DungeonGate Create(Transform parent, Vector3 pos, float width)
+        public static DungeonGate Create(Transform parent, Vector3 pos, float width, float yRot = 0f)
         {
             var go = new GameObject("DungeonGate");
             go.transform.SetParent(parent, false);
             go.transform.position = pos;
+            go.transform.rotation = Quaternion.Euler(0f, yRot, 0f);
 
             var g = go.AddComponent<DungeonGate>();
             g._blocker = go.AddComponent<BoxCollider>();
@@ -772,9 +958,16 @@ namespace AbyssGame
             return g;
         }
 
+        public bool IsOpen => _open;
+
         public void SetOpen(bool open, bool instant = false)
         {
             _open = open;
+            if (!open && !instant)
+                _pendingSlamDust = true;
+            else if (open)
+                _pendingSlamDust = false;
+
             if (_blocker != null) _blocker.enabled = !open;
             if (instant && _bars != null)
                 _bars.localPosition = new Vector3(0f, open ? 3.85f : 0f, 0f);
@@ -785,6 +978,17 @@ namespace AbyssGame
             if (_bars == null) return;
             Vector3 target = new Vector3(0f, _open ? 3.85f : 0f, 0f);
             _bars.localPosition = Vector3.MoveTowards(_bars.localPosition, target, 7.5f * Time.deltaTime);
+
+            if (_pendingSlamDust && !_open && _bars.localPosition.y <= 0.05f)
+            {
+                _pendingSlamDust = false;
+                var mgr = VFXManager.EnsureInstance();
+                if (mgr != null)
+                {
+                    mgr.SpawnVFX(VFXType.Env_GroundDustBurst, transform.position + Vector3.up * 0.05f, Quaternion.identity, 1.5f, null, null, 1.0f);
+                    mgr.SpawnVFX(VFXType.Env_EnvironmentalImpact, transform.position + Vector3.up * 0.04f, Quaternion.identity, 1.4f, null, null, 0.65f);
+                }
+            }
         }
     }
 
@@ -903,6 +1107,8 @@ namespace AbyssGame
         public float InteractRadius => 3.2f;
         private bool _used = false;
         private Transform _orb;
+        private GameObject _idleEnergyVfx;
+        private GameObject _idleRunesVfx;
 
         public static WorldHealingShrine Create(Transform parent, Vector3 pos)
         {
@@ -918,6 +1124,18 @@ namespace AbyssGame
 
             var sh = go.AddComponent<WorldHealingShrine>();
             sh._orb = orb.transform;
+
+            if (Application.isPlaying)
+            {
+                var mgr = VFXManager.EnsureInstance();
+                if (mgr != null)
+                {
+                    Color healTint = new Color(0.26f, 0.92f, 0.56f, 1f);
+                    sh._idleEnergyVfx = mgr.SpawnLoopingVFX(VFXType.Env_MagicalEnergy, go.transform, new Vector3(0f, 1.1f, 0f), Quaternion.identity, healTint, 0.85f);
+                    sh._idleRunesVfx = mgr.SpawnLoopingVFX(VFXType.Env_FloatingRunes, go.transform, new Vector3(0f, 0.8f, 0f), Quaternion.identity, healTint, 0.85f);
+                }
+            }
+
             HeroPlayerInput.Interactables.Add(sh);
             return sh;
         }
@@ -939,6 +1157,16 @@ namespace AbyssGame
             if (_used) return;
             _used = true;
             if (_orb != null) _orb.gameObject.SetActive(false);
+
+            var mgr = VFXManager.EnsureInstance();
+            if (mgr != null)
+            {
+                if (_idleEnergyVfx != null) { mgr.ReleaseVFX(VFXType.Env_MagicalEnergy, _idleEnergyVfx); _idleEnergyVfx = null; }
+                if (_idleRunesVfx != null) { mgr.ReleaseVFX(VFXType.Env_FloatingRunes, _idleRunesVfx); _idleRunesVfx = null; }
+                mgr.SpawnVFX(VFXType.Env_AncientAltarActivation, transform.position, Quaternion.identity, 2.2f, new Color(0.32f, 1.0f, 0.62f, 1f), null, 1.0f);
+                mgr.SpawnVFX(VFXType.Env_GroundDustBurst, transform.position + Vector3.up * 0.05f, Quaternion.identity, 1.5f, null, null, 0.85f);
+            }
+
             GameAudio.I.PlaySfx(GameSfx.Heal, 1f);
 
             foreach (var u in ActorUnit.AllUnits)
@@ -968,6 +1196,8 @@ namespace AbyssGame
         private int _index;
         private Renderer _crystal;
         private Action<WorldRunePillar> _onActivated;
+        private GameObject _idleGlowVfx;
+        private GameObject _idleRunesVfx;
 
         public static WorldRunePillar Create(Transform parent, Vector3 pos, int idx, Action<WorldRunePillar> cb)
         {
@@ -985,6 +1215,18 @@ namespace AbyssGame
             rp._index = idx;
             rp._crystal = crys.GetComponentInChildren<Renderer>();
             rp._onActivated = cb;
+
+            if (Application.isPlaying)
+            {
+                var mgr = VFXManager.EnsureInstance();
+                if (mgr != null)
+                {
+                    Color coldBlue = new Color(0.35f, 0.65f, 1.0f, 1f);
+                    rp._idleGlowVfx = mgr.SpawnLoopingVFX(VFXType.Env_CrystalGlow, go.transform, new Vector3(0f, 1.92f, 0f), Quaternion.identity, coldBlue, 0.8f);
+                    rp._idleRunesVfx = mgr.SpawnLoopingVFX(VFXType.Env_FloatingRunes, go.transform, new Vector3(0f, 1.15f, 0f), Quaternion.identity, coldBlue, 0.8f);
+                }
+            }
+
             HeroPlayerInput.Interactables.Add(rp);
             return rp;
         }
@@ -1011,6 +1253,16 @@ namespace AbyssGame
                 }
                 _crystal.sharedMaterial = litMat;
             }
+
+            var mgr = VFXManager.EnsureInstance();
+            if (mgr != null)
+            {
+                if (_idleGlowVfx != null) { mgr.ReleaseVFX(VFXType.Env_CrystalGlow, _idleGlowVfx); _idleGlowVfx = null; }
+                if (_idleRunesVfx != null) { mgr.ReleaseVFX(VFXType.Env_FloatingRunes, _idleRunesVfx); _idleRunesVfx = null; }
+                mgr.SpawnVFX(VFXType.Env_AncientAltarActivation, transform.position, Quaternion.identity, 2.2f, EnvironmentVfxFactory.AntiqueGold, null, 0.95f);
+                mgr.SpawnLoopingVFX(VFXType.Env_FloatingRunes, transform, new Vector3(0f, 1.4f, 0f), Quaternion.identity, EnvironmentVfxFactory.AntiqueGold, 0.9f);
+            }
+
             if (user != null) user.AddShield(user.MaxHp * 0.15f);
             CharacterVisualFactory.SpawnBurst(transform.position + Vector3.up * 1.8f, new Color(1f, 0.85f, 0.25f), 2.5f, 0.5f);
             _onActivated?.Invoke(this);
@@ -1022,6 +1274,7 @@ namespace AbyssGame
         private bool _fireTrap;
         private float _timer;
         private Transform _hazardVisual;
+        private bool _telegraphTriggered;
 
         public static WorldDungeonTrap Create(Transform parent, Vector3 pos, bool fireTrap)
         {
@@ -1066,11 +1319,50 @@ namespace AbyssGame
         {
             _timer += Time.deltaTime;
             float cycle = _timer % 3.6f;
+
+            if (cycle < 2.0f)
+            {
+                _telegraphTriggered = false;
+            }
+            else if (!_telegraphTriggered && cycle >= 2.05f && cycle <= 2.60f)
+            {
+                _telegraphTriggered = true;
+                var mgr = VFXManager.EnsureInstance();
+                if (mgr != null)
+                {
+                    Color warnCol = _fireTrap ? new Color(1f, 0.48f, 0.14f, 1f) : EnvironmentVfxFactory.AntiqueGold;
+                    mgr.SpawnVFX(VFXType.Env_TrapActivation, transform.position + Vector3.up * 0.04f, Quaternion.identity, 0.85f, warnCol, null, 1.0f);
+                }
+            }
+
             bool active = cycle > 2.6f;
             if (_hazardVisual != null && _hazardVisual.gameObject.activeSelf != active)
             {
                 _hazardVisual.gameObject.SetActive(active);
-                if (active) TriggerTrapDamage();
+                if (active)
+                {
+                    SpawnTrapTriggerVfx();
+                    TriggerTrapDamage();
+                }
+            }
+        }
+
+        private void SpawnTrapTriggerVfx()
+        {
+            var mgr = VFXManager.EnsureInstance();
+            if (mgr == null) return;
+            Vector3 p = transform.position + Vector3.up * 0.06f;
+            if (_fireTrap)
+            {
+                mgr.SpawnVFX(VFXType.Env_FireExplosion, p, Quaternion.identity, 1.9f, null, null, 0.72f);
+                mgr.SpawnVFX(VFXType.Env_TrapFire, p, Quaternion.identity, 1.05f, null, null, 0.95f);
+                mgr.SpawnVFX(VFXType.Env_BlackFireSmoke, p + Vector3.up * 0.35f, Quaternion.identity, 1.8f, null, null, 0.75f);
+            }
+            else
+            {
+                mgr.SpawnVFX(VFXType.Env_EnvironmentalImpact, p, Quaternion.identity, 1.6f, null, null, 0.65f);
+                mgr.SpawnVFX(VFXType.Env_StoneDebris, p + Vector3.up * 0.12f, Quaternion.identity, 1.8f, null, null, 0.75f);
+                mgr.SpawnVFX(VFXType.Env_GroundDustBurst, p, Quaternion.identity, 1.4f, null, null, 0.85f);
             }
         }
 
@@ -1127,6 +1419,14 @@ namespace AbyssGame
             p._prompt = prompt;
             p._onEnter = onEnter;
             p._ring = ring.transform;
+
+            if (Application.isPlaying)
+            {
+                var mgr = VFXManager.EnsureInstance();
+                if (mgr != null)
+                    mgr.SpawnLoopingVFX(VFXType.Env_PortalParticles, go.transform, new Vector3(0f, 0.05f, 0f), Quaternion.identity, col, 1.15f);
+            }
+
             HeroPlayerInput.Interactables.Add(p);
             return p;
         }
